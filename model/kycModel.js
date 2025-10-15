@@ -55,7 +55,6 @@ const kycSchema = new mongoose.Schema(
     },
     proofOfAddress: {
       imageUrl: { type: String },
-      publicId: { type: String },
     },
     bankAccountName: {
       type: String,
@@ -74,13 +73,13 @@ const kycSchema = new mongoose.Schema(
       required: [true, "Organization description is required"],
       trim: true,
     },
+    rejectionReason: {
+      type: String,
+    },
     verificationStatus: {
       type: String,
       enum: ["pending", "verified", "rejected"],
       default: "pending",
-    },
-    rejectionReason: {
-      type: String,
     },
     verifiedAt: {
       type: Date,

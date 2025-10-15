@@ -6,6 +6,7 @@ const donationSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: [true, "Donation must belong to a donor"],
+      role: "donor"
     },
     campaign: {
       type: mongoose.Schema.Types.ObjectId,
