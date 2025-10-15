@@ -7,11 +7,6 @@ const milestoneSchema = new mongoose.Schema(
       ref: "Campaign",
       required: [true, "Milestone must belong to a campaign"],
     },
-    fundraiser: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      required: [true, "Milestone must belong to a fundraiser"],
-    },
     title: {
       type: String,
       required: [true, "Milestone title is required"],

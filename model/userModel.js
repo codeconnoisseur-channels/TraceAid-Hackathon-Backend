@@ -28,31 +28,6 @@ const userSchema = new mongoose.Schema(
       type: String,
       required: [true, "Password is required"],
     },
-    confirmPassword: {
-      type: String,
-      required: [true, "Please confirm your password"],
-    },
-    role: {
-      type: String,
-      enum: ["donor", "fundraiser", "admin"],
-      default: "donor",
-    },
-    kyc: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "KYC",
-    },
-    donations: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Donation",
-      },
-    ],
-    campaigns: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Campaign",
-      },
-    ],
     acceptedTerms: {
       type: Boolean,
       required: [true, "You must accept the terms and conditions"],
@@ -60,6 +35,25 @@ const userSchema = new mongoose.Schema(
     isVerified: {
       type: Boolean,
       default: false,
+    },
+    isGoogle: {
+      type: Boolean,
+      default: false,
+    },
+    otp: {
+      type: String,
+    },
+    otpExpiredAt: {
+      type: Number,
+    },
+    role: {
+      type: [String],
+      enum: ["donor", "fundraiser"],
+      default: "donor",
+    },
+    kyc: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "KYC",
     },
     status: {
       type: String,

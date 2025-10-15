@@ -52,12 +52,6 @@ const campaignSchema = new mongoose.Schema(
         ref: "Milestone",
       },
     ],
-    donations: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Donation",
-      },
-    ],
     supportingDocuments: [
       {
         imageUrl: { type: String },
@@ -66,7 +60,7 @@ const campaignSchema = new mongoose.Schema(
     ],
     status: {
       type: String,
-      enum: ["draft", "pending", "approved", "active", "completed", "rejected"],
+      enum: ["pending", "approved", "active", "completed", "rejected"],
       default: "pending",
     },
     rejectionReason: {
