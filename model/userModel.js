@@ -6,6 +6,8 @@ const userSchema = new mongoose.Schema(
       type: String,
       enum: ["individual", "organization"],
       required: true,
+      lowercase: true,
+      trim: true,
     },
     fullName: {
       type: String,
@@ -40,6 +42,10 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    token: {
+      type: String,
+      default: null,
+    },
     otp: {
       type: String,
     },
@@ -50,6 +56,16 @@ const userSchema = new mongoose.Schema(
       type: [String],
       enum: ["donor", "fundraiser"],
       default: "donor",
+    },
+    profilePicture: {
+      imageUrl: {
+        type: String,
+        default: null,
+      },
+      publicId: {
+        type: String,
+        default: null,
+      },
     },
     kyc: {
       type: mongoose.Schema.Types.ObjectId,
