@@ -19,9 +19,6 @@ exports.sendEmail = async (options) => {
     );
     console.log("Email sent successfully:", response.data);
   } catch (error) {
-    console.error(
-      "Error sending email:",
-      error.response ? error.response.data : error.message
-    );
+    console.error("Error sending email:", error.response ? error.response.data : error.message);
   }
 };

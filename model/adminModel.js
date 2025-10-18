@@ -37,6 +37,10 @@ const adminActivitySchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Donation",
     },
+    kyc: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "KYC",
+    },
     remarks: {
       type: String,
       trim: true,

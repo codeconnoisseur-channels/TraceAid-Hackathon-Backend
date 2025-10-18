@@ -28,24 +28,26 @@ exports.registerValidator = (req, res, next) => {
       }),
     password: joi
       .string()
-      .pattern(
-        /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%_*#?&-])[A-Za-z\d@$!%_*#?&]{8,}$/
-      )
+      .pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%_*#?&-])[A-Za-z\d@$!%_*#?&]{8,}$/)
       .required()
       .messages({
         "string.empty": "Password is required",
         "string.pattern.base":
           "Password must be at least 8 characters long and include at least one uppercase letter, one lowercase letter, a number, and a special character (@$!%_*#?&)",
       }),
-    confirmPassword: joi
-      .string()
-      .required()
-      .valid(joi.ref("password"))
-      .messages({
-        "any.only": "Passwords do not match",
-        "string.empty": "Confirm password cannot be empty",
-        "any.required": "Confirm password is required",
-      }),
+    confirmPassword: joi.string().required().valid(joi.ref("password")).messages({
+      "any.only": "Passwords do not match",
+      "string.empty": "Confirm password cannot be empty",
+      "any.required": "Confirm password is required",
+    }),
+    accountType: joi.string().valid("individual", "organization").required().messages({
+      "string.empty": "Account type is required",
+      "any.only": "Account type must be either 'individual' or 'organization'",
+    }),
+    acceptedTerms: joi.boolean().valid(true).required().messages({
+      "any.only": "You must accept the terms and conditions",
+      "any.required": "You must accept the terms and conditions",
+    }),
   });
 
   const { error } = schema.validate(req.body, { abortEarly: true });

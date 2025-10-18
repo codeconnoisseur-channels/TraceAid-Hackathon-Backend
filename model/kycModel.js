@@ -7,6 +7,7 @@ const kycSchema = new mongoose.Schema(
       ref: "User",
       required: true,
       unique: true,
+      
     },
     organizationName: {
       type: String,
