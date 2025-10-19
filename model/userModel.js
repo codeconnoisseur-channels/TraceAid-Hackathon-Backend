@@ -50,7 +50,7 @@ const userSchema = new mongoose.Schema(
       type: String,
     },
     otpExpiredAt: {
-      type: Number,
+      type: Date,
     },
     role: {
       type: [String],
