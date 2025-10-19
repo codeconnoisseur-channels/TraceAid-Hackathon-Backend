@@ -5,7 +5,9 @@ const GoogleStrategy = require("passport-google-oauth20").Strategy;
 passport.use(
   new GoogleStrategy(
     {
-      // ... credentials
+      clientID: process.env.GOOGLE_CLIENT_ID,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+      callbackURL: "http://localhost:5050/api/v1/auth/google/callback",
     },
     async (accessToken, refreshToken, profile, cb) => {
       try {
@@ -13,24 +15,23 @@ passport.use(
         let user = await userModel.findOne({ email });
 
         if (!user) {
-          // 🔑 FIX 1: Hash the temporary password
           const tempPassword = Math.random().toString(36).slice(-12);
           const saltPassword = await bcrypt.genSalt(10);
           const hashedPassword = await bcrypt.hash(tempPassword, saltPassword);
 
           user = new userModel({
             fullName: profile.displayName,
-            email: email, // 🔑 FIX 2: Use profile.emails[0].value
-            password: hashedPassword, // Use the Hashed Password
+            email: email,
+            password: hashedPassword,
             phoneNumber: "0000000000",
-            accountType: "individual", // Set default
+            accountType: "individual",
             acceptedTerms: true,
-            isEmailVerified: profile._json.email_verified, // Use _json if needed, but profile should be enough
+            isEmailVerified: profile._json.email_verified,
             profilePicture: {
               imageUrl: profile.photos[0].value,
               publicId: profile.id,
             },
-            role: "donor", // Set default
+            role: "donor",
           });
           await user.save();
           return cb(null, user);
@@ -38,7 +39,6 @@ passport.use(
         return cb(null, user);
       } catch (error) {
         console.error(error);
-        // Return null for the user object if an error occurs to prevent session creation
         return cb(error, null);
       }
     }
