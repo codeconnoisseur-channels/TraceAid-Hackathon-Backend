@@ -25,7 +25,7 @@ const swaggerDefinition = {
   info: {
     title: "API Documentation for Trace Aid",
     version: "1.0.0",
-    description: "The Documentation of the Trcae Aid for Frontend Developers",
+    description: "The Documentation of the Trace Aid for Frontend Developers",
     license: {
       name: "Licensed Under MIT",
       url: "https://spdx.org/licenses/MIT.html",
@@ -37,7 +37,7 @@ const swaggerDefinition = {
   },
   servers: [
     {
-      url: "http://localhost:3000",
+      url: "https://traceaid.onrender.com/api/v1/",
       description: "Development server",
     },
     {
