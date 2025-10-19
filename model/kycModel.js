@@ -7,7 +7,6 @@ const kycSchema = new mongoose.Schema(
       ref: "User",
       required: true,
       unique: true,
-      
     },
     organizationName: {
       type: String,
@@ -56,6 +55,7 @@ const kycSchema = new mongoose.Schema(
     },
     proofOfAddress: {
       imageUrl: { type: String },
+      publicId: { type: String },
     },
     bankAccountName: {
       type: String,

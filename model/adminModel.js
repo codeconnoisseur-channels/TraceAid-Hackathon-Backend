@@ -48,7 +48,7 @@ const adminActivitySchema = new mongoose.Schema(
     status: {
       type: String,
       enum: ["pending", "completed", "reversed"],
-      default: "completed",
+      default: "pending",
     },
   },
   { timestamps: true }

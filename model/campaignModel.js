@@ -71,7 +71,7 @@ const campaignSchema = new mongoose.Schema(
     },
     isFeatured: {
       type: Boolean,
-      deafult: false,
+      default: false,
     },
     progressPercentage: {
       type: Number,

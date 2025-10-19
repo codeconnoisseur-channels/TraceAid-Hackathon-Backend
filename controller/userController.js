@@ -596,7 +596,6 @@ exports.googleAuth = async (req, res) => {
 
     if (!user) {
       isNewUser = true;
-      // ⚠️ FIX: Generate and hash a secure temporary password to satisfy Mongoose schema validation.
       const tempPassword = Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(-8);
       const saltPassword = await bcrypt.genSalt(10);
       const hashedPassword = await bcrypt.hash(tempPassword, saltPassword);
@@ -605,23 +604,18 @@ exports.googleAuth = async (req, res) => {
         fullName: name,
         email: normalizedEmail,
         password: hashedPassword,
-        // 🔑 FIX: Set safe, default values. User must confirm their role/type later.
         accountType: "individual",
         role: "donor",
-        // Google doesn't provide a phone number, set a temporary value if required by schema.
         phoneNumber: "0000000000",
-        acceptedTerms: true, // Implicitly accepted via social login
-        isEmailVerified: true, // Google verifies this
+        acceptedTerms: true,
+        isEmailVerified: true,
         profilePicture: {
           imageUrl: picture,
-          // Use a unique Google ID (sub) as the publicId if you need to track it
           publicId: "GOOGLE_" + decoded.sub,
         },
-        // Note: You must remove 'confirmPassword' from your userModel schema as it's not needed here.
       });
     }
 
-    // 2. Generate and send JWT
     const jwtToken = jwt.sign({ id: user._id, email: user.email }, process.env.JWT_SECRET, { expiresIn: "1d" });
 
     res.status(200).json({
@@ -629,10 +623,8 @@ exports.googleAuth = async (req, res) => {
       statusText: "OK",
       message: "Login successful",
       data: {
-        // Use user.toObject({ getters: true }) to ensure virtuals are included if needed
         user: user.toObject({ getters: true }),
         token: jwtToken,
-        // 🔑 KEY TO THE SOLUTION: Tell the front-end that this is a fresh registration.
         isNewUser: isNewUser,
       },
     });
@@ -648,27 +640,26 @@ exports.googleAuth = async (req, res) => {
 
 exports.setRole = async (req, res) => {
   try {
-    // 1. Get the authenticated user ID from the middleware
     const userId = req.user._id;
 
-    // 2. Client sends their choice (e.g., 'organization' or 'individual')
     const { accountType } = req.body;
-
-    if (!["individual", "organization"].includes(accountType)) {
-      return res.status(400).json({ message: "Invalid account type provided." });
+    if (!accountType) {
+      return res.status(400).json({
+        statusCode: false,
+        statusText: "Bad Request",
+        message: "Account type is required.",
+      });
     }
-
-    // 3. Determine the corresponding role
+    if (!["individual", "organization"].includes(accountType)) {
+      return res.status(400).json({
+        statusCode: false,
+        statusText: "Bad Request",
+        message: "Invalid account type provided.",
+      });
+    }
     const role = accountType === "organization" ? "fundraiser" : "donor";
 
-    // 4. Update the user's document
-    const updatedUser = await userModel
-      .findByIdAndUpdate(
-        userId,
-        { accountType, role },
-        { new: true } // Return the updated document
-      )
-      .select("-password"); // Securely exclude password
+    const updatedUser = await userModel.findByIdAndUpdate(userId, { accountType, role }, { new: true }).select("-password");
 
     res.status(200).json({
       statusCode: true,

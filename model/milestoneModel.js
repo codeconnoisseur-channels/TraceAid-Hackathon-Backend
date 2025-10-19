@@ -56,6 +56,9 @@ const milestoneSchema = new mongoose.Schema(
     endDate: {
       type: Date,
     },
+    fundsReleasedAt:{
+      type: Date,
+    }
   },
   { timestamps: true }
 );
