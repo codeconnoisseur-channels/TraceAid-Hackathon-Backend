@@ -283,6 +283,9 @@ router.put("/change-password/:id", authenticate, changePassword);
  *         description: Unauthorized
  */
 router.put("/update/:id", authenticate, uploads.single("profilePicture"), updateProfile);
+router.get("/google-Auth", profile)
+router.get("/google-Auth/callback", loginProfile)
+
 
 /**
  * @swagger
