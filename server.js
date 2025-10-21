@@ -26,7 +26,7 @@ const swaggerDefinition = {
   info: {
     title: "API Documentation for Trace Aid",
     version: "1.0.0",
-    description: "The Documentation of the Trcae Aid for Frontend Developers",
+    description: "The Documentation of the Trace Aid for Frontend Developers",
     license: {
       name: "Licensed Under MIT",
       url: "https://spdx.org/licenses/MIT.html",
