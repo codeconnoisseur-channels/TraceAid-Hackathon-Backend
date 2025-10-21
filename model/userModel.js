@@ -9,9 +9,16 @@ const userSchema = new mongoose.Schema(
       lowercase: true,
       trim: true,
     },
-    fullName: {
+    firstName: {
       type: String,
-      required: [true, "Fullname or organization name is required"],
+      trim: true,
+    },
+    lastName: {
+      type: String,
+      trim: true,
+    },
+    organizationName: {
+      type: String,
       trim: true,
     },
     email: {

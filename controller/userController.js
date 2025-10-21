@@ -7,18 +7,45 @@ const { sendEmail } = require("../utils/brevo");
 const cloudinary = require("../config/cloudinary");
 const fs = require("fs");
 const path = require("path");
+const { individualNameToTitleCase, organizationNameToTitleCase } = require("../helper/nameConverter");
 
 exports.registerUser = async (req, res) => {
   try {
-    const { fullName, email, phoneNumber, password, confirmPassword, accountType, acceptedTerms } = req.body;
+    const { firstName, lastName, organizationName, email, phoneNumber, password, confirmPassword, accountType, acceptedTerms } = req.body;
 
-    if (!fullName || !email || !phoneNumber || !password || !confirmPassword || !acceptedTerms) {
+    if (!accountType) {
       return res.status(400).json({
         statusCode: false,
         statusText: "Bad Request",
-        message: "All fields are required",
+        message: "Account type is required (individual or  organization)",
       });
     }
+
+    if (accountType === "organization") {
+      if (!organizationName || !email || !phoneNumber || !password || !confirmPassword || !acceptedTerms) {
+        return res.status(400).json({
+          statusCode: false,
+          statusText: "Bad Request",
+          message: "All organization fields are required",
+        });
+      }
+    } else if (accountType === "individual") {
+      if (!firstName || !lastName || !email || !phoneNumber || !password || !confirmPassword || !acceptedTerms) {
+        return res.status(400).json({
+          statusCode: false,
+          statusText: "Bad Request",
+          message: "All individual fields are required",
+        });
+      }
+    } else {
+      return res.status(400).json({
+        statusCode: false,
+        statusText: "Bad Request",
+        message: "Invalid account type provided",
+      });
+    }
+
+    const determinedRole = accountType === "organization" ? "fundraiser" : "donor";
 
     if (password !== confirmPassword) {
       return res.status(400).json({
@@ -37,25 +64,14 @@ exports.registerUser = async (req, res) => {
       });
     }
 
-    let determinedRole;
-    if (accountType === "organization") {
-      determinedRole = "fundraiser";
-    } else if (accountType === "individual") {
-      determinedRole = "donor";
-    } else {
-      return res.status(400).json({
-        statusCode: false,
-        statusText: "Bad Request",
-        message: "Invalid account type provided",
-      });
-    }
-
     const saltPassword = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, saltPassword);
     const { otp, expiresAt } = generateOTPCode();
 
     const newUser = new userModel({
-      fullName,
+      firstName: individualNameToTitleCase(firstName),
+      lastName: individualNameToTitleCase(lastName),
+      organizationName: organizationNameToTitleCase(organizationName),
       email,
       phoneNumber: `+234${phoneNumber.slice(1)}`,
       password: hashedPassword,
@@ -67,10 +83,12 @@ exports.registerUser = async (req, res) => {
       otpExpiredAt: expiresAt,
     });
 
+    const displayName = accountType === "individual" ? `${newUser.firstName} ` : newUser.organizationName;
+
     const mailDetails = {
       email: newUser.email,
       subject: "Email Verification",
-      html: registerOTP(newUser.otp, `${newUser.fullName.split(" ")[0]}`),
+      html: registerOTP(newUser.otp, displayName),
     };
 
     await sendEmail(mailDetails);
@@ -173,23 +191,25 @@ exports.resendOTP = async (req, res) => {
       });
     }
 
-    const { otp, expiresAt } = generateOTPCode();
-
     if (user.otpExpiredAt > Date.now() && user.otp) {
+      const waitOtpTime = new Date(user.otpExpiredAt).toLocaleTimeString();
       return res.status(400).json({
         statusCode: false,
         statusText: "Bad Request",
-        message: `OTP has already been sent. Please try again after ${new Date(user.otpExpiredAt).toLocaleTimeString()}`,
+        message: `OTP has already been sent. Please try again after ${waitOtpTime}`,
       });
     }
 
+    const { otp, expiresAt } = generateOTPCode();
     user.otp = otp;
     user.otpExpiredAt = expiresAt;
 
+    const displayName = accountType === "individual" ? `${user.firstName}` : user.organizationName;
+
     const mailDetails = {
-      email: user.email,
-      subject: "Resend: Email Verification",
-      html: registerOTP(user.otp, `${user.fullName.split(" ")[0]}`),
+      email: newUser.email,
+      subject: "Email Verification",
+      html: registerOTP(newUser.otp, displayName),
     };
 
     await sendEmail(mailDetails);
@@ -229,6 +249,14 @@ exports.loginUser = async (req, res) => {
         statusCode: false,
         statusText: "Not Found",
         message: "Invalid credentials",
+      });
+    }
+
+    if (!user.isVerified) {
+      return res.status(403).json({
+        statusCode: false,
+        statusText: "Forbidden",
+        message: "Account not verified. Please verify your email first.",
       });
     }
 
@@ -330,10 +358,13 @@ exports.forgotPassword = async (req, res) => {
 
     const link = `${req.protocol}://${req.get("host")}/api/v1/reset-password/${user._id}`;
 
+    const { accountType } = user;
+    const displayName = accountType === "individual" ? `${user.firstName}` : user.organizationName;
+
     const mailDetails = {
       email: user.email,
-      subject: "Password Reset Request",
-      html: forgotPasswordLink(link, user.fullName),
+      subject: "Email Verification",
+      html: forgotPasswordLink(link, displayName),
     };
 
     await sendEmail(mailDetails);
@@ -474,7 +505,7 @@ exports.changePassword = async (req, res) => {
 
 exports.updateProfile = async (req, res) => {
   try {
-    const { fullName, phoneNumber } = req.body;
+    const { firstName, lastName, organizationName, phoneNumber } = req.body;
     const { id } = req.params;
     const file = req.file;
     let uploadProfilePicture;
@@ -495,8 +526,10 @@ exports.updateProfile = async (req, res) => {
     }
 
     const updateProfile = {
-      fullName: fullName ?? user.fullName,
-      phoneNumber: `+234${(phoneNumber ?? user.phoneNumber).slice(1)}`,
+      firstName: individualNameToTitleCase(firstName ?? user.firstName),
+      lastName: individualNameToTitleCase(lastName ?? user.lastName),
+      organizationName: organizationNameToTitleCase(organizationName ?? user.organizationName),
+      phoneNumber: phoneNumber ? `+234${phoneNumber.slice(1)}` : user.phoneNumber,
     };
 
     if (uploadProfilePicture) {
@@ -522,57 +555,6 @@ exports.updateProfile = async (req, res) => {
     });
   }
 };
-
-// exports.googleAuth = async (req, res) => {
-//   try {
-//     const { token } = req.body;
-//     const decoded = jwt.decode(token);
-
-//     if (!decoded) {
-//       return res.status(400).json({
-//         statusCode: false,
-//         statusText: "Bad Request",
-//         message: "Invalid token",
-//       });
-//     }
-
-//     const { email, name, picture } = decoded;
-
-//     let user = await userModel.findOne({ email: email.toLowerCase() });
-
-//     if (!user) {
-//       const password = Math.random().toString(36).slice(-8);
-//       const saltPassword = await bcrypt.genSalt(10);
-//       const hashedPassword = await bcrypt.hash(password, saltPassword);
-
-//       user = await userModel.create({
-//         fullName: name,
-//         email: email.toLowerCase(),
-//         password: hashedPassword,
-//         profilePicture: {
-//           imageUrl: picture,
-//           publicId: "",
-//         },
-//       });
-//     }
-
-//     const jwtToken = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "1d" });
-
-//     res.status(200).json({
-//       statusCode: true,
-//       statusText: "OK",
-//       message: "Login successful",
-//       data: { user, token: jwtToken },
-//     });
-//   } catch (error) {
-//     console.error("Error logging in with Google:", error);
-//     res.status(500).json({
-//       statusCode: false,
-//       statusText: "Internal Server Error",
-//       message: error.message,
-//     });
-//   }
-// };
 
 exports.googleAuth = async (req, res) => {
   try {

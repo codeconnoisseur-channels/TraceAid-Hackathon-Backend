@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const { validate } = require("./userModel");
 
 const kycSchema = new mongoose.Schema(
   {
@@ -7,6 +8,13 @@ const kycSchema = new mongoose.Schema(
       ref: "User",
       required: true,
       unique: true,
+      validate: {
+        validator: async function (value) {
+          const user = await mongoose.model("User").findById(value);
+          return user && user.role === "fundraiser";
+        },
+        message: "User must be an fundraiser",
+      },
     },
     organizationName: {
       type: String,
@@ -17,6 +25,7 @@ const kycSchema = new mongoose.Schema(
       type: String,
       enum: ["Non-profit", "NGO", "Foundation"],
       required: [true, "Organization type is required"],
+      trim: true,
     },
     registrationNumber: {
       type: String,
@@ -34,7 +43,7 @@ const kycSchema = new mongoose.Schema(
         required: [true, "Registration certificate is required"],
       },
     },
-    authorizedRepresentativeName: {
+    authorizedRepresentativeFullName: {
       type: String,
       required: [true, "Authorized representative name is required"],
       trim: true,
@@ -52,6 +61,7 @@ const kycSchema = new mongoose.Schema(
     organizationAddress: {
       type: String,
       required: [true, "Organization address is required"],
+      trim: true,
     },
     proofOfAddress: {
       imageUrl: { type: String },
@@ -60,14 +70,18 @@ const kycSchema = new mongoose.Schema(
     bankAccountName: {
       type: String,
       required: [true, "Bank account name is required"],
+      trim: true,
     },
     bankAccountNumber: {
       type: String,
       required: [true, "Bank account number is required"],
+      trim: true,
+      unique: true,
     },
     bankName: {
       type: String,
       required: [true, "Bank name is required"],
+      trim: true
     },
     description: {
       type: String,
@@ -76,6 +90,7 @@ const kycSchema = new mongoose.Schema(
     },
     rejectionReason: {
       type: String,
+      trim: true,
     },
     verificationStatus: {
       type: String,
