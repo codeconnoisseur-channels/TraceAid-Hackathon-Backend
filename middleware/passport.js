@@ -26,7 +26,7 @@ passport.use(
             phoneNumber: "0000000000",
             accountType: "individual",
             acceptedTerms: true,
-            isEmailVerified: profile._json.email_verified,
+            isVerified: profile._json.email_verified,
             profilePicture: {
               imageUrl: profile.photos[0].value,
               publicId: profile.id,

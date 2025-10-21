@@ -3,11 +3,12 @@ const express = require("express");
 const PORT = process.env.PORT || 7777;
 const mongoose = require("mongoose");
 const cors = require("cors");
-const userRouter = require("./routes/userRouter");
 const session = require("express-session");
 const passport = require("passport");
 const swaggerJSDoc = require("swagger-jsdoc");
 const swaggerUi = require("swagger-ui-express");
+const userRouter = require("./routes/userRouter");
+const kycRouter = require('./routes/kycRouter')
 
 const app = express();
 app.use(express.json());
@@ -37,7 +38,7 @@ const swaggerDefinition = {
   },
   servers: [
     {
-      url: "http://localhost:3000",
+      url: "https://traceaid.onrender.com/",
       description: "Development server",
     },
     {
@@ -76,6 +77,7 @@ app.use(passport.initialize());
 app.use(passport.session());
 
 app.use("/api/v1", userRouter);
+app.use("/api/v1", kycRouter);
 
 app.use((error, req, res, next) => {
   if (error) {

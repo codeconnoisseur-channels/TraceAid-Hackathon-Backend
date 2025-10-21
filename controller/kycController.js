@@ -9,18 +9,18 @@ exports.addKyc = async (req, res) => {
   const files = req.files || {};
 
   try {
-    // Ensure only Fundraiser (organization) accounts can submit KYC
     if (accountType !== "organization" || role !== "fundraiser") {
       return res.status(401).json({
         statusCode: false,
+        statusText: "Unauthorized",
         message: "Only Fundraiser (Organization) accounts can submit KYC.",
       });
     }
 
-    // Prevent duplicate KYC submission
     if (kyc) {
       return res.status(400).json({
         statusCode: false,
+        statusText: "Bad Request",
         message: "KYC document already linked to your account.",
       });
     }
@@ -29,7 +29,7 @@ exports.addKyc = async (req, res) => {
       organizationName,
       organizationType,
       registrationNumber,
-      authorizedRepresentativeName,
+      authorizedRepresentativeFullName,
       organizationAddress,
       bankAccountName,
       bankAccountNumber,
@@ -37,11 +37,10 @@ exports.addKyc = async (req, res) => {
       description,
     } = req.body;
 
-    // Validate all fields
     const requiredFields = {
       organizationName,
       registrationNumber,
-      authorizedRepresentativeName,
+      authorizedRepresentativeFullName,
       organizationAddress,
       bankAccountName,
       bankAccountNumber,
@@ -53,12 +52,12 @@ exports.addKyc = async (req, res) => {
       if (!value) {
         return res.status(400).json({
           statusCode: false,
+          statusText: "Bad Request",
           message: `${key} is required`,
         });
       }
     }
 
-    // Ensure required files exist
     const certFile = files["registrationCertificate"]?.[0];
     const idFile = files["authorizedRepresentativeId"]?.[0];
     const proofFile = files["proofOfAddress"]?.[0];
@@ -66,11 +65,24 @@ exports.addKyc = async (req, res) => {
     if (!certFile || !idFile || !proofFile) {
       return res.status(400).json({
         statusCode: false,
+        statusText: "Bad Request",
         message: "All required KYC documents must be uploaded.",
       });
     }
 
-    // Upload all files to Cloudinary
+    const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "application/pdf"];
+
+    const allFiles = [certFile, idFile, proofFile];
+    for (const file of allFiles) {
+      if (!allowedTypes.includes(file.mimetype)) {
+        return res.status(400).json({
+          statusCode: false,
+          statusText: "Bad Request",
+          message: `Invalid file type for ${file.fieldname}. Only JPG, JPEG, PNG, and PDF are allowed.`,
+        });
+      }
+    }
+
     const uploadToCloudinary = async (file, folder) => {
       const result = await cloudinary.uploader.upload(file.path, { folder });
       fs.unlinkSync(file.path);
@@ -83,13 +95,12 @@ exports.addKyc = async (req, res) => {
       uploadToCloudinary(proofFile, "traceaid/kyc/proof_address"),
     ]);
 
-    // Create KYC record
     const newKyc = await kycModel.create({
       user: userId,
       organizationName,
       organizationType,
       registrationNumber,
-      authorizedRepresentativeName,
+      authorizedRepresentativeFullName,
       organizationAddress,
       bankAccountName,
       bankAccountNumber,
@@ -101,11 +112,11 @@ exports.addKyc = async (req, res) => {
       verificationStatus: "pending",
     });
 
-    // Link KYC record to user
     await userModel.findByIdAndUpdate(userId, { kyc: newKyc._id });
 
     res.status(201).json({
       statusCode: true,
+      statusText: "Created",
       message: "KYC documents submitted successfully for review.",
       data: newKyc,
     });
@@ -113,8 +124,8 @@ exports.addKyc = async (req, res) => {
     console.error(error.message);
     res.status(500).json({
       statusCode: false,
-      message: "Internal Server Error",
-      error: error.message,
+      statusText: "Internal Server Error",
+      message: error.message,
     });
   }
 };

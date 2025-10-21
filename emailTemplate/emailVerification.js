@@ -1,5 +1,5 @@
 const watermark = "https://res.cloudinary.com/dbzzkaa97/image/upload/v1754353355/watermark_fdbzah.png";
-const logo = "https://res.cloudinary.com/dbzzkaa97/image/upload/v1754353355/logo_v2s6ow.png";
+const logo = "https://res.cloudinary.com/dfefiap2l/image/upload/v1760999697/TRACE_AID_LOGO_1_rwfufj.png";
 const linkedIn = "https://res.cloudinary.com/dbzzkaa97/image/upload/v1754433533/linkedIn_ggxxm4.png";
 const instagram = "https://res.cloudinary.com/dbzzkaa97/image/upload/v1754433533/instagram_p8byzw.png";
 const facebook = "https://res.cloudinary.com/dbzzkaa97/image/upload/v1754433532/facebook_rjeokq.png";
@@ -159,6 +159,8 @@ exports.forgotPasswordLink = (resetUrl, firstname) => {
       * {
         margin: 0;
         padding: 0;
+        font-family: 'Poppins', sans-serif;
+        
       }
     </style>
   </head>
@@ -169,7 +171,7 @@ exports.forgotPasswordLink = (resetUrl, firstname) => {
         
         <!-- Logo -->
         <tr>
-          <td style="margin: 0px">
+          <td style="margin: 0px; background-color: grey">
             <img src="${logo}" width="140">
           </td> 
         </tr>
@@ -185,7 +187,7 @@ exports.forgotPasswordLink = (resetUrl, firstname) => {
 
             <!-- Reset Button -->
             <a href="${resetUrl}" target="_blank"
-              style="display: inline-block; background-color: #4e26ebff; color: #ffffff; font-size: 18px; 
+              style="display: inline-block; background-color: grey; color: #ffffff; font-size: 18px; 
               font-weight: bold; text-decoration: none; padding: 12px 30px; border-radius: 5px; margin: 20px 0;">
               Reset My Password
             </a>
@@ -229,7 +231,7 @@ exports.forgotPasswordLink = (resetUrl, firstname) => {
 
         <!-- Bottom border -->
         <tr>
-          <td style="height: 5px; background-color: #4e26ebff;"></td>
+          <td style="height: 5px; background-color: grey;"></td>
         </tr>
       </table>
     </center>
