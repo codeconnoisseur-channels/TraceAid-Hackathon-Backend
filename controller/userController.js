@@ -354,9 +354,11 @@ exports.forgotPassword = async (req, res) => {
       });
     }
 
-    await userModel.findByIdAndUpdate(user._id, { new: true });
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "10m" });
 
-    const link = `${req.protocol}://${req.get("host")}/api/v1/reset-password/${user._id}`;
+    await userModel.findByIdAndUpdate(user._id, { token }, { new: true });
+
+    const link = `${req.protocol}://${req.get("host")}/api/v1/reset-password/${token}/${user._id}`;
 
     const { accountType } = user;
     const displayName = accountType === "individual" ? `${user.firstName}` : user.organizationName;
@@ -386,18 +388,8 @@ exports.forgotPassword = async (req, res) => {
 
 exports.resetPassword = async (req, res) => {
   try {
-    const { id } = req.params;
+    const { id, token } = req.params;
     const { password, confirmPassword } = req.body;
-
-    const user = await userModel.findById(id);
-
-    if (!user) {
-      return res.status(404).json({
-        statusCode: false,
-        statusText: "Not Found",
-        message: "User not found",
-      });
-    }
 
     if (!password || !confirmPassword) {
       return res.status(400).json({
@@ -418,12 +410,24 @@ exports.resetPassword = async (req, res) => {
     const saltPassword = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, saltPassword);
 
-    await userModel.findByIdAndUpdate(user._id, { password: hashedPassword, token: null }, { new: true });
+    const userId = req.params.id;
+    const user = await userModel.findOne({ _id: userId, token: req.params.token });
 
-    res.status(200).json({
-      statusCode: true,
-      statusText: "OK",
-      message: "Password reset successful",
+    jwt.verify(token, process.env.JWT_SECRET, async (error, result) => {
+      if (error) {
+        return res.status(404).json({
+          statusCode: false,
+          statusText: "Not Found",
+          message: "Email Expired",
+        });
+      } else {
+        await userModel.findByIdAndUpdate(user._id, { password: hashedPassword, token: null }, { new: true, runValidators: true });
+        res.status(200).json({
+          statusCode: true,
+          statusText: "OK",
+          message: "Password reset successful",
+        });
+      }
     });
   } catch (error) {
     console.error("Error resetting password:", error);

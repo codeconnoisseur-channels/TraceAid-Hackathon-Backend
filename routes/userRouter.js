@@ -385,11 +385,10 @@ router.post("/login", loginValidator, loginUser);
  * @swagger
  * /api/v1/forgot-password:
  *   post:
- *     summary: Send a password reset link to the user’s email
- *     description: |
- *       This endpoint sends a **password reset link** to the user's registered email address.
- *       The link will redirect the user to a page (handled by the frontend) where they can reset their password.
- *     tags: [Authentication]
+ *     summary: Send password reset link to user's email
+ *     description: Sends a secure token link to the registered email for password reset. Token expires in 10 minutes.
+ *     tags:
+ *       - Authentication
  *     requestBody:
  *       required: true
  *       content:
@@ -405,7 +404,7 @@ router.post("/login", loginValidator, loginUser);
  *                 example: johndoe@gmail.com
  *     responses:
  *       200:
- *         description: Password reset email sent successfully
+ *         description: Password reset link sent
  *         content:
  *           application/json:
  *             example:
@@ -413,18 +412,15 @@ router.post("/login", loginValidator, loginUser);
  *               statusText: OK
  *               message: Password reset email sent
  *       400:
- *         description: Missing or invalid email field
+ *         description: Missing or invalid email
  *         content:
  *           application/json:
- *             examples:
- *               MissingEmail:
- *                 summary: Missing email field
- *                 value:
- *                   statusCode: false
- *                   statusText: Bad Request
- *                   message: Email is required
+ *             example:
+ *               statusCode: false
+ *               statusText: Bad Request
+ *               message: Email is required
  *       404:
- *         description: Email not found in database
+ *         description: Email not found
  *         content:
  *           application/json:
  *             example:
@@ -432,30 +428,36 @@ router.post("/login", loginValidator, loginUser);
  *               statusText: Not Found
  *               message: Invalid email
  *       500:
- *         description: Server error while sending password reset link
+ *         description: Server error
  *         content:
  *           application/json:
  *             example:
  *               statusCode: false
  *               statusText: Internal Server Error
- *               message: "Error sending OTP"
+ *               message: Error sending OTP
  */
 router.post("/forgot-password", forgotPasswordValidator, forgotPassword);
 
 /**
  * @swagger
- * /api/v1/reset-password/{id}:
+ * /api/v1/reset-password/{token}/{id}:
  *   put:
- *     summary: Reset a user's password using their unique ID
- *     description: |
- *       This endpoint allows a user to **reset their password** using the unique ID (usually from the password reset link).  
- *       It validates the input, ensures both passwords match, and updates the user's password securely in the database.
- *     tags: [Authentication]
+ *     summary: Reset password using reset token
+ *     description: Resets a user's password using a valid reset token and user ID from the reset email.
+ *     tags:
+ *       - Authentication
  *     parameters:
+ *       - in: path
+ *         name: token
+ *         required: true
+ *         description: JWT reset token from email link
+ *         schema:
+ *           type: string
+ *           example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
  *       - in: path
  *         name: id
  *         required: true
- *         description: The unique ID of the user
+ *         description: User ID from email link
  *         schema:
  *           type: string
  *           example: 6714d65f94e6123b5a1c81b7
@@ -485,7 +487,7 @@ router.post("/forgot-password", forgotPasswordValidator, forgotPassword);
  *               statusText: OK
  *               message: Password reset successful
  *       400:
- *         description: Missing fields or password mismatch
+ *         description: Missing fields or mismatch
  *         content:
  *           application/json:
  *             examples:
@@ -502,23 +504,23 @@ router.post("/forgot-password", forgotPasswordValidator, forgotPassword);
  *                   statusText: Bad Request
  *                   message: Passwords do not match
  *       404:
- *         description: User not found
+ *         description: Invalid or expired token
  *         content:
  *           application/json:
  *             example:
  *               statusCode: false
  *               statusText: Not Found
- *               message: User not found
+ *               message: Token expired or invalid
  *       500:
- *         description: Server error during password reset
+ *         description: Server error during reset
  *         content:
  *           application/json:
  *             example:
  *               statusCode: false
  *               statusText: Internal Server Error
- *               message: "Error resetting password"
+ *               message: Error resetting password
  */
-router.put("/reset-password/:id",  resetPasswordValidator, resetPassword);
+router.put("/reset-password/:token/:id", resetPasswordValidator, resetPassword);
 
 /**
  * @swagger
