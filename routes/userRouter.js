@@ -9,6 +9,7 @@ const {
   updateProfile,
   setRole,
   googleAuth,
+  getOne,
 } = require("../controller/userController");
 const { authenticate } = require("../middleware/auth");
 const { profile, loginProfile, passport } = require("../middleware/passport");
@@ -941,5 +942,63 @@ router.put("/set-role", authenticate, setRole);
  *               message: "Error logging in with Google"
  */
 router.post("/auth/google", googleAuth);
+
+/**
+ * @swagger
+ * /api/v1/user/{id}:
+ *   get:
+ *     summary: Retrieve a single user by ID
+ *     description: |
+ *       This endpoint allows the frontend to fetch a specific user's details by their **User ID**.
+ *       
+ *       - No authentication required.
+ *       - The **password** field is automatically excluded from the response.
+ *     tags:
+ *       - Authentication
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         description: The unique ID of the user to retrieve
+ *         schema:
+ *           type: string
+ *           example: 6714d65f94e6123b5a1c81b7
+ *     responses:
+ *       200:
+ *         description: User retrieved successfully
+ *         content:
+ *           application/json:
+ *             example:
+ *               statusCode: true
+ *               statusText: OK
+ *               data:
+ *                 _id: "6714d65f94e6123b5a1c81b7"
+ *                 firstName: "John"
+ *                 lastName: "Doe"
+ *                 email: "johndoe@gmail.com"
+ *                 role: "donor"
+ *                 accountType: "individual"
+ *                 createdAt: "2025-10-20T12:00:00.000Z"
+ *                 updatedAt: "2025-10-20T12:00:00.000Z"
+ *       404:
+ *         description: User not found
+ *         content:
+ *           application/json:
+ *             example:
+ *               statusCode: false
+ *               statusText: Not Found
+ *               message: User not found
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             example:
+ *               statusCode: false
+ *               statusText: Internal Server Error
+ *               message: Error retrieving user
+ */
+router.get("/user/:id", getOne);
+
+
 
 module.exports = router;

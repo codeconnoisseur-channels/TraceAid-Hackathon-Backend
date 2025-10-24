@@ -661,3 +661,29 @@ exports.setRole = async (req, res) => {
     });
   }
 };
+
+exports.getOne = async () => {
+  try {
+    const { id } = req.params;
+    const user = await userModel.findById(id).select("-password");
+
+    if (!user) {
+      return res.status(404).json({
+        statusCode: false,
+        statusText: "Not Found",
+        message: "User not found",
+      });
+    }
+    res.status(200).json({
+      statusCode: true,
+      statusText: "OK",
+      data: user,
+    });
+  } catch (error) {
+    res.status(500).json({
+      statusCode: false,
+      statusText: "Internal Server Error",
+      message: error.message,
+    });
+  }
+};
