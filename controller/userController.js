@@ -662,7 +662,7 @@ exports.setRole = async (req, res) => {
   }
 };
 
-exports.getOne = async () => {
+exports.getOne = async (req, res) => {
   try {
     const { id } = req.params;
     const user = await userModel.findById(id).select("-password");
