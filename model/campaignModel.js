@@ -4,83 +4,81 @@ const campaignSchema = new mongoose.Schema(
   {
     fundraiser: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
+      ref: "Fundraiser",
       required: true,
     },
     title: {
       type: String,
-      required: [true, "Campaign title is required"],
+      required: true,
       trim: true,
     },
     description: {
       type: String,
-      required: [true, "Campaign description is required"],
+      required: true,
       trim: true,
     },
     category: {
       type: String,
       enum: ["Health", "Education", "Community", "Environment", "Others"],
-      required: [true, "Campaign category is required"],
+      required: true,
     },
     goalAmount: {
       type: Number,
-      required: [true, "Total campaign goal amount is required"],
-      min: [1, "Goal amount must be greater than 0"],
+      required: true,
+      min: 1,
     },
     amountRaised: {
       type: Number,
       default: 0,
     },
     coverMedia: {
-      imageUrl: { type: String },
-      videoUrl: { type: String },
-      publicId: { type: String },
+      imageUrl: String,
+      publicId: String,
     },
     timeline: {
-      startDate: {
-        type: Date,
-        default: Date.now,
-      },
       endDate: {
         type: Date,
-        required: [true, "Campaign end date is required"],
+        required: true,
       },
     },
-    milestones: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Milestone",
-      },
-    ],
     supportingDocuments: [
       {
-        imageUrl: { type: String },
-        publicId: { type: String },
+        imageUrl: String,
+        publicId: String,
       },
     ],
     status: {
       type: String,
-      enum: ["pending", "approved", "active", "completed", "rejected"],
-      default: "pending",
-    },
-    rejectionReason: {
-      type: String,
-    },
-    verifiedAt: {
-      type: Date,
-    },
-    isFeatured: {
-      type: Boolean,
-      default: false,
+      enum: ["draft", "pending", "approved", "active", "completed", "rejected"],
+      default: "draft",
     },
     progressPercentage: {
       type: Number,
       default: 0,
+    },
+    donorCount: {
+      type: Number,
+      default: 0,
+    },
+    likeCount: {
+      type: Number,
+      default: 0,
+    },
+    saveCount: {
+      type: Number,
+      default: 0,
+    },
+    shareCount: {
+      type: Number,
+      default: 0,
+    },
+    isDeleted: {
+      type: Boolean,
+      default: false,
     },
   },
   { timestamps: true }
 );
 
 const Campaign = mongoose.model("Campaign", campaignSchema);
-
 module.exports = Campaign;

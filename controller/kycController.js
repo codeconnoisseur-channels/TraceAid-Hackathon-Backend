@@ -1,4 +1,4 @@
-const userModel = require("../model/userModel");
+const userModel = require("../model/fundraiserModel");
 const kycModel = require("../model/kycModel");
 const cloudinary = require("cloudinary").v2;
 const fs = require("fs");

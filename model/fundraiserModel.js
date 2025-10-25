@@ -1,22 +1,7 @@
 const mongoose = require("mongoose");
 
-const userSchema = new mongoose.Schema(
+const fundraiserSchema = new mongoose.Schema(
   {
-    accountType: {
-      type: String,
-      enum: ["individual", "organization"],
-      required: true,
-      lowercase: true,
-      trim: true,
-    },
-    firstName: {
-      type: String,
-      trim: true,
-    },
-    lastName: {
-      type: String,
-      trim: true,
-    },
     organizationName: {
       type: String,
       trim: true,
@@ -30,7 +15,6 @@ const userSchema = new mongoose.Schema(
     },
     phoneNumber: {
       type: String,
-      required: [true, "Phone number is required"],
       trim: true,
     },
     password: {
@@ -45,10 +29,7 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
-    isGoogle: {
-      type: Boolean,
-      default: false,
-    },
+
     token: {
       type: String,
       default: null,
@@ -61,8 +42,7 @@ const userSchema = new mongoose.Schema(
     },
     role: {
       type: [String],
-      enum: ["donor", "fundraiser"],
-      default: "donor",
+      default: "fundraiser",
     },
     profilePicture: {
       imageUrl: {
@@ -78,15 +58,25 @@ const userSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "KYC",
     },
+    kycStatus: {
+      type: String,
+      enum: ["not_submitted", "pending", "verified", "rejected"],
+      default: "not_submitted",
+    },
     status: {
       type: String,
       enum: ["active", "suspended", "deleted"],
       default: "active",
     },
+    wallet: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "FundraiserWallet",
+    },
   },
+
   { timestamps: true }
 );
 
-const User = mongoose.model("User", userSchema);
+const Fundraiser = mongoose.model("Fundraiser", fundraiserSchema);
 
-module.exports = User;
+module.exports = Fundraiser;

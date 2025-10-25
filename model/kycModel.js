@@ -1,21 +1,14 @@
 const mongoose = require("mongoose");
-const { validate } = require("./userModel");
+const { validate } = require("./fundraiserModel");
 
 const kycSchema = new mongoose.Schema(
   {
     user: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
+      ref: "Fundraiser",
       required: true,
       unique: true,
-      validate: {
-        validator: async function (value) {
-          const user = await mongoose.model("User").findById(value);
-          return user && user.role === "fundraiser";
-        },
-        message: "User must be an fundraiser",
       },
-    },
     organizationName: {
       type: String,
       required: [true, "Organization name is required"],
@@ -81,7 +74,7 @@ const kycSchema = new mongoose.Schema(
     bankName: {
       type: String,
       required: [true, "Bank name is required"],
-      trim: true
+      trim: true,
     },
     description: {
       type: String,
