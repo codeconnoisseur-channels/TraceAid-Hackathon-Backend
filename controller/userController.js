@@ -1,4 +1,4 @@
-const userModel = require("../model/userModel");
+const userModel = require("../model/fundraiserModel");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const generateOTPCode = require("../middleware/generateOTP");

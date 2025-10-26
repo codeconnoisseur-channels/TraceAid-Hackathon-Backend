@@ -4,9 +4,8 @@ const donationSchema = new mongoose.Schema(
   {
     donor: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
+      ref: "Donor",
       required: [true, "Donation must belong to a donor"],
-      role: "donor"
     },
     campaign: {
       type: mongoose.Schema.Types.ObjectId,
@@ -16,7 +15,7 @@ const donationSchema = new mongoose.Schema(
     amount: {
       type: Number,
       required: [true, "Donation amount is required"],
-      min: [1, "Donation amount must be at least 1"],
+      min: 1,
     },
     currency: {
       type: String,
@@ -25,22 +24,17 @@ const donationSchema = new mongoose.Schema(
     },
     paymentReference: {
       type: String,
-      required: [true, "Payment reference is required"],
+      required: true,
       unique: true,
     },
     transactionId: {
       type: String,
-      required: [true, "Korapay transaction ID is required"],
+      required: true,
       unique: true,
-    },
-    paymentMethod: {
-      type: String,
-      enum: ["Korapay"],
-      default: "Korapay",
     },
     paymentStatus: {
       type: String,
-      enum: ["pending", "successful", "failed"],
+      enum: ["pending", "successful", "failed", "refunded"],
       default: "pending",
     },
     isAnonymous: {
@@ -51,21 +45,10 @@ const donationSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
-    paymentReceipt: {
-      imageUrl: { type: String },
-      publicId: { type: String },
-    },
-    refunded: {
-      type: Boolean,
-      default: false,
-    },
-    verifiedAt: {
-      type: Date,
-    },
+    verifiedAt: { type: Date },
   },
   { timestamps: true }
 );
 
 const Donation = mongoose.model("Donation", donationSchema);
-
 module.exports = Donation;
