@@ -7,6 +7,10 @@ const adminActivitySchema = new mongoose.Schema(
       ref: "User",
       required: [true, "Admin reference is required"],
     },
+    role: {
+      type: String,
+      default: "admin",
+    },
     actionType: {
       type: String,
       required: [true, "Action type is required"],
