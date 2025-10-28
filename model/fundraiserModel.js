@@ -29,7 +29,12 @@ const fundraiserSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
-
+    role: {
+      type: String,
+      enum: ["fundraiser", "admin"],
+      default: "fundraiser",
+      required: true,
+    },
     token: {
       type: String,
       default: null,
@@ -39,10 +44,6 @@ const fundraiserSchema = new mongoose.Schema(
     },
     otpExpiredAt: {
       type: Date,
-    },
-    role: {
-      type: [String],
-      default: "fundraiser",
     },
     profilePicture: {
       imageUrl: {

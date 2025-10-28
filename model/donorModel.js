@@ -2,13 +2,7 @@ const mongoose = require("mongoose");
 
 const donorSchema = new mongoose.Schema(
   {
-    accountType: {
-      type: String,
-      enum: ["individual", "organization"],
-      required: true,
-      lowercase: true,
-      trim: true,
-    },
+
     firstName: {
       type: String,
       trim: true,
@@ -35,6 +29,7 @@ const donorSchema = new mongoose.Schema(
     acceptedTerms: {
       type: Boolean,
       required: [true, "You must accept the terms and conditions"],
+      default: false
     },
     isVerified: {
       type: Boolean,
@@ -56,6 +51,7 @@ const donorSchema = new mongoose.Schema(
     },
     role: {
       type: String,
+      enum: ["donor", "fundraiser"],
       default: "donor",
     },
     isAnonymousDefault: {

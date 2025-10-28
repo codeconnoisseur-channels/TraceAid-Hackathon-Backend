@@ -4,24 +4,16 @@ const cloudinary = require("cloudinary").v2;
 const fs = require("fs");
 
 exports.addKyc = async (req, res) => {
-  const userId = req.user._id;
-  const { role, kyc, accountType } = req.user;
-  const files = req.files || {};
-
   try {
-    if (accountType !== "organization" || role !== "fundraiser") {
-      return res.status(401).json({
-        statusCode: false,
-        statusText: "Unauthorized",
-        message: "Only Fundraiser (Organization) accounts can submit KYC.",
-      });
-    }
+    const userId = req.user._id;
+    const files = req.files || {};
 
-    if (kyc) {
+    const existingKyc = await kycModel.findOne({ user: userId });
+    if (existingKyc) {
       return res.status(400).json({
         statusCode: false,
         statusText: "Bad Request",
-        message: "KYC document already linked to your account.",
+        message: "KYC document already submitted for this account.",
       });
     }
 
@@ -36,27 +28,6 @@ exports.addKyc = async (req, res) => {
       bankName,
       description,
     } = req.body;
-
-    const requiredFields = {
-      organizationName,
-      registrationNumber,
-      authorizedRepresentativeFullName,
-      organizationAddress,
-      bankAccountName,
-      bankAccountNumber,
-      bankName,
-      description,
-    };
-
-    for (const [key, value] of Object.entries(requiredFields)) {
-      if (!value) {
-        return res.status(400).json({
-          statusCode: false,
-          statusText: "Bad Request",
-          message: `${key} is required`,
-        });
-      }
-    }
 
     const certFile = files["registrationCertificate"]?.[0];
     const idFile = files["authorizedRepresentativeId"]?.[0];
@@ -74,7 +45,7 @@ exports.addKyc = async (req, res) => {
 
     const allFiles = [certFile, idFile, proofFile];
     for (const file of allFiles) {
-      if (!allowedTypes.includes(file.mimetype)) {
+      if (file && !allowedTypes.includes(file.mimetype)) {
         return res.status(400).json({
           statusCode: false,
           statusText: "Bad Request",

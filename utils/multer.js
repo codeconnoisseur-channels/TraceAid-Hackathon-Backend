@@ -1,29 +1,43 @@
 const multer = require("multer");
-const fs = require("fs")
+const fs = require("fs");
+const path = require("path");
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    fs.mkdirSync('./images', {recursive: true})
-    cb(null, "./images");
+    const uploadDir = path.join(process.cwd(), "uploads");
+    fs.mkdirSync(uploadDir, { recursive: true });
+    cb(null, uploadDir);
   },
 
   filename: (req, file, cb) => {
     const uniqueSuffix = `${Date.now()}_${Math.round(Math.random() * 1e9)}`;
-    const ext = file.mimetype.split("/")[1];
-    cb(null, `IMG_${uniqueSuffix}.${ext}`);
+    const ext = file.mimetype.split("/")[1] || path.extname(file.originalname).slice(1);
+    cb(null, `${file.fieldname}_${uniqueSuffix}.${ext}`);
   },
 });
 
 const fileFilter = (req, file, cb) => {
-  if (file.mimetype.startsWith("image/")) {
+  const allowedMimeTypes = [
+    "image/jpeg",
+    "image/jpg",
+    "image/png",
+    "image/webp",
+    "video/mp4",
+    "video/mkv",
+    "application/pdf",
+    "application/msword",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  ];
+
+  if (allowedMimeTypes.includes(file.mimetype)) {
     cb(null, true);
   } else {
-    cb(new Error("Invalid file format: Images only"));
+    cb(new Error("Invalid file format: Only images, videos, and documents are allowed."), false);
   }
 };
 
 const limits = {
-  fileSize: 1024 * 1024 * 10,
+  fileSize: 1024 * 1024 * 50,
 };
 
 const uploads = multer({

@@ -7,12 +7,12 @@ const milestoneSchema = new mongoose.Schema(
       ref: "Campaign",
       required: true,
     },
-    title: {
+    milestoneTitle: {
       type: String,
       required: true,
       trim: true,
     },
-    description: {
+    milestoneDescription: {
       type: String,
       required: true,
       trim: true,

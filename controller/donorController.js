@@ -1,51 +1,26 @@
-const userModel = require("../model/fundraiserModel");
+const donorModel = require("../model/donorModel");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
-const generateOTPCode = require("../middleware/generateOTP");
+const generateOTPCode = require("../helper/generateOTP");
 const { registerOTP, forgotPasswordLink } = require("../emailTemplate/emailVerification");
 const { sendEmail } = require("../utils/brevo");
 const cloudinary = require("../config/cloudinary");
 const fs = require("fs");
 const path = require("path");
-const { individualNameToTitleCase, organizationNameToTitleCase } = require("../helper/nameConverter");
+const { individualNameToTitleCase } = require("../helper/nameConverter");
 
 exports.registerUser = async (req, res) => {
   try {
-    const { firstName, lastName, organizationName, email, phoneNumber, password, confirmPassword, accountType, acceptedTerms } = req.body;
+    const { firstName, lastName, email, phoneNumber, password, confirmPassword, acceptedTerms } = req.body;
 
-    if (!accountType) {
+    const existingUser = await donorModel.findOne({ email });
+    if (existingUser) {
       return res.status(400).json({
         statusCode: false,
         statusText: "Bad Request",
-        message: "Account type is required (individual or  organization)",
+        message: "User with this email already exists",
       });
     }
-
-    if (accountType === "organization") {
-      if (!organizationName || !email || !phoneNumber || !password || !confirmPassword || !acceptedTerms) {
-        return res.status(400).json({
-          statusCode: false,
-          statusText: "Bad Request",
-          message: "All organization fields are required",
-        });
-      }
-    } else if (accountType === "individual") {
-      if (!firstName || !lastName || !email || !phoneNumber || !password || !confirmPassword || !acceptedTerms) {
-        return res.status(400).json({
-          statusCode: false,
-          statusText: "Bad Request",
-          message: "All individual fields are required",
-        });
-      }
-    } else {
-      return res.status(400).json({
-        statusCode: false,
-        statusText: "Bad Request",
-        message: "Invalid account type provided",
-      });
-    }
-
-    const determinedRole = accountType === "organization" ? "fundraiser" : "donor";
 
     if (password !== confirmPassword) {
       return res.status(400).json({
@@ -55,35 +30,23 @@ exports.registerUser = async (req, res) => {
       });
     }
 
-    const existingUser = await userModel.findOne({ email });
-    if (existingUser) {
-      return res.status(400).json({
-        statusCode: false,
-        statusText: "Bad Request",
-        message: "User with this email already exists",
-      });
-    }
-
     const saltPassword = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, saltPassword);
     const { otp, expiresAt } = generateOTPCode();
 
-    const newUser = new userModel({
+    const newUser = new donorModel({
       firstName: individualNameToTitleCase(firstName),
       lastName: individualNameToTitleCase(lastName),
-      organizationName: organizationNameToTitleCase(organizationName),
-      email,
+      email: email.toLowerCase(),
       phoneNumber: `+234${phoneNumber.slice(1)}`,
       password: hashedPassword,
       confirmPassword,
-      role: determinedRole,
-      accountType,
       acceptedTerms,
       otp: otp,
       otpExpiredAt: expiresAt,
     });
 
-    const displayName = accountType === "individual" ? `${newUser.firstName} ` : newUser.organizationName;
+    const displayName = newUser.firstName;
 
     const mailDetails = {
       email: newUser.email,
@@ -122,7 +85,7 @@ exports.verifyUser = async (req, res) => {
       });
     }
 
-    const user = await userModel.findOne({ email: email.toLowerCase() });
+    const user = await donorModel.findOne({ email: email.toLowerCase() });
 
     if (!user) {
       return res.status(404).json({
@@ -181,7 +144,7 @@ exports.resendOTP = async (req, res) => {
       });
     }
 
-    const user = await userModel.findOne({ email: email.toLowerCase() });
+    const user = await donorModel.findOne({ email: email.toLowerCase() });
 
     if (!user) {
       return res.status(404).json({
@@ -204,12 +167,12 @@ exports.resendOTP = async (req, res) => {
     user.otp = otp;
     user.otpExpiredAt = expiresAt;
 
-    const displayName = accountType === "individual" ? `${user.firstName}` : user.organizationName;
+    const displayName = user.firstName;
 
     const mailDetails = {
-      email: newUser.email,
+      email: user.email,
       subject: "Email Verification",
-      html: registerOTP(newUser.otp, displayName),
+      html: registerOTP(user.otp, displayName),
     };
 
     await sendEmail(mailDetails);
@@ -242,7 +205,7 @@ exports.loginUser = async (req, res) => {
       });
     }
 
-    const user = await userModel.findOne({ email: email.toLowerCase() });
+    const user = await donorModel.findOne({ email: email.toLowerCase() });
 
     if (!user) {
       return res.status(404).json({
@@ -314,7 +277,7 @@ exports.checkAuth = async (req, res) => {
           message: "Invalid token",
         });
       } else {
-        const checkUser = userModel.findById(data.id);
+        const checkUser = donorModel.findById(data.id);
         res.status(200).json({
           statusCode: true,
           statusText: "OK",
@@ -344,7 +307,7 @@ exports.forgotPassword = async (req, res) => {
       });
     }
 
-    const user = await userModel.findOne({ email: email.toLowerCase() });
+    const user = await donorModel.findOne({ email: email.toLowerCase() });
 
     if (!user) {
       return res.status(404).json({
@@ -360,8 +323,7 @@ exports.forgotPassword = async (req, res) => {
 
     const link = `${req.protocol}://${req.get("host")}/api/v1/reset-password/${token}/${user._id}`;
 
-    const { accountType } = user;
-    const displayName = accountType === "individual" ? `${user.firstName}` : user.organizationName;
+    const displayName = user.firstName;
 
     const mailDetails = {
       email: user.email,
@@ -388,7 +350,7 @@ exports.forgotPassword = async (req, res) => {
 
 exports.resetPassword = async (req, res) => {
   try {
-    const { id, token } = req.params;
+    const { token } = req.params;
     const { password, confirmPassword } = req.body;
 
     if (!password || !confirmPassword) {
@@ -411,7 +373,7 @@ exports.resetPassword = async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, saltPassword);
 
     const userId = req.params.id;
-    const user = await userModel.findOne({ _id: userId, token: req.params.token });
+    const user = await donorModel.findOne({ _id: userId, token: req.params.token });
 
     jwt.verify(token, process.env.JWT_SECRET, async (error, result) => {
       if (error) {
@@ -421,7 +383,7 @@ exports.resetPassword = async (req, res) => {
           message: "Email Expired",
         });
       } else {
-        await userModel.findByIdAndUpdate(user._id, { password: hashedPassword, token: null }, { new: true, runValidators: true });
+        await donorModel.findByIdAndUpdate(user._id, { password: hashedPassword, token: null }, { new: true, runValidators: true });
         res.status(200).json({
           statusCode: true,
           statusText: "OK",
@@ -442,7 +404,7 @@ exports.resetPassword = async (req, res) => {
 exports.changePassword = async (req, res) => {
   try {
     const { id } = req.user;
-    const user = await userModel.findById(id);
+    const user = await donorModel.findById(id);
 
     if (!user) {
       return res.status(404).json({
@@ -490,7 +452,7 @@ exports.changePassword = async (req, res) => {
     const saltPassword = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(newPassword, saltPassword);
 
-    await userModel.findByIdAndUpdate(user._id, { password: hashedPassword }, { new: true, runValidators: true });
+    await donorModel.findByIdAndUpdate(user._id, { password: hashedPassword }, { new: true, runValidators: true });
 
     res.status(200).json({
       statusCode: true,
@@ -509,12 +471,12 @@ exports.changePassword = async (req, res) => {
 
 exports.updateProfile = async (req, res) => {
   try {
-    const { firstName, lastName, organizationName, phoneNumber } = req.body;
+    const { firstName, lastName, phoneNumber } = req.body;
     const { id } = req.params;
     const file = req.file;
     let uploadProfilePicture;
 
-    const user = await userModel.findById(id);
+    const user = await donorModel.findById(id);
     if (!user) {
       if (file && file.path) fs.unlinkSync(file.path);
       return res.status(404).json({
@@ -525,14 +487,16 @@ exports.updateProfile = async (req, res) => {
     }
 
     if (file && file.path) {
-      uploadProfilePicture = await cloudinary.uploader.upload(file.path);
+      uploadProfilePicture = await cloudinary.uploader.upload(file.path, {
+        folder: "TraceAid-Profile-Pictures",
+        transformation: [{ width: 500, height: 500, crop: "fill" }],
+      });
       fs.unlinkSync(file.path);
     }
 
     const updateProfile = {
       firstName: individualNameToTitleCase(firstName ?? user.firstName),
       lastName: individualNameToTitleCase(lastName ?? user.lastName),
-      organizationName: organizationNameToTitleCase(organizationName ?? user.organizationName),
       phoneNumber: phoneNumber ? `+234${phoneNumber.slice(1)}` : user.phoneNumber,
     };
 
@@ -543,7 +507,9 @@ exports.updateProfile = async (req, res) => {
       };
     }
 
-    const updatedUser = await userModel.findByIdAndUpdate(user._id, updateProfile, { new: true, runValidators: true });
+    const updatedUser = await donorModel
+      .findByIdAndUpdate(user._id, updateProfile, { new: true, runValidators: true })
+      .select(-password - otp - token);
 
     res.status(200).json({
       statusCode: true,
@@ -552,6 +518,7 @@ exports.updateProfile = async (req, res) => {
       data: updatedUser,
     });
   } catch (error) {
+    if (req.file && req.file.path) fs.unlinkSync(req.file.path);
     res.status(500).json({
       statusCode: false,
       statusText: "Internal Server Error",
@@ -576,7 +543,7 @@ exports.googleAuth = async (req, res) => {
 
     const { email, name, picture } = decoded;
     const normalizedEmail = email.toLowerCase();
-    let user = await userModel.findOne({ email: normalizedEmail });
+    let user = await donorModel.findOne({ email: normalizedEmail });
 
     let isNewUser = false;
 
@@ -586,7 +553,7 @@ exports.googleAuth = async (req, res) => {
       const saltPassword = await bcrypt.genSalt(10);
       const hashedPassword = await bcrypt.hash(tempPassword, saltPassword);
 
-      user = await userModel.create({
+      user = await donorModel.create({
         fullName: name,
         email: normalizedEmail,
         password: hashedPassword,
@@ -645,7 +612,7 @@ exports.setRole = async (req, res) => {
     }
     const role = accountType === "organization" ? "fundraiser" : "donor";
 
-    const updatedUser = await userModel.findByIdAndUpdate(userId, { accountType, role }, { new: true }).select("-password");
+    const updatedUser = await donorModel.findByIdAndUpdate(userId, { accountType, role }, { new: true }).select("-password");
 
     res.status(200).json({
       statusCode: true,
@@ -665,7 +632,7 @@ exports.setRole = async (req, res) => {
 exports.getOne = async (req, res) => {
   try {
     const { id } = req.params;
-    const user = await userModel.findById(id).select("-password");
+    const user = await donorModel.findById(id).select("-password");
 
     if (!user) {
       return res.status(404).json({
