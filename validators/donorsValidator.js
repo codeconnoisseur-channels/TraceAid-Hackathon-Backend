@@ -66,10 +66,6 @@ exports.registerValidator = (req, res, next) => {
       "string.empty": "Confirm password cannot be empty",
       "any.required": "Confirm password is required",
     }),
-    accountType: joi.string().valid("individual", "organization").required().messages({
-      "string.empty": "Account type is required",
-      "any.only": "Account type must be either 'individual' or 'organization'",
-    }),
     acceptedTerms: joi.boolean().valid(true).required().messages({
       "any.only": "You must accept the terms and conditions",
       "any.required": "You must accept the terms and conditions",

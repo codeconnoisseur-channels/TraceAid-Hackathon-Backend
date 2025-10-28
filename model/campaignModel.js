@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const { CAMPAIGN_CATEGORY_VALUES } = require("../enum/campaignCategoriesEnum");
 
 const campaignSchema = new mongoose.Schema(
   {
@@ -7,22 +8,22 @@ const campaignSchema = new mongoose.Schema(
       ref: "Fundraiser",
       required: true,
     },
-    title: {
+   CampaignTitle: {
       type: String,
       required: true,
       trim: true,
     },
-    description: {
+    campaignDescription: {
       type: String,
       required: true,
       trim: true,
     },
-    category: {
+    campaignCategory: {
       type: String,
-      enum: ["Health", "Education", "Community", "Environment", "Others"],
+      enum: CAMPAIGN_CATEGORY_VALUES,
       required: true,
     },
-    goalAmount: {
+    TotalCampaignGoalAmount: {
       type: Number,
       required: true,
       min: 1,
@@ -31,11 +32,11 @@ const campaignSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
-    coverMedia: {
+    campaignCoverImageOrVideo: {
       imageUrl: String,
       publicId: String,
     },
-    timeline: {
+    campaignDuration: {
       endDate: {
         type: Date,
         required: true,

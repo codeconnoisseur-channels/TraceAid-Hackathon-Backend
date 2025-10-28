@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const { authenticate } = require("../middleware/auth");
+const { authenticate, isFundraiser } = require("../middleware/auth");
 const { kycValidator } = require("../validators/kycValidator");
 const { addKyc } = require("../controller/kycController");
 const uploads = require("../utils/multer");
@@ -181,6 +181,7 @@ const uploads = require("../utils/multer");
 router.post(
   "/add-kyc",
   authenticate,
+  isFundraiser,
   kycValidator,
   uploads.fields([
     { name: "registrationCertificate", maxCount: 1 },
