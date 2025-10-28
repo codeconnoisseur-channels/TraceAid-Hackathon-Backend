@@ -7,9 +7,12 @@ const session = require("express-session");
 const passport = require("passport");
 const swaggerJSDoc = require("swagger-jsdoc");
 const swaggerUi = require("swagger-ui-express");
+const kycRouter = require('./routes/kycRouter')
 const donorRouter = require("./routes/donorRouter");
 const fundraiserRouter = require("./routes/fundraiserRouter");
-const kycRouter = require('./routes/kycRouter')
+const adminAuthRouter = require("./routes/adminAuthRouter");
+const adminRouter = require("./routes/adminRouter")
+
 
 const app = express();
 app.use(express.json());
@@ -80,6 +83,8 @@ app.use(passport.session());
 app.use("/donor/api/v1", donorRouter);
 app.use("/fundraiser/api/v1", fundraiserRouter)
 app.use("/api/v1", kycRouter);
+app.use("/api/v1", adminAuthRouter);
+app.use("/api/v1", adminRouter)
 
 app.use((error, req, res, next) => {
   if (error) {

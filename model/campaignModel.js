@@ -53,6 +53,10 @@ const campaignSchema = new mongoose.Schema(
       enum: ["draft", "pending", "approved", "active", "completed", "rejected"],
       default: "draft",
     },
+    rejectionReason: {
+      type: String,
+      trim: true,
+    },
     progressPercentage: {
       type: Number,
       default: 0,
