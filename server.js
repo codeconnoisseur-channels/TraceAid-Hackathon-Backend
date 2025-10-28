@@ -7,13 +7,11 @@ const session = require("express-session");
 const passport = require("passport");
 const swaggerJSDoc = require("swagger-jsdoc");
 const swaggerUi = require("swagger-ui-express");
-
-const donorRouter = require("./routes/donorRouter");
-const fundraiserRouter = require("./routes/fundraiserRouter");
-const kycRouter = require('./routes/kycRouter')
+const kycRouter = require("./routes/kycRouter");
 const adminAuthRouter = require("./routes/adminAuthRouter");
 const adminRouter = require("./routes/adminRouter")
-
+const donorRouter = require("./routes/donorRouter");
+const fundraiserRouter = require("./routes/fundraiserRouter");
 
 const app = express();
 app.use(express.json());
