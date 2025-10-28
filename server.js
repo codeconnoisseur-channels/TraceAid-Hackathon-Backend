@@ -8,7 +8,9 @@ const passport = require("passport");
 const swaggerJSDoc = require("swagger-jsdoc");
 const swaggerUi = require("swagger-ui-express");
 const userRouter = require("./routes/userRouter");
-const kycRouter = require('./routes/kycRouter')
+const kycRouter = require("./routes/kycRouter");
+const adminAuthRouter = require("./routes/adminAuthRouter");
+const adminRouter = require("./routes/adminRouter")
 
 const app = express();
 app.use(express.json());
@@ -78,6 +80,8 @@ app.use(passport.session());
 
 app.use("/api/v1", userRouter);
 app.use("/api/v1", kycRouter);
+app.use("/api/v1", adminAuthRouter);
+app.use("/api/v1", adminRouter)
 
 app.use((error, req, res, next) => {
   if (error) {
