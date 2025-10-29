@@ -27,7 +27,7 @@ const router = require("express").Router();
 
 /**
  * @swagger
- * /api/v1/admin/register:
+ * /admin-auth/api/v1/register:
  *   post:
  *     summary: Register a new admin
  *     description: Create a new admin account. Sends an OTP to the provided email for verification. Passwords must match.
@@ -149,11 +149,11 @@ const router = require("express").Router();
  *                   type: string
  *                   example: "An unexpected error occurred."
  */
-router.post("/admin/register", registerValidator, registerAdmin);
+router.post("/register", registerValidator, registerAdmin);
 
 /**
  * @swagger
- * /api/v1/admin/verify-otp:
+ * /admin-auth/api/v1/verify-otp:
  *   post:
  *     summary: Verify an admin's email using OTP
  *     description: Verifies an admin account by validating the OTP sent to their registered email during registration. Once verified, the admin can log in.
@@ -242,11 +242,11 @@ router.post("/admin/register", registerValidator, registerAdmin);
  *                   type: string
  *                   example: "An unexpected error occurred."
  */
-router.post("/admin/verify-otp", verifyValidator, verifyAdmin);
+router.post("/verify-otp", verifyValidator, verifyAdmin);
 
 /**
  * @swagger
- * /api/v1/admin/resend-otp:
+ * /admin-auth/api/v1/resend-otp:
  *   post:
  *     summary: Resend OTP for admin email verification
  *     description: Resends a new OTP to the admin's registered email address if the previous OTP has expired or was not received.
@@ -331,11 +331,11 @@ router.post("/admin/verify-otp", verifyValidator, verifyAdmin);
  *                   type: string
  *                   example: "An unexpected error occurred."
  */
-router.post("/admin/resend-otp", resendValidator, resendOTP);
+router.post("/resend-otp", resendValidator, resendOTP);
 
 /**
  * @swagger
- * /api/v1/admin/login:
+ * /admin-auth/api/v1/login:
  *   post:
  *     summary: Login an admin
  *     description: Authenticates an admin using email and password credentials. Returns an access token upon successful login.
@@ -462,11 +462,11 @@ router.post("/admin/resend-otp", resendValidator, resendOTP);
  *                   type: string
  *                   example: "An unexpected error occurred."
  */
-router.post("/admin/login", loginValidator, loginAdmin);
+router.post("/login", loginValidator, loginAdmin);
 
 /**
  * @swagger
- * /api/v1/admin/forgot-password:
+ * /admin-auth/api/v1/forgot-password:
  *   post:
  *     summary: Initiate admin password reset
  *     description: Sends a password reset OTP or link to the admin's registered email address to allow password recovery.
@@ -551,11 +551,11 @@ router.post("/admin/login", loginValidator, loginAdmin);
  *                   type: string
  *                   example: "An unexpected error occurred while processing your request."
  */
-router.post("/admin/forgot-password", forgotPasswordValidator, forgotPassword);
+router.post("/forgot-password", forgotPasswordValidator, forgotPassword);
 
 /**
  * @swagger
- * /api/v1/admin/reset-password/{token}/{id}:
+ * /admin-auth/api/v1/reset-password/{token}/{id}:
  *   put:
  *     summary: Reset admin password
  *     description: Allows an admin to reset their password using a valid password reset token and user ID.
@@ -677,14 +677,14 @@ router.post("/admin/forgot-password", forgotPasswordValidator, forgotPassword);
  *                   example: "An unexpected error occurred while resetting the password."
  */
 router.put(
-  "/admin/reset-password/:token/:id",
+  "/reset-password/:token/:id",
   resetPasswordValidator,
   resetPassword
 );
 
 /**
  * @swagger
- * /api/v1/admin/change-password:
+ * /admin-auth/api/v1/change-password:
  *   put:
  *     summary: Change admin account password
  *     description: Allows a logged-in admin to change their password by providing the current password and a new one.
@@ -798,7 +798,7 @@ router.put(
  *                   example: "An unexpected error occurred while changing the password."
  */
 router.put(
-  "/admin/change-password",
+  "/change-password",
   changePasswordValidator,
   protectAdmin,
   changePassword
@@ -806,7 +806,7 @@ router.put(
 
 /**
  * @swagger
- * /api/v1/admin/update/{id}:
+ * /admin-auth/api/v1/update/{id}:
  *   put:
  *     summary: Update admin profile
  *     description: Allows an authenticated admin to update their profile information such as first name, last name, and profile picture.
@@ -946,7 +946,7 @@ router.put(
  *                   example: "An unexpected error occurred while updating profile."
  */
 router.put(
-  "/admin/update/:id",
+  "/update/:id",
   updateProfileValidator,
   protectAdmin,
   uploads.single("profilePicture"),
@@ -955,7 +955,7 @@ router.put(
 
 /**
  * @swagger
- * /api/v1/admin/admin/{id}:
+ * /admin-auth/api/v1/admin/{id}:
  *   get:
  *     summary: Get admin details by ID
  *     description: Retrieves detailed information about a specific admin. This route is protected and requires authentication.
@@ -1069,5 +1069,5 @@ router.put(
  *                   type: string
  *                   example: "An unexpected error occurred while fetching admin details."
  */
-router.get("/admin/admin/:id", protectAdmin, getOne);
+router.get("/admin/:id", protectAdmin, getOne);
 module.exports = router;

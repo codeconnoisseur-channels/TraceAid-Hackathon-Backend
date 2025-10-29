@@ -29,7 +29,7 @@ const router = require("express").Router();
 
 /**
  * @swagger
- * /api/v1/donor/register:
+ * /donor/api/v1/register:
  *   post:
  *     summary: Register a new donor
  *     description: Creates a new donor account and sends an OTP to the user's email for verification.
@@ -162,7 +162,7 @@ router.post("/register", registerValidator, registerUser);
 
 /**
  * @swagger
- * /api/v1/donors/verify-otp:
+ * /donor/api/v1/verify-otp:
  *   post:
  *     summary: Verify donor email with OTP
  *     tags: [Donor Authentication]
@@ -253,7 +253,7 @@ router.post("/resend-otp", resendValidator, resendOTP);
 
 /**
  * @swagger
- * /api/v1/donors/login:
+ * /donor/api/v1/login:
  *   post:
  *     summary: Donor Login
  *     tags: [Donor Authentication]
@@ -375,7 +375,7 @@ router.post("/login", loginValidator, loginUser);
 
 /**
  * @swagger
- * /api/v1/donors/forgot-password:
+ * /donor/api/v1/forgot-password:
  *   post:
  *     summary: Initiate password reset
  *     tags: [Donor Authentication]
@@ -463,7 +463,7 @@ router.post("/forgot-password", forgotPasswordValidator, forgotPassword);
 
 /**
  * @swagger
- * /api/v1/users/reset-password/{token}/{id}:
+ * /donor/api/v1/users/reset-password/{token}/{id}:
  *   put:
  *     summary: Reset user password
  *     tags: [Donor Authentication]
@@ -569,7 +569,7 @@ router.put("/reset-password/:token/:id", resetPasswordValidator, resetPassword);
 
 /**
  * @swagger
- * /api/v1/users/change-password/{id}:
+ * /donor/api/v1/users/change-password/{id}:
  *   put:
  *     summary: Change user password (authenticated)
  *     tags: [Donor Authentication]
@@ -695,7 +695,7 @@ router.put(
 
 /**
  * @swagger
- * /api/v1/users/update/{id}:
+ * /donor/api/v1/users/update/{id}:
  *   put:
  *     summary: Update user profile
  *     tags: [Donor Authentication]
@@ -843,7 +843,7 @@ router.put(
 
 /**
  * @swagger
- * /api/v1/users/auth/google:
+ * /donor/api/v1/users/auth/google:
  *   get:
  *     summary: Initiate Google OAuth login
  *     tags: [Donor Authentication]
@@ -878,7 +878,7 @@ router.get("/auth/google", profile);
 
 /**
  * @swagger
- * /api/v1/users/auth/google/callback:
+ * /donor/api/v1/users/auth/google/callback:
  *   get:
  *     summary: Handle Google OAuth callback
  *     tags: [Donor Authentication]
@@ -955,7 +955,7 @@ router.get("/auth/google/callback", loginProfile);
 
 /**
  * @swagger
- * /api/v1/set-role:
+ * /donor/api/v1/set-role:
  *   put:
  *     summary: Set user account type and role
  *     description: |
@@ -1036,7 +1036,7 @@ router.put("/set-role", authenticate, setRole);
 
 /**
  * @swagger
- * /api/v1/users/auth/google:
+ * /donor/api/v1/users/auth/google:
  *   post:
  *     summary: Authenticate user with Google
  *     tags: [Donor Authentication]
@@ -1132,7 +1132,7 @@ router.post("/auth/google", googleAuth);
 
 /**
  * @swagger
- * /api/v1/users/user/{id}:
+ * /donor/api/v1/users/user/{id}:
  *   get:
  *     summary: Retrieve a user profile by ID
  *     tags: [Donor Authentication]

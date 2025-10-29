@@ -82,8 +82,8 @@ app.use(passport.session());
 app.use("/donor/api/v1", donorRouter);
 app.use("/fundraiser/api/v1", fundraiserRouter)
 app.use("/api/v1", kycRouter);
-app.use("/api/v1", adminAuthRouter);
-app.use("/api/v1", adminRouter)
+app.use("/admin-auth/api/v1", adminAuthRouter);
+app.use("/admin/api/v1", adminRouter)
 
 app.use((error, req, res, next) => {
   if (error) {
