@@ -466,7 +466,7 @@ router.post("/forgot-password", forgotPasswordValidator, forgotPassword);
  * /api/v1/users/reset-password/{token}/{id}:
  *   put:
  *     summary: Reset user password
- *     tags: [User Authentication]
+ *     tags: [Donor Authentication]
  *     description: Allows a user to reset their password using a valid reset token sent via email.
  *     parameters:
  *       - in: path
@@ -572,7 +572,7 @@ router.put("/reset-password/:token/:id", resetPasswordValidator, resetPassword);
  * /api/v1/users/change-password/{id}:
  *   put:
  *     summary: Change user password (authenticated)
- *     tags: [User Authentication]
+ *     tags: [Donor Authentication]
  *     description: Allows an authenticated user to change their password by providing the current and new passwords.
  *     security:
  *       - bearerAuth: []
@@ -698,7 +698,7 @@ router.put(
  * /api/v1/users/update/{id}:
  *   put:
  *     summary: Update user profile
- *     tags: [User Profile]
+ *     tags: [Donor Authentication]
  *     description: Allows an authenticated user to update their profile information, including uploading a profile picture.
  *     security:
  *       - bearerAuth: []
@@ -846,7 +846,7 @@ router.put(
  * /api/v1/users/auth/google:
  *   get:
  *     summary: Initiate Google OAuth login
- *     tags: [User Authentication]
+ *     tags: [Donor Authentication]
  *     description: Redirects the user to Google for authentication. After successful login, Google redirects the user back to your callback endpoint with an authorization code.
  *     responses:
  *       302:
@@ -881,7 +881,7 @@ router.get("/auth/google", profile);
  * /api/v1/users/auth/google/callback:
  *   get:
  *     summary: Handle Google OAuth callback
- *     tags: [User Authentication]
+ *     tags: [Donor Authentication]
  *     description: Handles the callback from Google after the user authorizes the application. Retrieves user information from Google and either logs in the existing user or registers a new account.
  *     responses:
  *       200:
@@ -1039,7 +1039,7 @@ router.put("/set-role", authenticate, setRole);
  * /api/v1/users/auth/google:
  *   post:
  *     summary: Authenticate user with Google
- *     tags: [User Authentication]
+ *     tags: [Donor Authentication]
  *     description: Authenticates a user using a Google ID token sent from the client. If the user does not exist, a new account is created automatically.
  *     requestBody:
  *       required: true
@@ -1135,7 +1135,7 @@ router.post("/auth/google", googleAuth);
  * /api/v1/users/user/{id}:
  *   get:
  *     summary: Retrieve a user profile by ID
- *     tags: [User Management]
+ *     tags: [Donor Authentication]
  *     description: Fetch detailed profile information for a specific user using their unique ID.
  *     parameters:
  *       - in: path
