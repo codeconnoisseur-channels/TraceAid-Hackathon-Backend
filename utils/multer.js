@@ -6,6 +6,8 @@ const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     const uploadDir = path.join(process.cwd(), "uploads");
     fs.mkdirSync(uploadDir, { recursive: true });
+
+    console.log("i am uploadsss",uploadDir)
     cb(null, uploadDir);
   },
 
@@ -17,18 +19,7 @@ const storage = multer.diskStorage({
 });
 
 const fileFilter = (req, file, cb) => {
-  const allowedMimeTypes = [
-    "image/jpeg",
-    "image/jpg",
-    "image/png",
-    "image/webp",
-    "video/mp4",
-    "video/mkv",
-    "application/pdf",
-    "application/msword",
-  ];
-
-  if (allowedMimeTypes.includes(file.mimetype)) {
+  if (file.mimetype.startsWith("image") || file.mimetype.startsWith("video") || file.mimetype.startsWith("application/pdf")) {
     cb(null, true);
   } else {
     cb(new Error("Invalid file format: Only images, videos, and documents are allowed."), false);

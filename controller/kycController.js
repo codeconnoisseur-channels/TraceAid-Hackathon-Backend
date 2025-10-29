@@ -6,9 +6,12 @@ const fs = require("fs");
 exports.addKyc = async (req, res) => {
   try {
     const userId = req.user._id;
-        console.log("USER ID:", userId);
+console.log("req files", req.files)
+    console.log("USER ID:", userId);
 
-    const files = req.files || [];
+    const file = req.files || [];
+    
+    console.log("FILE:", file);
 
     const existingKyc = await kycModel.findOne({ user: userId });
     if (existingKyc) {
@@ -28,16 +31,22 @@ exports.addKyc = async (req, res) => {
       bankAccountName,
       bankAccountNumber,
       bankName,
-      description,
     } = req.body;
 
-    console.log("FILES:", files.map(f => f.fieldname));
+    console.log("BODY:", req.body);
 
-const certFile = files.find(f => f.fieldname === "registrationCertificate");
-const idFile = files.find(f => f.fieldname === "authorizedRepresentativeId");
-const proofFile = files.find(f => f.fieldname === "proofOfAddress");
+    console.log(file)
 
-    if (!certFile || !idFile || !proofFile) {
+    // const certFile = file.find((f) => f.fieldname === "registrationCertificate");
+    // console.log(certFile)
+    // const idFile = file.find((f) => f.fieldname === "authorizedRepresentativeId");
+    // console.log(idFile)
+const certFile = req.files?.registrationCertificate?.[0];
+const idFile = req.files?.authorizedRepresentativeId?.[0];
+console.log("Certificate File:", certFile);
+console.log("ID File:", idFile);
+
+    if (!certFile || !idFile) {
       return res.status(400).json({
         statusCode: false,
         statusText: "Bad Request",
@@ -47,7 +56,7 @@ const proofFile = files.find(f => f.fieldname === "proofOfAddress");
 
     const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "application/pdf"];
 
-    const allFiles = [certFile, idFile, proofFile];
+    const allFiles = [certFile, idFile];
     for (const file of allFiles) {
       if (file && !allowedTypes.includes(file.mimetype)) {
         return res.status(400).json({
@@ -64,10 +73,9 @@ const proofFile = files.find(f => f.fieldname === "proofOfAddress");
       return { imageUrl: result.secure_url, publicId: result.public_id };
     };
 
-    const [certUpload, idUpload, proofUpload] = await Promise.all([
+    const [certUpload, idUpload] = await Promise.all([
       uploadToCloudinary(certFile, "traceaid/kyc/certificates"),
       uploadToCloudinary(idFile, "traceaid/kyc/ids"),
-      uploadToCloudinary(proofFile, "traceaid/kyc/proof_address"),
     ]);
 
     const newKyc = await kycModel.create({
@@ -80,10 +88,8 @@ const proofFile = files.find(f => f.fieldname === "proofOfAddress");
       bankAccountName,
       bankAccountNumber,
       bankName,
-      description,
       registrationCertificate: certUpload,
       authorizedRepresentativeId: idUpload,
-      proofOfAddress: proofUpload,
       verificationStatus: "pending",
     });
 

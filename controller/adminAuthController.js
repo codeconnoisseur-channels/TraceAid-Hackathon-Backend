@@ -51,11 +51,18 @@ exports.registerAdmin = async (req, res) => {
     await sendEmail(mailDetails);
     await newAdmin.save();
 
+    const response = {
+      _id: newAdmin._id,
+      firstName,
+      lastName,
+      email,
+    }
+
     res.status(201).json({
       statusCode: true,
       statusText: "Created",
       message: "Admin Registration successful",
-      data: { admin: newAdmin },
+      data: { admin: response },
     });
   } catch (error) {
     console.error("Error registering admin:", error);
@@ -231,11 +238,18 @@ exports.loginAdmin = async (req, res) => {
       expiresIn: "1d",
     });
 
+    const response = {
+      _id: admin._id,
+      firstName,
+      email,
+      token,
+    }
+
     res.status(200).json({
       statusCode: true,
       statusText: "OK",
       message: "Login successful",
-      data: { admin, token },
+      data: { login: response },
     });
   } catch (error) {
     console.error("Error logging in user:", error);
@@ -520,11 +534,18 @@ exports.updateProfile = async (req, res) => {
       { new: true, runValidators: true }
     );
 
+    const response = {
+      _id: updatedadmin._id,
+      firstName: updatedadmin.firstName,
+      lastName: updatedadmin.lastName,
+      profilePicture: updatedadmin.profilePicture,
+    }
+
     res.status(200).json({
       statusCode: true,
       statusText: "OK",
       message: "Profile updated successfully",
-      data: updatedUser,
+      data: {update: response},
     });
   } catch (error) {
     res.status(500).json({

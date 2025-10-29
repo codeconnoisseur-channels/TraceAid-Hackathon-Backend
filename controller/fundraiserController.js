@@ -8,6 +8,7 @@ const cloudinary = require("../config/cloudinary");
 const fs = require("fs");
 const path = require("path");
 const {  organizationNameToTitleCase } = require("../helper/nameConverter");
+const { GetTransacBlockedContacts } = require("@getbrevo/brevo");
 
 exports.registerOrganization = async (req, res) => {
   try {
@@ -54,13 +55,21 @@ exports.registerOrganization = async (req, res) => {
     };
 
     await sendEmail(mailDetails);
-    await newUser.save();
+    await newUser.save()
+
+    const response = {
+      _id: newUser._id,
+      organizationName,
+      email,
+      phoneNumber,
+
+    }
 
     res.status(201).json({
       statusCode: true,
       statusText: "Created",
       message: "User Registration successful",
-      data: { user: newUser },
+      data: response,
     });
   } catch (error) {
     console.error("Error registering user:", error);
@@ -234,11 +243,18 @@ exports.loginOrganization = async (req, res) => {
 
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "1d" });
 
+    const response = {
+      _id: user._id,
+      organizationName: user.organizationName,
+      email,
+      token
+    }
+
     res.status(200).json({
       statusCode: true,
       statusText: "OK",
       message: "Login successful",
-      data: { user, token },
+      data: { login: response},
     });
   } catch (error) {
     console.error("Error logging in user:", error);
@@ -504,11 +520,18 @@ exports.updateProfile = async (req, res) => {
 
     const updatedUser = await fundraiserModel.findByIdAndUpdate(user._id, updateProfile, { new: true, runValidators: true });
 
+    const response = {
+      _id: updatedUser._id,
+      organizationName: updatedUser.organizationName,
+      phoneNumber: updatedUser.phoneNumber,
+      profilePicture: updatedUser.profilePicture,
+    }
+
     res.status(200).json({
       statusCode: true,
       statusText: "OK",
       message: "Profile updated successfully",
-      data: updatedUser,
+      data: {update: response},
     });
   } catch (error) {
     res.status(500).json({

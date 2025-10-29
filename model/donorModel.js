@@ -14,7 +14,7 @@ const donorSchema = new mongoose.Schema(
     email: {
       type: String,
       required: [true, "Email address is required"],
-      unique: true,
+      // unique: true,
       lowercase: true,
       trim: true,
     },
@@ -62,6 +62,6 @@ const donorSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-const donor = mongoose.model("User", donorSchema);
+const donor = mongoose.model("Donor", donorSchema);
 
 module.exports = donor;

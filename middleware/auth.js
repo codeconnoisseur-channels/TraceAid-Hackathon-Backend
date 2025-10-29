@@ -64,8 +64,8 @@ exports.authenticate = async (req, res, next) => {
       kyc: user.kyc || null,
     };
 
-    console.log("Authenticated User:", req.user)
-    
+    // console.log("Authenticated User:", req.user)
+
     next();
   } catch (error) {
     console.error("Authentication Error:", error);
@@ -88,6 +88,7 @@ exports.isFundraiser = (req, res, next) => {
     }
 
     const userRole = req.user.role;
+
     const isFundraiser =
       Array.isArray(userRole) ? userRole.includes("fundraiser") : userRole === "fundraiser";
 

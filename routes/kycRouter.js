@@ -178,13 +178,43 @@ const uploads = require("../utils/multer");
  *                   type: string
  *                   example: "An unexpected error occurred."
  */
+// router.post(
+//   "/add-kyc",
+//   authenticate,
+//   isFundraiser,
+//   uploads.fields([
+//     { name: "registrationCertificate", maxCount: 1 },
+//     { name: "authorizedRepresentativeId", maxCount: 1 },
+//   ]),
+//   (req, res, next) => {
+//     console.log("MULTER FILES:", req.files);
+//     console.log("MULTER BODY:", req.body);
+//     next();
+//   },
+//   kycValidator,
+//   addKyc
+// );
+
 router.post(
   "/add-kyc",
   authenticate,
   isFundraiser,
+  uploads.fields([
+    { name: "registrationCertificate", maxCount: 1 },
+    { name: "authorizedRepresentativeId", maxCount: 1 },
+  ]),
+  (req, res, next) => {
+    console.log("---- DEBUG MULTER ----");
+    console.log("FILES:", req.files);
+    console.log("BODY:", req.body);
+    console.log("-----------------------");
+    next();
+  },
   kycValidator,
-uploads.any(),
   addKyc
 );
 
+
+
 module.exports = router;
+ 
