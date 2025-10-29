@@ -24,28 +24,13 @@ const {
 
 const router = require("express").Router();
 
-router.post("/admin/register", registerValidator, registerAdmin);
-router.post("/admin/verify-otp", verifyValidator, verifyAdmin);
-router.post("/admin/resend-otp", resendValidator, resendOTP);
-router.post("/admin/login", loginValidator, loginAdmin);
-router.post("/admin/forgot-password", forgotPasswordValidator, forgotPassword);
-router.put(
-  "/admin/reset-password/:token/:id",
-  resetPasswordValidator,
-  resetPassword
-);
-router.put(
-  "/admin/change-password",
-  changePasswordValidator,
-  protectAdmin,
-  changePassword
-);
-router.put(
-  "/admin/update/:id",
-  updateProfileValidator,
-  protectAdmin,
-  uploads.single("profilePicture"),
-  updateProfile
-);
-router.get("/admin/admin/:id", protectAdmin, getOne);
+router.post("/register", registerValidator, registerAdmin);
+router.post("/verify-otp", verifyValidator, verifyAdmin);
+router.post("/resend-otp", resendValidator, resendOTP);
+router.post("/login", loginValidator, loginAdmin);
+router.post("/forgot-password", forgotPasswordValidator, forgotPassword);
+router.put("/admin/reset-password/:token/:id", resetPasswordValidator, resetPassword);
+router.put("/change-password", changePasswordValidator, protectAdmin, changePassword);
+router.put("/update/:id", updateProfileValidator, protectAdmin, uploads.single("profilePicture"), updateProfile);
+router.get("/admin/:id", protectAdmin, getOne);
 module.exports = router;

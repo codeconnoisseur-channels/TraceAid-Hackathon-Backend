@@ -8,7 +8,7 @@ const campaignSchema = new mongoose.Schema(
       ref: "Fundraiser",
       required: true,
     },
-   CampaignTitle: {
+   campaignTitle: {
       type: String,
       required: true,
       trim: true,
@@ -23,7 +23,7 @@ const campaignSchema = new mongoose.Schema(
       enum: CAMPAIGN_CATEGORY_VALUES,
       required: true,
     },
-    TotalCampaignGoalAmount: {
+    totalCampaignGoalAmount: {
       type: Number,
       required: true,
       min: 1,

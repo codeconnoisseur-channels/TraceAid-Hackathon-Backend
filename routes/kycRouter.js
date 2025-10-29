@@ -183,11 +183,7 @@ router.post(
   authenticate,
   isFundraiser,
   kycValidator,
-  uploads.fields([
-    { name: "registrationCertificate", maxCount: 1 },
-    { name: "authorizedRepresentativeId", maxCount: 1 },
-    { name: "proofOfAddress", maxCount: 1 },
-  ]),
+uploads.any(),
   addKyc
 );
 

@@ -3,10 +3,10 @@ const campaignModel = require("../model/campaignModel");
 const fundraiserModel = require("../model/fundraiserModel");
 const adminActivityModel = require("../model/adminModel");
 const { sendEmail } = require("../utils/brevo");
-const {
-  kycStatusEmail,
-  campaignStatusEmail,
-} = require("../emailTemplate/emailVerification");
+const { kycStatusEmail, campaignStatusEmail } = require("../emailTemplate/emailVerification");
+const MilestoneEvidenceModel = require("../model/milestoneEvidenceModel");
+const Payout = require("../model/payoutModel");
+const FundraiserWallet = require("../model/fundraiserWallet");
 
 exports.verifyKyc = async (req, res) => {
   try {
@@ -133,9 +133,7 @@ exports.reviewCampaign = async (req, res) => {
       });
     }
 
-    const campaign = await campaignModel
-      .findById(campaignId)
-      .populate("fundraiser");
+    const campaign = await campaignModel.findById(campaignId).populate("fundraiser");
     if (!campaign) {
       return res.status(404).json({
         statusCode: false,
@@ -173,12 +171,7 @@ exports.reviewCampaign = async (req, res) => {
     await sendEmail({
       email: campaign.fundraiser.email,
       subject: "Campaign Review Update",
-      html: campaignStatusEmail(
-        campaign.fundraiser.organizationName,
-        action,
-        campaign.title,
-        remarks
-      ),
+      html: campaignStatusEmail(campaign.fundraiser.organizationName, action, campaign.title, remarks),
     });
 
     await adminActivityModel.create({
@@ -189,9 +182,7 @@ exports.reviewCampaign = async (req, res) => {
 
     res.status(200).json({
       statusCode: true,
-      message: `Campaign ${
-        action === "approve" ? "approved" : "rejected"
-      } successfully`,
+      message: `Campaign ${action === "approve" ? "approved" : "rejected"} successfully`,
       data: campaign,
     });
   } catch (error) {
@@ -199,5 +190,144 @@ exports.reviewCampaign = async (req, res) => {
       statusCode: false,
       message: error.message,
     });
+  }
+};
+
+exports.reviewMilestoneEvidence = async (req, res) => {
+  try {
+    const { evidenceId } = req.params;
+    const { action, rejectionReason } = req.body; // action = 'approve' | 'reject'
+    const adminId = req.user.id;
+
+    const evidence = await MilestoneEvidenceModel.findById(evidenceId).populate("milestone campaign fundraiser");
+    if (!evidence) return res.status(404).json({ statusCode: false, statusText: "Not Found", message: "Evidence not found" });
+
+    if (!["approve", "reject"].includes(action))
+      return res.status(400).json({ statusCode: false, statusText: "Bad Request", message: "Invalid action" });
+
+    if (action === "approve") {
+      evidence.status = "approved";
+      evidence.reviewedBy = adminId;
+      evidence.reviewedAt = new Date();
+      await evidence.save();
+
+      // update milestone
+      await Milestone.findByIdAndUpdate(evidence.milestone._id, {
+        verificationStatus: "approved",
+        status: "completed",
+        verifiedAt: new Date(),
+      });
+
+      // create payout record (admin will process payment externally)
+      const payout = await Payout.create({
+        fundraiser: evidence.fundraiser._id,
+        campaign: evidence.campaign._id,
+        milestone: evidence.milestone._id,
+        referenceID: `PAYOUT_${Date.now()}`,
+        amount: evidence.milestone.targetAmount ?? evidence.milestone.releasedAmount ?? 0,
+        status: "processing",
+        processedBy: adminId,
+      });
+
+      // send email to fundraiser
+      await sendEmail({
+        to: evidence.fundraiser.email,
+        subject: "Milestone evidence approved",
+        html: `Your evidence for milestone "${evidence.milestone.milestoneTitle}" was approved. Next payout reference: ${payout.referenceID}`,
+      });
+
+      return res.json({ statusCode: true, statusText: "OK", message: "Evidence approved", data: { evidence, payout } });
+    } else {
+      evidence.status = "rejected";
+      evidence.reviewedBy = adminId;
+      evidence.reviewedAt = new Date();
+      evidence.rejectionReason = rejectionReason || "Not specified";
+      await evidence.save();
+
+      // mark milestone as rejected
+      await Milestone.findByIdAndUpdate(evidence.milestone._id, {
+        verificationStatus: "rejected",
+        status: "rejected",
+        rejectedAt: new Date(),
+      });
+
+      await sendEmail({
+        to: evidence.fundraiser.email,
+        subject: "Milestone evidence rejected",
+        html: `Your evidence for milestone "${evidence.milestone.milestoneTitle}" was rejected. Reason: ${evidence.rejectionReason}`,
+      });
+
+      return res.json({ statusCode: true, statusText: "OK", message: "Evidence rejected", data: evidence });
+    }
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ statusCode: false, statusText: "Internal Server Error", message: err.message });
+  }
+};
+
+exports.releaseMilestoneFunds = async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+  try {
+    const { milestoneId } = req.params;
+    const adminId = req.user.id;
+
+    const milestone = await MilestoneModel.findById(milestoneId).session(session);
+    if (!milestone) throw new Error("Milestone not found");
+
+    if (milestone.verificationStatus === "approved" || milestone.status === "funds-released") {
+      return res.status(400).json({ statusCode: false, statusText: "Bad Request", message: "Funds already released or milestone already approved" });
+    }
+
+    // amount to release
+    const amount = milestone.targetAmount;
+
+    // create payout record (admin processes actual transfer outside)
+    const payout = await PayoutModel.create(
+      [
+        {
+          fundraiser: milestone.campaign.fundraiser,
+          campaign: milestone.campaign,
+          milestone: milestone._id,
+          referenceID: `PAYOUT_${Date.now()}`,
+          amount,
+          status: "processing",
+          processedBy: adminId,
+        },
+      ],
+      { session }
+    );
+
+    // Update milestone
+    milestone.releasedAmount = amount;
+    milestone.fundsReleasedAt = new Date();
+    milestone.status = "funds-released";
+    milestone.verificationStatus = "funds-released";
+    await milestone.save({ session });
+
+    // Optionally credit fundraiser wallet immediately (if you want to track available balance)
+    await FundraiserWallet.findOneAndUpdate(
+      { fundraiser: milestone.campaign.fundraiser },
+      { $inc: { availableBalance: amount } },
+      { upsert: true, session }
+    );
+
+    await session.commitTransaction();
+    session.endSession();
+
+    // send email notifying fundraiser
+    // sendEmail({ to: fundraiser.email, subject: "Funds released", html: ... })
+
+    return res.json({
+      statusCode: true,
+      statusText: "OK",
+      message: "Funds released (recorded). Admin should complete actual transfer externally.",
+      data: payout[0],
+    });
+  } catch (err) {
+    await session.abortTransaction();
+    session.endSession();
+    console.error(err);
+    return res.status(500).json({ statusCode: false, statusText: "Internal Server Error", message: err.message });
   }
 };

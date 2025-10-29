@@ -26,6 +26,11 @@ const payoutSchema = new mongoose.Schema(
       enum: ["processing", "paid", "failed", "reversed"],
       default: "processing",
     },
+    processedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Admin",
+    },
+    processedAt: Date,
   },
   { timestamps: true }
 );
