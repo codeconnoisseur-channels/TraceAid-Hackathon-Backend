@@ -249,6 +249,97 @@ router.post("/register", registerValidator, registerUser);
  *                   type: string
  *                   example: Unexpected error occurred
  */
+router.post("/verify-otp", verifyValidator, verifyUser);
+
+/**
+ * @swagger
+ * /donor/api/v1/resend-otp:
+ *   post:
+ *     summary: Resend verification OTP
+ *     tags: [Donor Authentication]
+ *     description: |
+ *       Allows a registered user to request a new verification OTP if the previous one has expired.
+ *       This endpoint verifies that the user exists and ensures an OTP isn’t resent before the previous one expires.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 example: "janedoe@gmail.com"
+ *     responses:
+ *       200:
+ *         description: OTP resent successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 statusCode:
+ *                   type: boolean
+ *                   example: true
+ *                 statusText:
+ *                   type: string
+ *                   example: "OK"
+ *                 message:
+ *                   type: string
+ *                   example: "OTP resent successfully"
+ *       400:
+ *         description: Bad Request — invalid email, missing field, or resend attempted too soon
+ *         content:
+ *           application/json:
+ *             examples:
+ *               MissingEmail:
+ *                 summary: No email provided
+ *                 value:
+ *                   statusCode: false
+ *                   statusText: "Bad Request"
+ *                   message: "Email is required"
+ *               OTPNotExpired:
+ *                 summary: OTP still valid
+ *                 value:
+ *                   statusCode: false
+ *                   statusText: "Bad Request"
+ *                   message: "OTP has already been sent. Please try again after 10:35:42 PM"
+ *       404:
+ *         description: User not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 statusCode:
+ *                   type: boolean
+ *                   example: false
+ *                 statusText:
+ *                   type: string
+ *                   example: "Not Found"
+ *                 message:
+ *                   type: string
+ *                   example: "User not found"
+ *       500:
+ *         description: Internal Server Error — unexpected failure when generating or sending the OTP email
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 statusCode:
+ *                   type: boolean
+ *                   example: false
+ *                 statusText:
+ *                   type: string
+ *                   example: "Internal Server Error"
+ *                 message:
+ *                   type: string
+ *                   example: "Error resending OTP: SMTP connection failed"
+ */
 router.post("/resend-otp", resendValidator, resendOTP);
 
 /**
