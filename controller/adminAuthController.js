@@ -1,7 +1,7 @@
 const AdminAuthModel = require("../model/adminAuth");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
-const generateOTPCode = require("../middleware/generateOTP");
+const generateOTPCode = require("../helper/generateOTP");
 const {
   registerOTP,
   forgotPasswordLink,
