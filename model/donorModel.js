@@ -14,7 +14,7 @@ const donorSchema = new mongoose.Schema(
     email: {
       type: String,
       required: [true, "Email address is required"],
-      unique: true,
+      // unique: true,
       lowercase: true,
       trim: true,
     },
