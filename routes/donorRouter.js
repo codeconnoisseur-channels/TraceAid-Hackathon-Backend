@@ -786,41 +786,43 @@ router.put(
 
 /**
  * @swagger
- * /donor/api/v1/users/update/{id}:
+ * /donor/api/v1/update/{id}:
  *   put:
- *     summary: Update user profile
+ *     summary: Update donor profile
  *     tags: [Donor Authentication]
- *     description: Allows an authenticated user to update their profile information, including uploading a profile picture.
+ *     description: |
+ *       Allows an authenticated donor to update their personal details and optionally upload a new profile picture.
+ *       This endpoint requires authentication via Bearer Token and validates all input fields.
  *     security:
  *       - bearerAuth: []
  *     parameters:
- *       - in: path
- *         name: id
+ *       - name: id
+ *         in: path
  *         required: true
- *         description: ID of the user whose profile is being updated
+ *         description: Unique identifier of the donor to update.
  *         schema:
  *           type: string
- *           example: 67420ac2e3c9237f7a9b81a1
+ *           example: "672d5cbf64e4d25b1f93a2d4"
  *     requestBody:
- *       required: true
+ *       required: false
  *       content:
  *         multipart/form-data:
  *           schema:
  *             type: object
  *             properties:
- *               fullName:
+ *               firstName:
  *                 type: string
- *                 example: John Doe
+ *                 example: "John"
+ *               lastName:
+ *                 type: string
+ *                 example: "Doe"
  *               phoneNumber:
  *                 type: string
- *                 example: "+2348012345678"
- *               address:
- *                 type: string
- *                 example: 12 Admiralty Way, Lekki Phase 1, Lagos
+ *                 example: "08012345678"
  *               profilePicture:
  *                 type: string
  *                 format: binary
- *                 description: Optional profile picture upload
+ *                 description: Optional profile picture (image file)
  *     responses:
  *       200:
  *         description: Profile updated successfully
@@ -834,33 +836,36 @@ router.put(
  *                   example: true
  *                 statusText:
  *                   type: string
- *                   example: OK
+ *                   example: "OK"
  *                 message:
  *                   type: string
- *                   example: Profile updated successfully
+ *                   example: "Profile updated successfully"
  *                 data:
  *                   type: object
  *                   properties:
- *                     id:
+ *                     _id:
  *                       type: string
- *                       example: 67420ac2e3c9237f7a9b81a1
- *                     fullName:
+ *                       example: "672d5cbf64e4d25b1f93a2d4"
+ *                     firstName:
  *                       type: string
- *                       example: John Doe
- *                     email:
+ *                       example: "John"
+ *                     lastName:
  *                       type: string
- *                       example: johndoe@example.com
+ *                       example: "Doe"
  *                     phoneNumber:
  *                       type: string
- *                       example: +2348012345678
- *                     address:
- *                       type: string
- *                       example: 12 Admiralty Way, Lekki Phase 1, Lagos
+ *                       example: "+2348012345678"
  *                     profilePicture:
- *                       type: string
- *                       example: https://res.cloudinary.com/example/image/upload/v1729912739/profile.jpg
+ *                       type: object
+ *                       properties:
+ *                         imageUrl:
+ *                           type: string
+ *                           example: "https://res.cloudinary.com/demo/image/upload/v1730145623/TraceAid-Profile-Pictures/abcd1234.jpg"
+ *                         publicId:
+ *                           type: string
+ *                           example: "TraceAid-Profile-Pictures/abcd1234"
  *       400:
- *         description: Invalid input or validation error
+ *         description: Bad Request — invalid or missing field
  *         content:
  *           application/json:
  *             schema:
@@ -871,12 +876,12 @@ router.put(
  *                   example: false
  *                 statusText:
  *                   type: string
- *                   example: Bad Request
+ *                   example: "Bad Request"
  *                 message:
  *                   type: string
- *                   example: Invalid phone number format or missing required fields
+ *                   example: "Validation failed: firstName is required"
  *       401:
- *         description: Unauthorized — missing or invalid token
+ *         description: Unauthorized — no or invalid authentication token provided
  *         content:
  *           application/json:
  *             schema:
@@ -887,12 +892,12 @@ router.put(
  *                   example: false
  *                 statusText:
  *                   type: string
- *                   example: Unauthorized
+ *                   example: "Unauthorized"
  *                 message:
  *                   type: string
- *                   example: Authentication failed or token expired
+ *                   example: "No token provided"
  *       404:
- *         description: User not found
+ *         description: Not Found — donor ID does not exist
  *         content:
  *           application/json:
  *             schema:
@@ -903,12 +908,12 @@ router.put(
  *                   example: false
  *                 statusText:
  *                   type: string
- *                   example: Not Found
+ *                   example: "Not Found"
  *                 message:
  *                   type: string
- *                   example: User not found
+ *                   example: "User not found"
  *       500:
- *         description: Internal server error while updating profile
+ *         description: Internal Server Error — unexpected error during update or Cloudinary upload
  *         content:
  *           application/json:
  *             schema:
@@ -919,10 +924,10 @@ router.put(
  *                   example: false
  *                 statusText:
  *                   type: string
- *                   example: Internal Server Error
+ *                   example: "Internal Server Error"
  *                 message:
  *                   type: string
- *                   example: Unexpected error occurred while updating profile
+ *                   example: "Error updating profile: Cloudinary upload failed"
  */
 router.put(
   "/update/:id",
