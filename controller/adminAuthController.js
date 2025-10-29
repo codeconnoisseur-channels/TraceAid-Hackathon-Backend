@@ -38,7 +38,7 @@ exports.registerAdmin = async (req, res) => {
       lastName,
       email,
       password: hashedPassword,
-      otp,
+      otp: otp,
       otpExpiredAt: expiresAt,
     });
 

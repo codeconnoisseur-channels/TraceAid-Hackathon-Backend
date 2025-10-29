@@ -1,3 +1,4 @@
+
 exports.CAMPAIGN_CATEGORY = {
   HEALTH: 'Health & Wellness',
   EDUCATION: 'Education & Schools',
@@ -10,3 +11,4 @@ exports.CAMPAIGN_CATEGORY = {
 };
 
 exports.CAMPAIGN_CATEGORY_VALUES = Object.values(exports.CAMPAIGN_CATEGORY);
+
