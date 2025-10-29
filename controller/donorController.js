@@ -319,7 +319,7 @@ exports.forgotPassword = async (req, res) => {
 
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "10m" });
 
-    await userModel.findByIdAndUpdate(user._id, { token }, { new: true });
+    await donorModel.findByIdAndUpdate(user._id, { token }, { new: true });
 
     const link = `${req.protocol}://${req.get("host")}/api/v1/reset-password/${token}/${user._id}`;
 
