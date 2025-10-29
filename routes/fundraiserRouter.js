@@ -25,7 +25,7 @@ const router = require("express").Router();
 
 /**
  * @swagger
- * /api/v1/fundraisers/register:
+ * /fundraiser/api/v1/register:
  *   post:
  *     summary: Register a new fundraising organization
  *     tags: [Fundraiser Management]
@@ -143,7 +143,7 @@ router.post("/register", organizationRegisterValidator, registerOrganization);
 
 /**
  * @swagger
- * /api/v1/fundraisers/verify:
+ * /fundraiser/api/v1/verify:
  *   post:
  *     summary: Verify a fundraising organization's email address
  *     tags: [Fundraiser Management]
@@ -243,7 +243,7 @@ router.post("/verify", organizationVerifyValidator, verifyOrganization);
 
 /**
  * @swagger
- * /api/v1/fundraisers/resend-otp:
+ * /fundraiser/api/v1/resend-otp:
  *   post:
  *     summary: Resend OTP to an organization's registered email
  *     tags: [Fundraiser Management]
@@ -333,7 +333,7 @@ router.post("/resend-otp", organizationResendValidator, resendOTP);
 
 /**
  * @swagger
- * /api/v1/fundraisers/login:
+ * /fundraiser/api/v1/login:
  *   post:
  *     summary: Log in an organization
  *     tags: [Fundraiser Management]
@@ -469,7 +469,7 @@ router.post("/login", organizationLoginValidator, loginOrganization);
 
 /**
  * @swagger
- * /api/v1/fundraisers/forgot-password:
+ * /fundraiser/api/v1/forgot-password:
  *   post:
  *     summary: Initiate password reset for an organization
  *     tags: [Fundraiser Management]
@@ -564,7 +564,7 @@ router.post(
 
 /**
  * @swagger
- * /api/v1/fundraisers/reset-password/{token}/{id}:
+ * /fundraiser/api/v1/reset-password/{token}/{id}:
  *   put:
  *     summary: Reset organization password using token and ID
  *     tags: [Fundraiser Management]
@@ -679,7 +679,7 @@ router.put(
 
 /**
  * @swagger
- * /api/v1/fundraisers/change-password/{id}:
+ * /fundraiser/api/v1/change-password/{id}:
  *   put:
  *     summary: Change organization password (authenticated users only)
  *     tags: [Fundraiser Management]
@@ -812,7 +812,7 @@ router.put(
 
 /**
  * @swagger
- * /api/v1/fundraisers/update/{id}:
+ * /fundraiser/api/v1/update/{id}:
  *   put:
  *     summary: Update organization profile
  *     tags: [Fundraiser Management]

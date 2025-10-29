@@ -5,7 +5,7 @@ const { protectAdmin, restrictAdmin } = require("../middleware/adminAuth");
 
 /**
  * @swagger
- * /api/v1/admin/kyc/{kycId}/verify:
+ * /admin/api/v1/kyc/{kycId}/verify:
  *   patch:
  *     summary: Verify or reject a fundraiser's KYC record
  *     description: Allows an authenticated admin to verify or reject a fundraiser's KYC record. Verification updates both the KYC and fundraiser status and sends an email notification to the fundraiser.
@@ -141,7 +141,7 @@ router.patch("/kyc/:kycId/verify", protectAdmin, restrictAdmin, verifyKyc);
 
 /**
  * @swagger
- * /api/v1/admin/campaigns/{campaignId}/review:
+ * /admin/api/v1/campaigns/{campaignId}/review:
  *   patch:
  *     summary: Approve or reject a campaign
  *     description: Allows an authenticated admin to approve or reject a campaign. If approved, the campaign becomes public; if rejected, a rejection reason (remarks) must be provided.
