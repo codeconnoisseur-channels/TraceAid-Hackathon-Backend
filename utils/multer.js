@@ -26,7 +26,6 @@ const fileFilter = (req, file, cb) => {
     "video/mkv",
     "application/pdf",
     "application/msword",
-    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
   ];
 
   if (allowedMimeTypes.includes(file.mimetype)) {

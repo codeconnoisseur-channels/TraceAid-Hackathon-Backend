@@ -1,5 +1,5 @@
 const router = require("express").Router();
-const { verifyKyc, reviewCampaign } = require("../controller/adminController");
+const { verifyKyc, reviewCampaign, reviewMilestoneEvidence, releaseMilestoneFunds } = require("../controller/adminController");
 const { protectAdmin, restrictAdmin } = require("../middleware/adminAuth");
 
 
@@ -262,5 +262,9 @@ router.patch("/kyc/:kycId/verify", protectAdmin, restrictAdmin, verifyKyc);
  *                   example: "An unexpected error occurred while reviewing campaign."
  */
 router.patch("/campaigns/:campaignId/review", protectAdmin, restrictAdmin, reviewCampaign)
+router.put("/evidence/:evidenceId/review", protectAdmin, restrictAdmin, reviewMilestoneEvidence);
+router.post("/milestones/:milestoneId/release",protectAdmin, restrictAdmin,  releaseMilestoneFunds);
+
 
 module.exports = router;
+

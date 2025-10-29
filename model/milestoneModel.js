@@ -32,6 +32,11 @@ const milestoneSchema = new mongoose.Schema(
       enum: ["pending", "approved", "in-progress", "completed", "rejected"],
       default: "pending",
     },
+    verificationStatus: {
+      type: String,
+      enum: ["waiting-release", "funds-released", "evidence-pending", "evidence-reviewed", "approved", "rejected"],
+      default: "waiting-release",
+    },
     verifiedAt: {
       type: Date,
     },

@@ -6,16 +6,34 @@ const { campaignNameToTitleCase } = require("../helper/nameConverter");
 const fundraiserModel = require("../model/fundraiserModel");
 const kycModel = require("../model/kycModel");
 const milestoneModel = require("../model/milestoneModel");
+const milestoneEvidenceModel = require("../model/milestoneEvidenceModel");
 
 exports.createACampaign = async (req, res) => {
-  const fundraiserId = req.user.id;
+  console.log("AUTH USER OBJECT:", req.user);
+
+  const fundraiserId = req.user.id || req.user._id;
   const file = req.file;
 
   try {
-    const { campaignTitle, campaignDescription, TotalCampaignGoalAmount, campaignCategory, campaignDuration, milestones } = req.body;
-    const user = await fundraiserModel.findById(fundraiserId);
+    let { campaignTitle, campaignDescription, totalCampaignGoalAmount, campaignCategory, campaignDuration, milestones } = req.body;
 
-    const checkVerifiedKyc = await kycModel.findOne({ fundraiserId: fundraiserId });
+    // If milestones came as a string (from form-data), parse it
+    if (typeof milestones === "string") {
+      try {
+        milestones = JSON.parse(milestones);
+      } catch (err) {
+        return res.status(400).json({
+          statusCode: false,
+          statusText: "Bad Request",
+          message: "Invalid milestones format. Must be a valid JSON array.",
+        });
+      }
+    }
+    const user = await fundraiserModel.findById(fundraiserId);
+    console.log("USER:", user);
+
+    const checkVerifiedKyc = await kycModel.findOne({ fundraiserId: req.user.id, verificationStatus: "verified" });
+    console.log("KYC:", checkVerifiedKyc);
 
     if (!user) {
       return res.status(404).json({
@@ -49,8 +67,10 @@ exports.createACampaign = async (req, res) => {
       });
     }
 
-    if (!campaignTitle || !campaignDescription || !TotalCampaignGoalAmount || !campaignCategory || !campaignDuration) {
-      if (file && file.path) fs.unlinkSync(file.path);
+    if (!campaignTitle || !campaignDescription || !totalCampaignGoalAmount || !campaignCategory || !campaignDuration) {
+      if (file && file.path && fs.existsSync(file.path)) {
+        fs.unlinkSync(file.path);
+      }
       return res.status(400).json({
         statusCode: false,
         statusText: "Bad Request",
@@ -58,8 +78,10 @@ exports.createACampaign = async (req, res) => {
       });
     }
 
-    if (isNaN(TotalCampaignGoalAmount) || Number(TotalCampaignGoalAmount) <= 0) {
-      if (file && file.path) fs.unlinkSync(file.path);
+    if (isNaN(totalCampaignGoalAmount) || Number(totalCampaignGoalAmount) <= 0) {
+      if (file && file.path && fs.existsSync(file.path)) {
+        fs.unlinkSync(file.path);
+      }
       return res.status(400).json({
         statusCode: false,
         statusText: "Bad Request",
@@ -75,8 +97,12 @@ exports.createACampaign = async (req, res) => {
       });
     }
 
+    console.log("RAW BODY:", req.body);
+
     if (!milestones || !Array.isArray(milestones) || milestones.length === 0) {
-      if (file && file.path) fs.unlinkSync(file.path);
+      if (file && file.path && fs.existsSync(file.path)) {
+        fs.unlinkSync(file.path);
+      }
       return res.status(400).json({
         statusCode: false,
         statusText: "Bad Request",
@@ -95,13 +121,15 @@ exports.createACampaign = async (req, res) => {
       fundraiser: fundraiserId, // Use the secured ID
       campaignTitle: campaignNameToTitleCase(campaignTitle),
       campaignDescription,
-      TotalCampaignGoalAmount: Number(TotalCampaignGoalAmount),
+      totalCampaignGoalAmount: Number(totalCampaignGoalAmount),
       campaignCategory,
       campaignCoverImageOrVideo: {
         imageUrl: campaignCoverImageOrVideoUrl.secure_url,
         publicId: campaignCoverImageOrVideoUrl.public_id,
       },
-      campaignDuration,
+      campaignDuration: {
+        endDate: new Date(campaignDuration),
+      },
     });
 
     await newCampaign.save();
@@ -130,8 +158,9 @@ exports.createACampaign = async (req, res) => {
       },
     });
   } catch (error) {
-    if (file && file.path) fs.unlinkSync(file.path);
-
+    if (file && file.path && fs.existsSync(file.path)) {
+      fs.unlinkSync(file.path);
+    }
     console.error("Error creating campaign:", error);
     res.status(500).json({
       statusCode: false,
@@ -204,6 +233,45 @@ exports.getOneCampaign = async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({
+      statusCode: false,
+      statusText: "Internal Server Error",
+      message: error.message,
+    });
+  }
+};
+
+exports.getCampaignWithMilestonesAndEvidence = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const campaign = await campaignModel.findById(id).lean();
+    if (!campaign)
+      return res.status(404).json({
+        statusCode: false,
+        statusText: "Not Found",
+        message: "Campaign not found",
+      });
+
+    const milestones = await milestoneModel.find({ campaign: id }).lean();
+    const milestoneIds = milestones.map((m) => m._id);
+    const evidences = await milestoneEvidenceModel.find({ milestone: { $in: milestoneIds } }).lean();
+
+    // map evidences to milestones
+    const evidenceMap = {};
+    evidences.forEach((e) => {
+      evidenceMap[e.milestone] = evidenceMap[e.milestone] || [];
+      evidenceMap[e.milestone].push(e);
+    });
+
+    const milestonesWithEvidence = milestones.map((m) => ({ ...m, evidences: evidenceMap[m._id] || [] }));
+
+    return res.json({
+      statusCode: true,
+      statusText: "OK",
+      data: { campaign, milestones: milestonesWithEvidence },
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({
       statusCode: false,
       statusText: "Internal Server Error",
       message: error.message,

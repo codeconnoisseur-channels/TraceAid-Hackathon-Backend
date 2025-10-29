@@ -12,6 +12,8 @@ const adminAuthRouter = require("./routes/adminAuthRouter");
 const adminRouter = require("./routes/adminRouter")
 const donorRouter = require("./routes/donorRouter");
 const fundraiserRouter = require("./routes/fundraiserRouter");
+const campaignRouter = require("./routes/campaignRouter")
+const milestoneRouter = require("./routes/milestoneRouter")
 
 const app = express();
 app.use(express.json());
@@ -81,9 +83,13 @@ app.use(passport.session());
 
 app.use("/donor/api/v1", donorRouter);
 app.use("/fundraiser/api/v1", fundraiserRouter)
-app.use("/api/v1", kycRouter);
+app.use("/kyc/api/v1", kycRouter);
 app.use("/admin-auth/api/v1", adminAuthRouter);
 app.use("/admin/api/v1", adminRouter)
+app.use("/campaign/api/v1", campaignRouter)
+app.use("/milestone/api/v1", milestoneRouter)
+
+
 
 app.use((error, req, res, next) => {
   if (error) {
@@ -95,6 +101,7 @@ app.use((error, req, res, next) => {
   }
   next();
 });
+
 
 mongoose
   .connect(process.env.MONGO_URI)

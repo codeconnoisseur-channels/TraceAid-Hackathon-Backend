@@ -20,21 +20,18 @@ exports.authenticate = async (req, res, next) => {
     try {
       decoded = jwt.verify(token, process.env.JWT_SECRET);
     } catch (error) {
-      if (error instanceof jwt.TokenExpiredError) {
-        return res.status(401).json({
-          statusCode: false,
-          statusText: "Authentication Failed",
-          message: "Session expired. Please login again.",
-        });
-      }
-      if (error instanceof jwt.JsonWebTokenError) {
-        return res.status(401).json({
-          statusCode: false,
-          statusText: "Authentication Failed",
-          message: "Invalid token signature or format.",
-        });
-      }
-      throw error;
+      const isExpired = error instanceof jwt.TokenExpiredError;
+      const isInvalid = error instanceof jwt.JsonWebTokenError;
+
+      return res.status(401).json({
+        statusCode: false,
+        statusText: "Authentication Failed",
+        message: isExpired
+          ? "Session expired. Please login again."
+          : isInvalid
+          ? "Invalid token signature or format."
+          : "Token verification failed.",
+      });
     }
 
     const userId = decoded.id || decoded.userId || decoded._id;
@@ -61,12 +58,14 @@ exports.authenticate = async (req, res, next) => {
     }
 
     req.user = {
-      id: user._id.toString(),
+      _id: user._id, 
       role: user.role,
       isVerified: user.isVerified,
       kyc: user.kyc || null,
     };
 
+    console.log("Authenticated User:", req.user)
+    
     next();
   } catch (error) {
     console.error("Authentication Error:", error);
@@ -89,7 +88,8 @@ exports.isFundraiser = (req, res, next) => {
     }
 
     const userRole = req.user.role;
-    const isFundraiser = Array.isArray(userRole) ? userRole.includes("fundraiser") : userRole === "fundraiser";
+    const isFundraiser =
+      Array.isArray(userRole) ? userRole.includes("fundraiser") : userRole === "fundraiser";
 
     if (!isFundraiser) {
       return res.status(403).json({

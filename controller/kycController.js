@@ -6,7 +6,9 @@ const fs = require("fs");
 exports.addKyc = async (req, res) => {
   try {
     const userId = req.user._id;
-    const files = req.files || {};
+        console.log("USER ID:", userId);
+
+    const files = req.files || [];
 
     const existingKyc = await kycModel.findOne({ user: userId });
     if (existingKyc) {
@@ -29,9 +31,11 @@ exports.addKyc = async (req, res) => {
       description,
     } = req.body;
 
-    const certFile = files["registrationCertificate"]?.[0];
-    const idFile = files["authorizedRepresentativeId"]?.[0];
-    const proofFile = files["proofOfAddress"]?.[0];
+    console.log("FILES:", files.map(f => f.fieldname));
+
+const certFile = files.find(f => f.fieldname === "registrationCertificate");
+const idFile = files.find(f => f.fieldname === "authorizedRepresentativeId");
+const proofFile = files.find(f => f.fieldname === "proofOfAddress");
 
     if (!certFile || !idFile || !proofFile) {
       return res.status(400).json({
