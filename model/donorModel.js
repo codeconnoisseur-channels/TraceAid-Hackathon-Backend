@@ -62,6 +62,6 @@ const donorSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-const donor = mongoose.model("User", donorSchema);
+const donor = mongoose.model("Donor", donorSchema);
 
 module.exports = donor;

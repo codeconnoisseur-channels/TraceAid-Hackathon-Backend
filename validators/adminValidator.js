@@ -9,9 +9,10 @@ exports.registerValidator = (req, res, next) => {
       .required()
       .pattern(/^[A-Za-z\s]+$/)
       .messages({
-        "string.empty": "Full name is required",
-        "string.min": "Full name must be at least 3 characters long",
-        "string.pattern.base": "Fullname can only contain letters",
+        "string.empty": "First Nameis required",
+        "any.required": "First name is required",
+        "string.min": "First name must be at least 3 characters long",
+        "string.pattern.base": "First name can only contain letters",
       }),
     lastName: joi
       .string()
@@ -20,13 +21,15 @@ exports.registerValidator = (req, res, next) => {
       .required()
       .pattern(/^[A-Za-z\s]+$/)
       .messages({
-        "string.empty": "Full name is required",
-        "string.min": "Full name must be at least 3 characters long",
-        "string.pattern.base": "Fullname can only contain letters",
+        "string.empty": "Last name is required",
+        "string.min": "Last name must be at least 3 characters long",
+        "any.required": "Last name is required",
+        "string.pattern.base": "Last name can only contain letters",
       }),
     email: joi.string().email().trim().required().messages({
       "string.empty": "Email is required",
       "string.email": "Please provide a valid email address",
+      "any.required": "Email is required",
     }),
     password: joi
       .string()
@@ -38,6 +41,7 @@ exports.registerValidator = (req, res, next) => {
         "string.empty": "Password is required",
         "string.pattern.base":
           "Password must be at least 8 characters long and include at least one uppercase letter, one lowercase letter, a number, and a special character (@$!%_*#?&)",
+          "any.required": "Password is required",
       }),
     confirmPassword: joi
       .string()
@@ -65,9 +69,11 @@ exports.verifyValidator = (req, res, next) => {
     email: joi.string().email().trim().required().messages({
       "string.empty": "Email is required",
       "string.email": "Please provide a valid email address",
+      "any.required": "Email is required",
     }),
     otp: joi.string().trim().required().messages({
       "string.empty": "OTP is required",
+      "any.required": "OTP is required",
     }),
   });
 
@@ -86,6 +92,7 @@ exports.resendValidator = (req, res, next) => {
     email: joi.string().email().trim().required().messages({
       "string.empty": "Email is required",
       "string.email": "Please provide a valid email address",
+      "any.required": "Email is required",
     }),
   });
 
@@ -104,9 +111,12 @@ exports.loginValidator = (req, res, next) => {
     email: joi.string().email().trim().required().messages({
       "string.empty": "Email is required",
       "string.email": "Please provide a valid email address",
+      "any.required": "Email is required",
     }),
     password: joi.string().required().messages({
       "string.empty": "Password is required",
+      "string.pattern.base": "Password must be at least 8 characters long and include at least one uppercase letter, one lowercase letter, a number, and a special character (@$!%_*#?&)",
+      "any.required": "Password is required",
     }),
   });
 
@@ -125,6 +135,7 @@ exports.forgotPasswordValidator = (req, res, next) => {
     email: joi.string().email().trim().required().messages({
       "string.empty": "Email is required",
       "string.email": "Please provide a valid email address",
+      "any.required": "Email is required",
     }),
   });
 
@@ -149,6 +160,7 @@ exports.resetPasswordValidator = (req, res, next) => {
         "string.empty": "Password is required",
         "string.pattern.base":
           "Password must be at least 8 characters long and include at least one uppercase letter, one lowercase letter, a number, and a special character (@$!%_*#?&)",
+          "any.required": "Password is required",
       }),
     confirmPassword: joi
       .string()
@@ -158,6 +170,7 @@ exports.resetPasswordValidator = (req, res, next) => {
         "any.only": "Passwords do not match",
         "string.empty": "Confirm password cannot be empty",
         "any.required": "Confirm password is required",
+
       }),
   });
 
@@ -174,6 +187,8 @@ exports.changePasswordValidator = (req, res, next) => {
   const schema = joi.object({
     oldPassword: joi.string().required().messages({
       "string.empty": "Old password is required",
+      "string.pattern.base": "Old password must be at least 8 characters long and include at least one uppercase letter, one lowercase letter, a number, and a special character (@$!%_*#?&)",
+      "any.required": "Old password is required",
     }),
     newPassword: joi
       .string()
@@ -185,6 +200,7 @@ exports.changePasswordValidator = (req, res, next) => {
         "string.empty": "New password is required",
         "string.pattern.base":
           "New password must be at least 8 characters long and include at least one uppercase letter, one lowercase letter, a number, and a special character (@$!%_*#?&)",
+          "any.required": "New password is required",
       }),
     confirmPassword: joi
       .string()
@@ -207,28 +223,6 @@ exports.changePasswordValidator = (req, res, next) => {
 
 exports.updateProfileValidator = (req, res, next) => {
   const schema = joi.object({
-    firstName: joi
-      .string()
-      .min(2)
-      .trim()
-      .required()
-      .pattern(/^[A-Za-z\s]+$/)
-      .messages({
-        "string.empty": "First name is required",
-        "string.min": "First name must be at least 3 characters long",
-        "string.pattern.base": "First name can only contain letters",
-      }),
-    lastName: joi
-      .string()
-      .min(2)
-      .trim()
-      .required()
-      .pattern(/^[A-Za-z\s]+$/)
-      .messages({
-        "string.empty": "last name is required",
-        "string.min": "last name must be at least 3 characters long",
-        "string.pattern.base": "last name can only contain letters",
-      }),
     phoneNumber: joi
       .string()
       .trim()
@@ -237,6 +231,7 @@ exports.updateProfileValidator = (req, res, next) => {
       .messages({
         "string.empty": "Phone number is required",
         "string.pattern.base": "Phone number must be 11 digits",
+        "any.required": "Phone number is required",
       }),
     organizationName: joi
       .string()
@@ -250,6 +245,7 @@ exports.updateProfileValidator = (req, res, next) => {
       .messages({
         "string.empty": "Organization name is required",
         "string.min": "Organization name must be at least 3 characters long",
+        "any.required": "Organization name is required",
       }),
   });
 

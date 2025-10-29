@@ -46,6 +46,8 @@ exports.registerUser = async (req, res) => {
       otpExpiredAt: expiresAt,
     });
 
+    await newUser.save();
+
     const displayName = newUser.firstName;
 
     const mailDetails = {
@@ -55,13 +57,20 @@ exports.registerUser = async (req, res) => {
     };
 
     await sendEmail(mailDetails);
-    await newUser.save();
+
+    const response = {
+      _id: newUser._id,
+      firstName,
+      lastName,
+      email,
+      acceptedTerms,
+    };
 
     res.status(201).json({
       statusCode: true,
       statusText: "Created",
       message: "User Registration successful",
-      data: { user: newUser },
+      data: { user: response },
     });
   } catch (error) {
     console.error("Error registering user:", error);
@@ -235,11 +244,18 @@ exports.loginUser = async (req, res) => {
 
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "1d" });
 
+    const response = {
+      _id: user._id,
+      email,
+      acceptedTerms,
+      token,
+    };
+
     res.status(200).json({
       statusCode: true,
       statusText: "OK",
       message: "Login successful",
-      data: { user, token },
+      data: { login: response },
     });
   } catch (error) {
     console.error("Error logging in user:", error);
@@ -511,11 +527,18 @@ exports.updateProfile = async (req, res) => {
       .findByIdAndUpdate(user._id, updateProfile, { new: true, runValidators: true })
       .select(-password - otp - token);
 
+    const response = {
+      _id: updatedUser._id,
+      firstName: updatedUser.firstName,
+      lastName: updatedUser.lastName,
+      profilePicture: updatedUser.profilePicture,
+    };
+
     res.status(200).json({
       statusCode: true,
       statusText: "OK",
       message: "Profile updated successfully",
-      data: updatedUser,
+      data: { update: response },
     });
   } catch (error) {
     if (req.file && req.file.path) fs.unlinkSync(req.file.path);

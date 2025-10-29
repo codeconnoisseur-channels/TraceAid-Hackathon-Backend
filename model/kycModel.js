@@ -78,7 +78,6 @@ const kycSchema = new mongoose.Schema(
     },
     description: {
       type: String,
-      required: [true, "Organization description is required"],
       trim: true,
     },
     rejectionReason: {
