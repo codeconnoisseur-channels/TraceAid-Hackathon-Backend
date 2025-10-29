@@ -554,7 +554,7 @@ router.post("/forgot-password", forgotPasswordValidator, forgotPassword);
 
 /**
  * @swagger
- * /donor/api/v1/users/reset-password/{token}/{id}:
+ * /donor/api/v1/reset-password/{token}/{id}:
  *   put:
  *     summary: Reset user password
  *     tags: [Donor Authentication]
