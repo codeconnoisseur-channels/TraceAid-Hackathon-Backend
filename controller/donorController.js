@@ -22,6 +22,22 @@ exports.registerUser = async (req, res) => {
     //   });
     // }
 
+    const existingUser = await donorModel.findOne({ email: email.toLowerCase() });
+
+    if (process.env.NODE_ENV === "development") {
+      if (existingUser) {
+        await donorModel.deleteOne({ email: email.toLowerCase() });
+      }
+    } else {
+      if (existingUser) {
+        return res.status(400).json({
+          statusCode: false,
+          statusText: "Bad Request",
+          message: "User with this email already exists",
+        });
+      }
+    }
+
     if (password !== confirmPassword) {
       return res.status(400).json({
         statusCode: false,
@@ -93,6 +109,7 @@ exports.verifyUser = async (req, res) => {
         message: "Email and OTP are required",
       });
     }
+    console.log("I AM THE BODY OTP ", otp);
 
     const user = await donorModel.findOne({ email: email.toLowerCase() });
 
@@ -103,6 +120,8 @@ exports.verifyUser = async (req, res) => {
         message: "User not found",
       });
     }
+
+    console.log("I AM THE USER OTP", user.otp);
 
     if (user.otp !== otp) {
       return res.status(400).json({
@@ -246,8 +265,7 @@ exports.loginUser = async (req, res) => {
 
     const response = {
       _id: user._id,
-      email,
-      acceptedTerms,
+      email: email,
       token,
     };
 

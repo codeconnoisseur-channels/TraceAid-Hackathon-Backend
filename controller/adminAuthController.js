@@ -2,10 +2,7 @@ const AdminAuthModel = require("../model/adminAuth");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
 const generateOTPCode = require("../helper/generateOTP");
-const {
-  registerOTP,
-  forgotPasswordLink,
-} = require("../emailTemplate/emailVerification");
+const { registerOTP, forgotPasswordLink } = require("../emailTemplate/emailVerification");
 const { sendEmail } = require("../utils/brevo");
 const cloudinary = require("../config/cloudinary");
 
@@ -21,6 +18,22 @@ exports.registerAdmin = async (req, res) => {
     //     message: "Admin with this email already exists",
     //   });
     // }
+
+    const existingUser = await adminModel.findOne({ email: email.toLowerCase() });
+
+    if (process.env.NODE_ENV === "development") {
+      if (existingUser) {
+        await adminModel.deleteOne({ email: email.toLowerCase() });
+      }
+    } else {
+      if (existingUser) {
+        return res.status(400).json({
+          statusCode: false,
+          statusText: "Bad Request",
+          message: "User with this email already exists",
+        });
+      }
+    }
 
     if (password !== confirmPassword) {
       return res.status(400).json({
@@ -56,7 +69,7 @@ exports.registerAdmin = async (req, res) => {
       firstName,
       lastName,
       email,
-    }
+    };
 
     res.status(201).json({
       statusCode: true,
@@ -243,7 +256,7 @@ exports.loginAdmin = async (req, res) => {
       lastName: admin.lastName,
       email: admin.email,
       token,
-    }
+    };
 
     res.status(200).json({
       statusCode: true,
@@ -287,9 +300,7 @@ exports.checkAuth = async (req, res) => {
           message: "Invalid token",
         });
       } else {
-        const checkAdmin = AdminAuthModel.findById(decoded.id).select(
-          "-password"
-        );
+        const checkAdmin = AdminAuthModel.findById(decoded.id).select("-password");
         res.status(200).json({
           statusCode: true,
           statusText: "OK",
@@ -335,9 +346,7 @@ exports.forgotPassword = async (req, res) => {
 
     await AdminAuthModel.findByIdAndUpdate(admin._id, { token }, { new: true });
 
-    const link = `${req.protocol}://${req.get(
-      "host"
-    )}/api/v1/reset-password/${token}/${admin._id}`;
+    const link = `${req.protocol}://${req.get("host")}/api/v1/reset-password/${token}/${admin._id}`;
 
     const mailDetails = {
       email: admin.email,
@@ -400,11 +409,7 @@ exports.resetPassword = async (req, res) => {
           message: "Token Expired or Invalid",
         });
       } else {
-        await AdminAuthModel.findByIdAndUpdate(
-          admin._id,
-          { password: hashedPassword, token: null },
-          { new: true, runValidators: true }
-        );
+        await AdminAuthModel.findByIdAndUpdate(admin._id, { password: hashedPassword, token: null }, { new: true, runValidators: true });
         res.status(200).json({
           statusCode: true,
           statusText: "OK",
@@ -473,11 +478,7 @@ exports.changePassword = async (req, res) => {
     const saltPassword = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(newPassword, saltPassword);
 
-    await AdminAuthModel.findByIdAndUpdate(
-      admin._id,
-      { password: hashedPassword },
-      { new: true, runValidators: true }
-    );
+    await AdminAuthModel.findByIdAndUpdate(admin._id, { password: hashedPassword }, { new: true, runValidators: true });
 
     res.status(200).json({
       statusCode: true,
@@ -528,24 +529,20 @@ exports.updateProfile = async (req, res) => {
       };
     }
 
-    const updatedadmin = await AdminAuthModel.findByIdAndUpdate(
-      admin._id,
-      updateProfile,
-      { new: true, runValidators: true }
-    );
+    const updatedadmin = await AdminAuthModel.findByIdAndUpdate(admin._id, updateProfile, { new: true, runValidators: true });
 
     const response = {
       _id: updatedadmin._id,
       firstName: updatedadmin.firstName,
       lastName: updatedadmin.lastName,
       profilePicture: updatedadmin.profilePicture,
-    }
+    };
 
     res.status(200).json({
       statusCode: true,
       statusText: "OK",
       message: "Profile updated successfully",
-      data: {update: response},
+      data: { update: response },
     });
   } catch (error) {
     res.status(500).json({

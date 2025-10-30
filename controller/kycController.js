@@ -22,6 +22,22 @@ exports.addKyc = async (req, res) => {
     //   });
     // }
 
+    const existingUser = await kycModel.findOne({ user: userId });
+
+    if (process.env.NODE_ENV === "development") {
+      if (existingUser) {
+        await kycModel.deleteOne({ user: userId });
+      }
+    } else {
+      if (existingUser) {
+        return res.status(400).json({
+          statusCode: false,
+          statusText: "Bad Request",
+          message: "User with this email already exists",
+        });
+      }
+    }
+
     const {
       organizationName,
       organizationType,
