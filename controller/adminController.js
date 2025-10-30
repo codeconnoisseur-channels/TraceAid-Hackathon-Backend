@@ -121,6 +121,49 @@ exports.verifyKyc = async (req, res) => {
   }
 };
 
+exports.getAllKyc = async (req, res) => {
+  try {
+    const kycs = await kycModel.find().populate("user");
+
+    res.status(200).json({
+      statusCode: true,
+      statusText: "Success",
+      message: "KYC records retrieved successfully",
+      data: kycs,
+    });
+  } catch (error) {
+    res.status(500).json({
+      statusCode: false,
+      statusText: "Internal Server Error",
+      message: error.message,
+    });
+  }
+};
+
+exports.getAllKycByTheStatus = async (req, res) => {
+  try {
+    const status = req.query.status;
+    const kycs = await kycModel.find({ verificationStatus: status }).populate("user");
+    if (!kycs) {
+      return res.status(404).json({
+        statusCode: false,
+        statusText: "Not Found",
+        message: "KYC records not found",
+      });
+    }
+    res.status(200).json({ statusCode: true,
+      statusText: "Success",
+      message: `KYC records retrieved successfully for status ${status}`,
+      data: kycs,
+    });
+  } catch (error) {
+    res.status(500).json({
+      statusCode: false,
+      statusText: "Internal Server Error",
+      message: error.message,
+    });
+  }}
+
 exports.reviewCampaign = async (req, res) => {
   try {
     const { campaignId } = req.params;

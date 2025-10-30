@@ -13,14 +13,14 @@ exports.registerUser = async (req, res) => {
   try {
     const { firstName, lastName, email, phoneNumber, password, confirmPassword, acceptedTerms } = req.body;
 
-    const existingUser = await donorModel.findOne({ email });
-    if (existingUser) {
-      return res.status(400).json({
-        statusCode: false,
-        statusText: "Bad Request",
-        message: "User with this email already exists",
-      });
-    }
+    // const existingUser = await donorModel.findOne({ email });
+    // if (existingUser) {
+    //   return res.status(400).json({
+    //     statusCode: false,
+    //     statusText: "Bad Request",
+    //     message: "User with this email already exists",
+    //   });
+    // }
 
     if (password !== confirmPassword) {
       return res.status(400).json({

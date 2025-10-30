@@ -14,14 +14,14 @@ exports.registerOrganization = async (req, res) => {
   try {
     const { organizationName, email, phoneNumber, password, confirmPassword, acceptedTerms } = req.body;
 
-    const existingUser = await fundraiserModel.findOne({ email });
-    if (existingUser) {
-      return res.status(400).json({
-        statusCode: false,
-        statusText: "Bad Request",
-        message: "User with this email already exists",
-      });
-    }
+    // const existingUser = await fundraiserModel.findOne({ email });
+    // if (existingUser) {
+    //   return res.status(400).json({
+    //     statusCode: false,
+    //     statusText: "Bad Request",
+    //     message: "User with this email already exists",
+    //   });
+    // }
 
     if (password !== confirmPassword) {
       return res.status(400).json({
@@ -54,8 +54,8 @@ exports.registerOrganization = async (req, res) => {
       html: registerOTP(newUser.otp, displayName),
     };
 
-    await sendEmail(mailDetails);
     await newUser.save()
+    await sendEmail(mailDetails);
 
     const response = {
       _id: newUser._id,

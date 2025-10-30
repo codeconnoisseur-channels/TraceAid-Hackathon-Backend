@@ -6,21 +6,21 @@ const fs = require("fs");
 exports.addKyc = async (req, res) => {
   try {
     const userId = req.user._id;
-console.log("req files", req.files)
+    console.log("req files", req.files);
     console.log("USER ID:", userId);
 
     const file = req.files || [];
-    
+
     console.log("FILE:", file);
 
-    const existingKyc = await kycModel.findOne({ user: userId });
-    if (existingKyc) {
-      return res.status(400).json({
-        statusCode: false,
-        statusText: "Bad Request",
-        message: "KYC document already submitted for this account.",
-      });
-    }
+    // const existingKyc = await kycModel.findOne({ user: userId });
+    // if (existingKyc) {
+    //   return res.status(400).json({
+    //     statusCode: false,
+    //     statusText: "Bad Request",
+    //     message: "KYC document already submitted for this account.",
+    //   });
+    // }
 
     const {
       organizationName,
@@ -35,16 +35,16 @@ console.log("req files", req.files)
 
     console.log("BODY:", req.body);
 
-    console.log(file)
+    console.log(file);
 
     // const certFile = file.find((f) => f.fieldname === "registrationCertificate");
     // console.log(certFile)
     // const idFile = file.find((f) => f.fieldname === "authorizedRepresentativeId");
     // console.log(idFile)
-const certFile = req.files?.registrationCertificate?.[0];
-const idFile = req.files?.authorizedRepresentativeId?.[0];
-console.log("Certificate File:", certFile);
-console.log("ID File:", idFile);
+    const certFile = req.files?.registrationCertificate?.[0];
+    const idFile = req.files?.authorizedRepresentativeId?.[0];
+    console.log("Certificate File:", certFile);
+    console.log("ID File:", idFile);
 
     if (!certFile || !idFile) {
       return res.status(400).json({
@@ -54,7 +54,7 @@ console.log("ID File:", idFile);
       });
     }
 
-    const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "application/pdf"];
+    const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "application/pdf", "video/mp4", "video/webm"];
 
     const allFiles = [certFile, idFile];
     for (const file of allFiles) {
@@ -68,7 +68,7 @@ console.log("ID File:", idFile);
     }
 
     const uploadToCloudinary = async (file, folder) => {
-      const result = await cloudinary.uploader.upload(file.path, { folder });
+      const result = await cloudinary.uploader.upload(file.path, { resource_type: "auto", folder });
       fs.unlinkSync(file.path);
       return { imageUrl: result.secure_url, publicId: result.public_id };
     };

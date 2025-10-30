@@ -1,7 +1,6 @@
 const router = require("express").Router();
-const { verifyKyc, reviewCampaign, reviewMilestoneEvidence, releaseMilestoneFunds } = require("../controller/adminController");
+const { verifyKyc, reviewCampaign, reviewMilestoneEvidence, releaseMilestoneFunds, getAllKyc } = require("../controller/adminController");
 const { protectAdmin, restrictAdmin } = require("../middleware/adminAuth");
-
 
 /**
  * @swagger
@@ -137,7 +136,7 @@ const { protectAdmin, restrictAdmin } = require("../middleware/adminAuth");
  *                   type: string
  *                   example: "An unexpected error occurred while verifying KYC"
  */
-router.patch("/kyc/:kycId/verify", protectAdmin, restrictAdmin, verifyKyc);
+router.patch("/:kycId/verify", protectAdmin, restrictAdmin, verifyKyc);
 
 /**
  * @swagger
@@ -261,10 +260,9 @@ router.patch("/kyc/:kycId/verify", protectAdmin, restrictAdmin, verifyKyc);
  *                   type: string
  *                   example: "An unexpected error occurred while reviewing campaign."
  */
-router.patch("/campaigns/:campaignId/review", protectAdmin, restrictAdmin, reviewCampaign)
+router.patch("/campaigns/:campaignId/review", protectAdmin, restrictAdmin, reviewCampaign);
 router.put("/evidence/:evidenceId/review", protectAdmin, restrictAdmin, reviewMilestoneEvidence);
-router.post("/milestones/:milestoneId/release",protectAdmin, restrictAdmin,  releaseMilestoneFunds);
-
+router.post("/milestones/:milestoneId/release", protectAdmin, restrictAdmin, releaseMilestoneFunds);
+router.get("/get-all-kyc", protectAdmin, restrictAdmin, getAllKyc);
 
 module.exports = router;
-

@@ -13,14 +13,14 @@ exports.registerAdmin = async (req, res) => {
   try {
     const { firstName, lastName, email, password, confirmPassword } = req.body;
 
-    const existingAdmin = await AdminAuthModel.findOne({ email });
-    if (existingAdmin) {
-      return res.status(400).json({
-        statusCode: false,
-        statusText: "Forbidden",
-        message: "Admin with this email already exists",
-      });
-    }
+    // const existingAdmin = await AdminAuthModel.findOne({ email });
+    // if (existingAdmin) {
+    //   return res.status(400).json({
+    //     statusCode: false,
+    //     statusText: "Forbidden",
+    //     message: "Admin with this email already exists",
+    //   });
+    // }
 
     if (password !== confirmPassword) {
       return res.status(400).json({
@@ -48,8 +48,8 @@ exports.registerAdmin = async (req, res) => {
       html: registerOTP(newAdmin.otp, newAdmin.firstName),
     };
 
-    await sendEmail(mailDetails);
     await newAdmin.save();
+    await sendEmail(mailDetails);
 
     const response = {
       _id: newAdmin._id,
@@ -240,8 +240,8 @@ exports.loginAdmin = async (req, res) => {
 
     const response = {
       _id: admin._id,
-      firstName,
-      email,
+      lastName: admin.lastName,
+      email: admin.email,
       token,
     }
 

@@ -7,7 +7,7 @@ const kycSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Fundraiser",
       required: true,
-      unique: true,
+      // unique: true,
       },
     organizationName: {
       type: String,
@@ -23,7 +23,7 @@ const kycSchema = new mongoose.Schema(
     registrationNumber: {
       type: String,
       required: [true, "Registration number is required"],
-      unique: true,
+      // unique: true,
       trim: true,
     },
     registrationCertificate: {
@@ -69,7 +69,7 @@ const kycSchema = new mongoose.Schema(
       type: String,
       required: [true, "Bank account number is required"],
       trim: true,
-      unique: true,
+      // unique: true,
     },
     bankName: {
       type: String,

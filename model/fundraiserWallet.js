@@ -6,7 +6,7 @@ const fundraiserWalletSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Fundraiser",
       required: true,
-      unique: true,
+      // unique: true,
     },
     availableBalance: {
       type: Number,
