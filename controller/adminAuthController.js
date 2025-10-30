@@ -53,6 +53,7 @@ exports.registerAdmin = async (req, res) => {
       password: hashedPassword,
       otp: otp,
       otpExpiredAt: expiresAt,
+      role: "admin"
     });
 
     const mailDetails = {
@@ -69,6 +70,7 @@ exports.registerAdmin = async (req, res) => {
       firstName,
       lastName,
       email,
+      role: newAdmin.role
     };
 
     res.status(201).json({
