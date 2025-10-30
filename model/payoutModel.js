@@ -10,7 +10,7 @@ const payoutSchema = new mongoose.Schema(
     referenceID: {
       type: String,
       required: true,
-      unique: true,
+      // unique: true,
     },
     campaign: {
       type: mongoose.Schema.Types.ObjectId,

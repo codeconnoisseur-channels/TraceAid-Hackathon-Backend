@@ -19,7 +19,7 @@ const storage = multer.diskStorage({
 });
 
 const fileFilter = (req, file, cb) => {
-  if (file.mimetype.startsWith("image") || file.mimetype.startsWith("video") || file.mimetype.startsWith("application/pdf")) {
+  if (file.mimetype.startsWith("image") || file.mimetype.startsWith("video/") || file.mimetype.startsWith("application/pdf")) {
     cb(null, true);
   } else {
     cb(new Error("Invalid file format: Only images, videos, and documents are allowed."), false);
