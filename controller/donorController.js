@@ -60,6 +60,7 @@ exports.registerUser = async (req, res) => {
       acceptedTerms,
       otp: otp,
       otpExpiredAt: expiresAt,
+      role: "donor",
     });
 
     await newUser.save();
@@ -80,6 +81,7 @@ exports.registerUser = async (req, res) => {
       lastName,
       email,
       acceptedTerms,
+      role: newUser.role,
     };
 
     res.status(201).json({

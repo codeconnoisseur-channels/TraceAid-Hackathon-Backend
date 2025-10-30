@@ -60,6 +60,7 @@ exports.registerOrganization = async (req, res) => {
       acceptedTerms,
       otp: otp,
       otpExpiredAt: expiresAt,
+      role: "fundraiser",
     });
 
     const displayName = newUser.organizationName;
@@ -78,6 +79,7 @@ exports.registerOrganization = async (req, res) => {
       organizationName,
       email,
       phoneNumber,
+      role: newUser.role
     };
 
     res.status(201).json({
