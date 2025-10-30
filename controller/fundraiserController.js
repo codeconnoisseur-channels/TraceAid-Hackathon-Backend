@@ -1,4 +1,4 @@
-const fundraiserModel = require("../model/fundraiserModel")
+const fundraiserModel = require("../model/fundraiserModel");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const generateOTPCode = require("../helper/generateOTP");
@@ -7,7 +7,7 @@ const { sendEmail } = require("../utils/brevo");
 const cloudinary = require("../config/cloudinary");
 const fs = require("fs");
 const path = require("path");
-const {  organizationNameToTitleCase } = require("../helper/nameConverter");
+const { organizationNameToTitleCase } = require("../helper/nameConverter");
 const { GetTransacBlockedContacts } = require("@getbrevo/brevo");
 
 exports.registerOrganization = async (req, res) => {
@@ -22,6 +22,22 @@ exports.registerOrganization = async (req, res) => {
     //     message: "User with this email already exists",
     //   });
     // }
+
+    const existingUser = await fundraiserModel.findOne({ email: email.toLowerCase() });
+
+    if (process.env.NODE_ENV === "development") {
+      if (existingUser) {
+        await fundraiserModel.deleteOne({ email: email.toLowerCase() });
+      }
+    } else {
+      if (existingUser) {
+        return res.status(400).json({
+          statusCode: false,
+          statusText: "Bad Request",
+          message: "User with this email already exists",
+        });
+      }
+    }
 
     if (password !== confirmPassword) {
       return res.status(400).json({
@@ -54,7 +70,7 @@ exports.registerOrganization = async (req, res) => {
       html: registerOTP(newUser.otp, displayName),
     };
 
-    await newUser.save()
+    await newUser.save();
     await sendEmail(mailDetails);
 
     const response = {
@@ -62,8 +78,7 @@ exports.registerOrganization = async (req, res) => {
       organizationName,
       email,
       phoneNumber,
-
-    }
+    };
 
     res.status(201).json({
       statusCode: true,
@@ -247,14 +262,14 @@ exports.loginOrganization = async (req, res) => {
       _id: user._id,
       organizationName: user.organizationName,
       email,
-      token
-    }
+      token,
+    };
 
     res.status(200).json({
       statusCode: true,
       statusText: "OK",
       message: "Login successful",
-      data: { login: response},
+      data: { login: response },
     });
   } catch (error) {
     console.error("Error logging in user:", error);
@@ -525,13 +540,13 @@ exports.updateProfile = async (req, res) => {
       organizationName: updatedUser.organizationName,
       phoneNumber: updatedUser.phoneNumber,
       profilePicture: updatedUser.profilePicture,
-    }
+    };
 
     res.status(200).json({
       statusCode: true,
       statusText: "OK",
       message: "Profile updated successfully",
-      data: {update: response},
+      data: { update: response },
     });
   } catch (error) {
     res.status(500).json({
