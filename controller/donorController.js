@@ -109,9 +109,9 @@ exports.verifyUser = async (req, res) => {
         message: "Email and OTP are required",
       });
     }
-    console.log("I AM THE BODY OTP ", otp);
 
-    const user = await donorModel.findOne({ email: email.toLowerCase() });
+    const formattedEmail = email.toLowerCase();
+    const user = await donorModel.findOne({ email: formattedEmail });
 
     if (!user) {
       return res.status(404).json({
@@ -121,8 +121,6 @@ exports.verifyUser = async (req, res) => {
       });
     }
 
-    console.log("I AM THE USER OTP", user.otp);
-
     if (user.otp !== otp) {
       return res.status(400).json({
         statusCode: false,
@@ -131,7 +129,10 @@ exports.verifyUser = async (req, res) => {
       });
     }
 
-    if (user.otpExpiredAt < Date.now()) {
+    const currentTime = Date.now();
+    const otpExpiryTime = user.otpExpiredAt;
+
+    if (otpExpiryTime < currentTime) {
       return res.status(400).json({
         statusCode: false,
         statusText: "Bad Request",
@@ -145,14 +146,34 @@ exports.verifyUser = async (req, res) => {
 
     await user.save();
 
-    res.status(200).json({
+    // ✅ Generate JWT Token After Verification
+    const jwtPayload = {
+      id: user._id,
+      email: user.email,
+      role: user.role,
+    };
+
+    const jwtSecret = process.env.JWT_SECRET;
+    const token = jwt.sign(jwtPayload, jwtSecret, { expiresIn: "1d" });
+
+    return res.status(200).json({
       statusCode: true,
       statusText: "OK",
       message: "Email verification successful",
+      data: {
+        token: token,
+        user: {
+          _id: user._id,
+          firstName: user.firstName,
+          email: user.email,
+          isVerified: user.isVerified,
+        },
+      },
     });
+
   } catch (error) {
     console.error("Error verifying user:", error);
-    res.status(500).json({
+    return res.status(500).json({
       statusCode: false,
       statusText: "Internal Server Error",
       message: error.message,
