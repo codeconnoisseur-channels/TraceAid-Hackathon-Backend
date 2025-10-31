@@ -2,7 +2,10 @@ const donorModel = require("../model/donorModel");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const generateOTPCode = require("../helper/generateOTP");
-const { registerOTP, forgotPasswordLink } = require("../emailTemplate/emailVerification");
+const {
+  registerOTP,
+  forgotPasswordLink,
+} = require("../emailTemplate/emailVerification");
 const { sendEmail } = require("../utils/brevo");
 const cloudinary = require("../config/cloudinary");
 const fs = require("fs");
@@ -11,7 +14,15 @@ const { individualNameToTitleCase } = require("../helper/nameConverter");
 
 exports.registerUser = async (req, res) => {
   try {
-    const { firstName, lastName, email, phoneNumber, password, confirmPassword, acceptedTerms } = req.body;
+    const {
+      firstName,
+      lastName,
+      email,
+      phoneNumber,
+      password,
+      confirmPassword,
+      acceptedTerms,
+    } = req.body;
 
     // const existingUser = await donorModel.findOne({ email });
     // if (existingUser) {
@@ -22,7 +33,9 @@ exports.registerUser = async (req, res) => {
     //   });
     // }
 
-    const existingUser = await donorModel.findOne({ email: email.toLowerCase() });
+    const existingUser = await donorModel.findOne({
+      email: email.toLowerCase(),
+    });
 
     if (process.env.NODE_ENV === "development") {
       if (existingUser) {
@@ -60,6 +73,7 @@ exports.registerUser = async (req, res) => {
       acceptedTerms,
       otp: otp,
       otpExpiredAt: expiresAt,
+      role: "donor",
     });
 
     await newUser.save();
@@ -80,6 +94,7 @@ exports.registerUser = async (req, res) => {
       lastName,
       email,
       acceptedTerms,
+      role: newUser.role,
     };
 
     res.status(201).json({
@@ -109,9 +124,9 @@ exports.verifyUser = async (req, res) => {
         message: "Email and OTP are required",
       });
     }
-    console.log("I AM THE BODY OTP ", otp);
 
-    const user = await donorModel.findOne({ email: email.toLowerCase() });
+    const formattedEmail = email.toLowerCase();
+    const user = await donorModel.findOne({ email: formattedEmail });
 
     if (!user) {
       return res.status(404).json({
@@ -121,8 +136,6 @@ exports.verifyUser = async (req, res) => {
       });
     }
 
-    console.log("I AM THE USER OTP", user.otp);
-
     if (user.otp !== otp) {
       return res.status(400).json({
         statusCode: false,
@@ -131,7 +144,10 @@ exports.verifyUser = async (req, res) => {
       });
     }
 
-    if (user.otpExpiredAt < Date.now()) {
+    const currentTime = Date.now();
+    const otpExpiryTime = user.otpExpiredAt;
+
+    if (otpExpiryTime < currentTime) {
       return res.status(400).json({
         statusCode: false,
         statusText: "Bad Request",
@@ -145,14 +161,33 @@ exports.verifyUser = async (req, res) => {
 
     await user.save();
 
-    res.status(200).json({
+    // ✅ Generate JWT Token After Verification
+    const jwtPayload = {
+      id: user._id,
+      email: user.email,
+      role: user.role,
+    };
+
+    const jwtSecret = process.env.JWT_SECRET;
+    const token = jwt.sign(jwtPayload, jwtSecret, { expiresIn: "1d" });
+
+    return res.status(200).json({
       statusCode: true,
       statusText: "OK",
       message: "Email verification successful",
+      data: {
+        token: token,
+        user: {
+          _id: user._id,
+          firstName: user.firstName,
+          email: user.email,
+          isVerified: user.isVerified,
+        },
+      },
     });
   } catch (error) {
     console.error("Error verifying user:", error);
-    res.status(500).json({
+    return res.status(500).json({
       statusCode: false,
       statusText: "Internal Server Error",
       message: error.message,
@@ -269,12 +304,15 @@ exports.loginUser = async (req, res) => {
       });
     }
 
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "1d" });
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
+      expiresIn: "1d",
+    });
 
     const response = {
       _id: user._id,
       email: email,
       token,
+      role: user.role,
     };
 
     res.status(200).json({
@@ -359,11 +397,13 @@ exports.forgotPassword = async (req, res) => {
       });
     }
 
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "10m" });
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
+      expiresIn: "10m",
+    });
 
     await donorModel.findByIdAndUpdate(user._id, { token }, { new: true });
 
-    const link = `${req.protocol}://${req.get("host")}/api/v1/reset-password/${token}/${user._id}`;
+    const link = `https://trace-aid.vercel.app/#/reset-password/${token}/${user._id}`;
 
     const displayName = user.firstName;
 
@@ -415,7 +455,10 @@ exports.resetPassword = async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, saltPassword);
 
     const userId = req.params.id;
-    const user = await donorModel.findOne({ _id: userId, token: req.params.token });
+    const user = await donorModel.findOne({
+      _id: userId,
+      token: req.params.token,
+    });
 
     jwt.verify(token, process.env.JWT_SECRET, async (error, result) => {
       if (error) {
@@ -425,7 +468,11 @@ exports.resetPassword = async (req, res) => {
           message: "Email Expired",
         });
       } else {
-        await donorModel.findByIdAndUpdate(user._id, { password: hashedPassword, token: null }, { new: true, runValidators: true });
+        await donorModel.findByIdAndUpdate(
+          user._id,
+          { password: hashedPassword, token: null },
+          { new: true, runValidators: true }
+        );
         res.status(200).json({
           statusCode: true,
           statusText: "OK",
@@ -494,7 +541,11 @@ exports.changePassword = async (req, res) => {
     const saltPassword = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(newPassword, saltPassword);
 
-    await donorModel.findByIdAndUpdate(user._id, { password: hashedPassword }, { new: true, runValidators: true });
+    await donorModel.findByIdAndUpdate(
+      user._id,
+      { password: hashedPassword },
+      { new: true, runValidators: true }
+    );
 
     res.status(200).json({
       statusCode: true,
@@ -539,7 +590,9 @@ exports.updateProfile = async (req, res) => {
     const updateProfile = {
       firstName: individualNameToTitleCase(firstName ?? user.firstName),
       lastName: individualNameToTitleCase(lastName ?? user.lastName),
-      phoneNumber: phoneNumber ? `+234${phoneNumber.slice(1)}` : user.phoneNumber,
+      phoneNumber: phoneNumber
+        ? `+234${phoneNumber.slice(1)}`
+        : user.phoneNumber,
     };
 
     if (uploadProfilePicture) {
@@ -550,7 +603,10 @@ exports.updateProfile = async (req, res) => {
     }
 
     const updatedUser = await donorModel
-      .findByIdAndUpdate(user._id, updateProfile, { new: true, runValidators: true })
+      .findByIdAndUpdate(user._id, updateProfile, {
+        new: true,
+        runValidators: true,
+      })
       .select(-password - otp - token);
 
     const response = {
@@ -598,7 +654,9 @@ exports.googleAuth = async (req, res) => {
 
     if (!user) {
       isNewUser = true;
-      const tempPassword = Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(-8);
+      const tempPassword =
+        Math.random().toString(36).slice(-8) +
+        Math.random().toString(36).slice(-8);
       const saltPassword = await bcrypt.genSalt(10);
       const hashedPassword = await bcrypt.hash(tempPassword, saltPassword);
 
@@ -618,7 +676,11 @@ exports.googleAuth = async (req, res) => {
       });
     }
 
-    const jwtToken = jwt.sign({ id: user._id, email: user.email }, process.env.JWT_SECRET, { expiresIn: "1d" });
+    const jwtToken = jwt.sign(
+      { id: user._id, email: user.email },
+      process.env.JWT_SECRET,
+      { expiresIn: "1d" }
+    );
 
     res.status(200).json({
       statusCode: true,
@@ -661,7 +723,9 @@ exports.setRole = async (req, res) => {
     }
     const role = accountType === "organization" ? "fundraiser" : "donor";
 
-    const updatedUser = await donorModel.findByIdAndUpdate(userId, { accountType, role }, { new: true }).select("-password");
+    const updatedUser = await donorModel
+      .findByIdAndUpdate(userId, { accountType, role }, { new: true })
+      .select("-password");
 
     res.status(200).json({
       statusCode: true,
@@ -690,10 +754,19 @@ exports.getOne = async (req, res) => {
         message: "User not found",
       });
     }
+
+    const response = {
+      _id: user._id,
+      email: user.email,
+      role: user.role,
+      firstName: user.firstName,
+      lastName: user.lastName,
+    };
+
     res.status(200).json({
       statusCode: true,
       statusText: "OK",
-      data: user,
+      data: response,
     });
   } catch (error) {
     res.status(500).json({

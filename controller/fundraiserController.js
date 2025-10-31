@@ -70,6 +70,7 @@ exports.registerOrganization = async (req, res) => {
       acceptedTerms,
       otp: otp,
       otpExpiredAt: expiresAt,
+      role: "fundraiser",
     });
 
     const displayName = newUser.organizationName;
@@ -88,6 +89,7 @@ exports.registerOrganization = async (req, res) => {
       organizationName,
       email,
       phoneNumber,
+      role: newUser.role
     };
 
     res.status(201).json({
@@ -281,6 +283,7 @@ exports.loginOrganization = async (req, res) => {
       organizationName: user.organizationName,
       email,
       token,
+      role: user.role,
     };
 
     res.status(200).json({
@@ -575,6 +578,7 @@ exports.updateProfile = async (req, res) => {
   }
 };
 
+
 exports.fundraiserActivateCampaign = async (req, res) => {
   try {
     const { campaignId } = req.params;
@@ -619,3 +623,38 @@ exports.fundraiserActivateCampaign = async (req, res) => {
   }
 };
 
+
+
+exports.getOne = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const user = await fundraiserModel.findById(id).select("-password -otp -otpExpiredAt -token -status");
+
+    if (!user) {
+      return res.status(404).json({
+        statusCode: false,
+        statusText: "Not Found",
+        message: "Fundraiser not found",
+      });
+    }
+
+    const response = {
+      _id: user._id,
+      email: user.email,
+      role: user.role,
+      organizationName: user.organizationName
+    };
+
+    res.status(200).json({
+      statusCode: true,
+      statusText: "OK",
+      data: response,
+    });
+  } catch (error) {
+    res.status(500).json({
+      statusCode: false,
+      statusText: "Internal Server Error",
+      message: error.message,
+    });
+  }
+};

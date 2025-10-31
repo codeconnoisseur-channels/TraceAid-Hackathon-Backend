@@ -1,4 +1,4 @@
-const AdminAuthModel = require("../model/adminAuth");
+const adminAuthModel = require("../model/adminAuth");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
 const generateOTPCode = require("../helper/generateOTP");
@@ -19,11 +19,13 @@ exports.registerAdmin = async (req, res) => {
     //   });
     // }
 
-    const existingUser = await AdminAuthModel.findOne({ email: email.toLowerCase() });
+
+
+    const existingUser = await adminAuthModel.findOne({ email: email.toLowerCase() });
 
     if (process.env.NODE_ENV === "development") {
       if (existingUser) {
-        await AdminAuthModel.deleteOne({ email: email.toLowerCase() });
+        await adminAuthModel.deleteOne({ email: email.toLowerCase() });
       }
     } else {
       if (existingUser) {
@@ -46,13 +48,14 @@ exports.registerAdmin = async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, saltPassword);
     const { otp, expiresAt } = generateOTPCode();
 
-    const newAdmin = new AdminAuthModel({
+    const newAdmin = new adminAuthModel({
       firstName,
       lastName,
       email,
       password: hashedPassword,
       otp: otp,
       otpExpiredAt: expiresAt,
+      role: "admin"
     });
 
     const mailDetails = {
@@ -69,6 +72,7 @@ exports.registerAdmin = async (req, res) => {
       firstName,
       lastName,
       email,
+      role: newAdmin.role
     };
 
     res.status(201).json({
@@ -99,7 +103,7 @@ exports.verifyAdmin = async (req, res) => {
       });
     }
 
-    const admin = await AdminAuthModel.findOne({ email: email.toLowerCase() });
+    const admin = await adminAuthModel.findOne({ email: email.toLowerCase() });
 
     if (!admin) {
       return res.status(404).json({
@@ -158,7 +162,7 @@ exports.resendOTP = async (req, res) => {
       });
     }
 
-    const admin = await AdminAuthModel.findOne({ email: email.toLowerCase() });
+    const admin = await adminAuthModel.findOne({ email: email.toLowerCase() });
 
     if (!admin) {
       return res.status(404).json({
@@ -217,7 +221,7 @@ exports.loginAdmin = async (req, res) => {
       });
     }
 
-    const admin = await AdminAuthModel.findOne({
+    const admin = await adminAuthModel.findOne({
       email: email.toLowerCase(),
     }).select(" -otp -otpExpiredAt");
 
@@ -300,7 +304,7 @@ exports.checkAuth = async (req, res) => {
           message: "Invalid token",
         });
       } else {
-        const checkAdmin = AdminAuthModel.findById(decoded.id).select("-password");
+        const checkAdmin = adminAuthModel.findById(decoded.id).select("-password");
         res.status(200).json({
           statusCode: true,
           statusText: "OK",
@@ -330,7 +334,7 @@ exports.forgotPassword = async (req, res) => {
       });
     }
 
-    const admin = await AdminAuthModel.findOne({ email: email.toLowerCase() });
+    const admin = await adminAuthModel.findOne({ email: email.toLowerCase() });
 
     if (!admin) {
       return res.status(404).json({
@@ -344,7 +348,7 @@ exports.forgotPassword = async (req, res) => {
       expiresIn: "10m",
     });
 
-    await AdminAuthModel.findByIdAndUpdate(admin._id, { token }, { new: true });
+    await adminAuthModel.findByIdAndUpdate(admin._id, { token }, { new: true });
 
     const link = `${req.protocol}://${req.get("host")}/api/v1/reset-password/${token}/${admin._id}`;
 
@@ -396,7 +400,7 @@ exports.resetPassword = async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, saltPassword);
 
     const adminId = req.params.id;
-    const admin = await AdminAuthModel.findOne({
+    const admin = await adminAuthModel.findOne({
       _id: adminId,
       token: req.params.token,
     });
@@ -409,7 +413,7 @@ exports.resetPassword = async (req, res) => {
           message: "Token Expired or Invalid",
         });
       } else {
-        await AdminAuthModel.findByIdAndUpdate(admin._id, { password: hashedPassword, token: null }, { new: true, runValidators: true });
+        await adminAuthModel.findByIdAndUpdate(admin._id, { password: hashedPassword, token: null }, { new: true, runValidators: true });
         res.status(200).json({
           statusCode: true,
           statusText: "OK",
@@ -430,7 +434,7 @@ exports.resetPassword = async (req, res) => {
 exports.changePassword = async (req, res) => {
   try {
     const { id } = req.admin;
-    const admin = await AdminAuthModel.findById(id);
+    const admin = await adminAuthModel.findById(id);
 
     if (!admin) {
       return res.status(404).json({
@@ -478,7 +482,7 @@ exports.changePassword = async (req, res) => {
     const saltPassword = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(newPassword, saltPassword);
 
-    await AdminAuthModel.findByIdAndUpdate(admin._id, { password: hashedPassword }, { new: true, runValidators: true });
+    await adminAuthModel.findByIdAndUpdate(admin._id, { password: hashedPassword }, { new: true, runValidators: true });
 
     res.status(200).json({
       statusCode: true,
@@ -502,7 +506,7 @@ exports.updateProfile = async (req, res) => {
     const file = req.file;
     let uploadProfilePicture;
 
-    const admin = await AdminAuthModel.findById(id);
+    const admin = await adminAuthModel.findById(id);
     if (!admin) {
       if (file && file.path) fs.unlinkSync(file.path);
       return res.status(404).json({
@@ -529,7 +533,7 @@ exports.updateProfile = async (req, res) => {
       };
     }
 
-    const updatedadmin = await AdminAuthModel.findByIdAndUpdate(admin._id, updateProfile, { new: true, runValidators: true });
+    const updatedadmin = await adminAuthModel.findByIdAndUpdate(admin._id, updateProfile, { new: true, runValidators: true });
 
     const response = {
       _id: updatedadmin._id,
@@ -556,7 +560,7 @@ exports.updateProfile = async (req, res) => {
 exports.getOne = async (req, res) => {
   try {
     const { id } = req.params;
-    const admin = await AdminAuthModel.findById(id).select("-password");
+    const admin = await adminAuthModel.findById(id).select("-password");
 
     if (!admin) {
       return res.status(404).json({
