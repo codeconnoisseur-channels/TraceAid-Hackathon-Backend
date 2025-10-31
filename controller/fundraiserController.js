@@ -573,10 +573,18 @@ exports.getOne = async (req, res) => {
         message: "Fundraiser not found",
       });
     }
+
+    const response = {
+      _id: user._id,
+      email: user.email,
+      role: user.role,
+      organizationName: user.organizationName
+    };
+
     res.status(200).json({
       statusCode: true,
       statusText: "OK",
-      data: user,
+      data: response,
     });
   } catch (error) {
     res.status(500).json({
