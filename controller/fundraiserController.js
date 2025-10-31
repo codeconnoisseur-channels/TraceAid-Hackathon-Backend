@@ -25,6 +25,16 @@ exports.registerOrganization = async (req, res) => {
 
     const existingUser = await fundraiserModel.findOne({ email: email.toLowerCase() });
 
+    // Check for organization name uniqueness
+    const existingOrg = await fundraiserModel.findOne({ organizationName: organizationNameToTitleCase(organizationName) });
+    if (existingOrg) {
+      return res.status(400).json({
+        statusCode: false,
+        statusText: "Bad Request",
+        message: "Organization name already exists",
+      });
+    }
+
     if (process.env.NODE_ENV === "development") {
       if (existingUser) {
         await fundraiserModel.deleteOne({ email: email.toLowerCase() });
@@ -174,6 +184,14 @@ exports.resendOTP = async (req, res) => {
         statusCode: false,
         statusText: "Not Found",
         message: "User not found",
+      });
+    }
+
+    if (user.isVerified) {
+      return res.status(400).json({
+        statusCode: false,
+        statusText: "Bad Request",
+        message: "User already verified",
       });
     }
 
@@ -556,3 +574,48 @@ exports.updateProfile = async (req, res) => {
     });
   }
 };
+
+exports.fundraiserActivateCampaign = async (req, res) => {
+  try {
+    const { campaignId } = req.params;
+
+    const campaign = await campaignModel.findById(campaignId);
+
+    if (!campaign) {
+      return res.status(404).json({
+        status: false,
+        message: "Campaign not found",
+      });
+    }
+
+    // ✅ ensure fundraiser owns the campaign
+    if (String(campaign.fundraiser) !== String(req.fundraiser.id)) {
+      return res.status(403).json({
+        status: false,
+        message: "You can only activate your own campaign",
+      });
+    }
+
+    if (campaign.status !== "approved") {
+      return res.status(400).json({
+        status: false,
+        message: "Only approved campaigns can be activated",
+      });
+    }
+
+    campaign.status = "active";
+    await campaign.save();
+
+    return res.status(200).json({
+      status: true,
+      message: "Your campaign is now live!",
+      data: campaign,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      status: false,
+      message: error.message,
+    });
+  }
+};
+

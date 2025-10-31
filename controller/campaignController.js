@@ -17,6 +17,16 @@ exports.createACampaign = async (req, res) => {
   try {
     let { campaignTitle, campaignDescription, totalCampaignGoalAmount, campaignCategory, campaignDuration, milestones } = req.body;
 
+    if (!campaignTitle || !campaignDescription || !totalCampaignGoalAmount || !campaignCategory || !campaignDuration) {
+      if (file && file.path && fs.existsSync(file.path)) {
+        fs.unlinkSync(file.path);
+      }
+      return res.status(400).json({
+        statusCode: false,
+        statusText: "Bad Request",
+        message: "All fields are required (Title, Description, Goal, Category, Duration).",
+      });
+    }
     // If milestones came as a string (from form-data), parse it
     if (typeof milestones === "string") {
       try {
@@ -29,33 +39,23 @@ exports.createACampaign = async (req, res) => {
         });
       }
     }
+
+    if (!file) {
+      return res.status(400).json({
+        statusCode: false,
+        statusText: "Bad Request",
+        message: "Campaign cover image or video is required.",
+      });
+    }
+
     const user = await fundraiserModel.findById(fundraiserId);
     console.log("USER:", user);
-
-    const checkVerifiedKyc = await kycModel.findOne({ fundraiserId: req.user.id, verificationStatus: "verified" });
-    console.log("KYC:", checkVerifiedKyc);
 
     if (!user) {
       return res.status(404).json({
         statusCode: false,
         statusText: "Not Found",
         message: "Authenticated Fundraiser user not found.",
-      });
-    }
-
-    if (user.isVerified === false) {
-      return res.status(403).json({
-        statusCode: false,
-        statusText: "Forbidden",
-        message: "Account not verified. Please verify your email first.",
-      });
-    }
-
-    if (!checkVerifiedKyc || checkVerifiedKyc.verificationStatus !== "verified") {
-      return res.status(403).json({
-        statusCode: false,
-        statusText: "Forbidden",
-        message: "Can't create a campaign until your KYC is verified.",
       });
     }
 
@@ -67,14 +67,54 @@ exports.createACampaign = async (req, res) => {
       });
     }
 
-    if (!campaignTitle || !campaignDescription || !totalCampaignGoalAmount || !campaignCategory || !campaignDuration) {
-      if (file && file.path && fs.existsSync(file.path)) {
-        fs.unlinkSync(file.path);
-      }
-      return res.status(400).json({
+    if (user.isVerified === false) {
+      return res.status(403).json({
         statusCode: false,
-        statusText: "Bad Request",
-        message: "All fields are required (Title, Description, Goal, Category, Duration).",
+        statusText: "Forbidden",
+        message: "Account not verified. Please verify your email first.",
+      });
+    }
+
+    if (user.kycStatus === "not_submitted") {
+      return res.status(403).json({
+        statusCode: false,
+        statusText: "Forbidden",
+        message: "You must submit your KYC before creating a campaign.",
+      });
+    }
+
+    if (user.kycStatus === "pending") {
+      return res.status(403).json({
+        statusCode: false,
+        statusText: "Forbidden",
+        message: "KYC is under review. You can create a campaign after approval.",
+      });
+    }
+
+    if (user.kycStatus === "rejected") {
+      return res.status(403).json({
+        statusCode: false,
+        statusText: "Forbidden",
+        message: "Your KYC was rejected. Please resubmit and wait for approval.",
+      });
+    }
+
+    if (user.kycStatus !== "verified") {
+      return res.status(403).json({
+        statusCode: false,
+        statusText: "Forbidden",
+        message: "KYC not verified. Please verify your KYC first.",
+      });
+    }
+
+    const checkVerifiedKyc = await kycModel.findOne({ fundraiserId: req.user.id, verificationStatus: "verified" });
+    console.log("KYC:", checkVerifiedKyc);
+
+    if (!checkVerifiedKyc) {
+      return res.status(403).json({
+        statusCode: false,
+        statusText: "Forbidden",
+        message: "KYC not verified. Please verify your KYC first.",
       });
     }
 
@@ -278,3 +318,4 @@ exports.getCampaignWithMilestonesAndEvidence = async (req, res) => {
     });
   }
 };
+

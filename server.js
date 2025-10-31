@@ -14,6 +14,7 @@ const donorRouter = require("./routes/donorRouter");
 const fundraiserRouter = require("./routes/fundraiserRouter");
 const campaignRouter = require("./routes/campaignRouter")
 const milestoneRouter = require("./routes/milestoneRouter")
+const donationRouter = require("./routes/donationRouter")
 
 const app = express();
 app.use(express.json());
@@ -88,6 +89,7 @@ app.use("/admin-auth/api/v1", adminAuthRouter);
 app.use("/admin/api/v1", adminRouter)
 app.use("/campaign/api/v1", campaignRouter)
 app.use("/milestone/api/v1", milestoneRouter)
+app.use("donation/api/v1", donationRouter)
 
 
 

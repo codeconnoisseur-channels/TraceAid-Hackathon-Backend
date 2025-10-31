@@ -5,6 +5,7 @@ const fundraiserSchema = new mongoose.Schema(
     organizationName: {
       type: String,
       trim: true,
+      unique: true,
     },
     email: {
       type: String,
@@ -31,7 +32,7 @@ const fundraiserSchema = new mongoose.Schema(
     },
     role: {
       type: String,
-      enum: ["fundraiser", "admin"],
+      enum: ["fundraiser"],
       default: "fundraiser",
       required: true,
     },

@@ -7,8 +7,9 @@ const {
   updateProfile,
   forgotPassword,
   resetPassword,
+  fundraiserActivateCampaign,
 } = require("../controller/fundraiserController");
-const { authenticate } = require("../middleware/auth");
+const { authenticate, isFundraiser } = require("../middleware/auth");
 const uploads = require("../utils/multer");
 const {
   organizationRegisterValidator,
@@ -964,5 +965,7 @@ router.put(
   uploads.single("profilePicture"),
   updateProfile
 );
+
+router.patch("/campaigns/activate/:campaignId", authenticate, isFundraiser, fundraiserActivateCampaign)
 
 module.exports = router;

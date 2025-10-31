@@ -19,11 +19,11 @@ exports.registerAdmin = async (req, res) => {
     //   });
     // }
 
-    const existingUser = await adminModel.findOne({ email: email.toLowerCase() });
+    const existingUser = await AdminAuthModel.findOne({ email: email.toLowerCase() });
 
     if (process.env.NODE_ENV === "development") {
       if (existingUser) {
-        await adminModel.deleteOne({ email: email.toLowerCase() });
+        await AdminAuthModel.deleteOne({ email: email.toLowerCase() });
       }
     } else {
       if (existingUser) {

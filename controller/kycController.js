@@ -1,4 +1,4 @@
-const userModel = require("../model/fundraiserModel");
+const fundraiserModel = require("../model/fundraiserModel");
 const kycModel = require("../model/kycModel");
 const cloudinary = require("cloudinary").v2;
 const fs = require("fs");
@@ -109,13 +109,38 @@ exports.addKyc = async (req, res) => {
       verificationStatus: "pending",
     });
 
-    await userModel.findByIdAndUpdate(userId, { kyc: newKyc._id });
+    await fundraiserModel.findByIdAndUpdate(
+      userId,
+      {
+        kyc: newKyc._id,
+        kycStatus: "pending",
+      },
+      { new: true, runValidators: true }
+    );
+
+    const response = {
+      user: newKyc.user,
+      organizationName: newKyc.organizationName,
+      organizationType: newKyc.organizationType,
+      registrationNumber: newKyc.registrationNumber,
+      authorizedRepresentativeFullName: newKyc.authorizedRepresentativeFullName,
+      organizationAddress: newKyc.organizationAddress,
+      bankAccountName: newKyc.bankAccountName,
+      bankAccountNumber: newKyc.bankAccountNumber,
+      bankName: newKyc.bankName,
+      registrationCertificate: newKyc.registrationCertificate,
+      authorizedRepresentativeId: newKyc.authorizedRepresentativeId,
+      verificationStatus: newKyc.verificationStatus,
+      createdAt: newKyc.createdAt,
+      updatedAt: newKyc.updatedAt,
+      id: newKyc._id.toString(),
+    };
 
     res.status(201).json({
       statusCode: true,
       statusText: "Created",
       message: "KYC documents submitted successfully for review.",
-      data: newKyc,
+      data: response,
     });
   } catch (error) {
     console.error(error.message);
