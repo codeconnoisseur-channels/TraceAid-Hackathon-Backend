@@ -19,6 +19,8 @@ exports.registerAdmin = async (req, res) => {
     //   });
     // }
 
+
+
     const existingUser = await adminAuthModel.findOne({ email: email.toLowerCase() });
 
     if (process.env.NODE_ENV === "development") {

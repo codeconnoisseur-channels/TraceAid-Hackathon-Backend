@@ -2,7 +2,6 @@ const mongoose = require("mongoose");
 
 const donorSchema = new mongoose.Schema(
   {
-
     firstName: {
       type: String,
       trim: true,
@@ -29,11 +28,21 @@ const donorSchema = new mongoose.Schema(
     acceptedTerms: {
       type: Boolean,
       required: [true, "You must accept the terms and conditions"],
-      default: false
+      default: false,
     },
     isVerified: {
       type: Boolean,
       default: false,
+    },
+    profilePicture: {
+      imageUrl: {
+        type: String,
+        default: null,
+      },
+      publicId: {
+        type: String,
+        default: null,
+      },
     },
     isGoogle: {
       type: Boolean,

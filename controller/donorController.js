@@ -217,6 +217,14 @@ exports.resendOTP = async (req, res) => {
       });
     }
 
+    if (user.isVerified) {
+      return res.status(400).json({
+        statusCode: false,
+        statusText: "Bad Request",
+        message: "User is already verified",
+      });
+    }
+
     if (user.otpExpiredAt > Date.now() && user.otp) {
       const waitOtpTime = new Date(user.otpExpiredAt).toLocaleTimeString();
       return res.status(400).json({

@@ -26,7 +26,13 @@ const milestoneSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
-    evidenceUploads: [{ imageUrl: String, publicId: String, uploadedAt: Date }],
+    evidenceUploads: [
+      {
+        imageUrl: String,
+        publicId: String,
+        uploadedAt: Date,
+      },
+    ],
     status: {
       type: String,
       enum: ["pending", "approved", "in-progress", "completed", "rejected"],

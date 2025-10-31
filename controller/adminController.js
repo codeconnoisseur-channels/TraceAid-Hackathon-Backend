@@ -7,6 +7,9 @@ const { kycStatusEmail, campaignStatusEmail } = require("../emailTemplate/emailV
 const MilestoneEvidenceModel = require("../model/milestoneEvidenceModel");
 const Payout = require("../model/payoutModel");
 const FundraiserWallet = require("../model/fundraiserWallet");
+const donorModel = require("../model/donorModel");
+const adminAuthModel = require("../model/adminAuth");
+const Milestone = require("../model/milestoneModel");
 
 exports.verifyKyc = async (req, res) => {
   try {
@@ -151,30 +154,93 @@ exports.getAllKycByTheStatus = async (req, res) => {
         message: "KYC records not found",
       });
     }
-    res.status(200).json({ statusCode: true,
-      statusText: "Success",
-      message: `KYC records retrieved successfully for status ${status}`,
-      data: kycs,
-    });
+    res.status(200).json({ statusCode: true, statusText: "Success", message: `KYC records retrieved successfully for status ${status}`, data: kycs });
   } catch (error) {
     res.status(500).json({
       statusCode: false,
       statusText: "Internal Server Error",
       message: error.message,
     });
-  }}
+  }
+};
+
+// exports.reviewCampaign = async (req, res) => {
+//   try {
+//     const { campaignId } = req.params;
+//     const { action, remarks } = req.body;
+
+//     const campaign = await campaignModel.findById(campaignId).populate("fundraiser");
+//     if (!campaign) {
+//       return res.status(404).json({
+//         statusCode: false,
+//         message: "Campaign not found",
+//       });
+//     }
+
+//     if (campaign.status !== "approved") {
+//       return res.status(400).json({
+//         statusCode: false,
+//         message: `This campaign has already been approved and cannot be approved again.`,
+//       });
+//     }
+
+//     if (!["approve", "reject"].includes(action)) {
+//       return res.status(400).json({
+//         statusCode: false,
+//         message: "Action must be either 'approve' or 'reject'",
+//       });
+//     }
+
+//     if (action === "approve") {
+//       campaign.status = "approved";
+//     } else {
+//       if (!remarks || remarks.trim() === "") {
+//         return res.status(400).json({
+//           statusCode: false,
+//           message: "Remarks are required when rejecting a campaign",
+//         });
+//       }
+
+//       campaign.status = "rejected";
+//       campaign.rejectionReason = remarks;
+//     }
+
+//     await campaign.save();
+
+//     const statusMessage =
+//       action === "approve"
+//         ? `Congratulations! Your campaign titled "${campaign.campaignTitle}" has been approved and will be visible to the public soon.`
+//         : `Unfortunately, your campaign titled "${campaign.campaignTitle}" has been rejected. Reason: ${remarks}`;
+
+//     await sendEmail({
+//       email: campaign.fundraiser.email,
+//       subject: "Campaign Review Update",
+//       html: campaignStatusEmail(campaign.fundraiser.organizationName, action, campaign.campaignTitle, remarks),
+//     });
+
+//     await adminActivityModel.create({
+//       admin: req.admin.id,
+//       action: `${action === "approve" ? "Approved" : "Rejected"} Campaign`,
+//       details: `Campaign titled "${campaign.campaignTitle}" has been ${campaign.status}`,
+//     });
+
+//     res.status(200).json({
+//       statusCode: true,
+//       message: `Campaign ${action === "approve" ? "approved" : "rejected"} successfully`,
+//       data: campaign,
+//     });
+//   } catch (error) {
+//     res.status(500).json({
+//       statusCode: false,
+//       message: error.message,
+//     });
+//   }
+// };
 
 exports.reviewCampaign = async (req, res) => {
   try {
     const { campaignId } = req.params;
     const { action, remarks } = req.body;
-
-    if (!["approve", "reject"].includes(action)) {
-      return res.status(400).json({
-        statusCode: false,
-        message: "Action must be either 'approve' or 'reject'",
-      });
-    }
 
     const campaign = await campaignModel.findById(campaignId).populate("fundraiser");
     if (!campaign) {
@@ -184,15 +250,23 @@ exports.reviewCampaign = async (req, res) => {
       });
     }
 
+    if (!["approve", "reject"].includes(action)) {
+      return res.status(400).json({
+        statusCode: false,
+        message: "Action must be either 'approve' or 'reject'",
+      });
+    }
+
     if (campaign.status !== "pending") {
       return res.status(400).json({
         statusCode: false,
-        message: `This campaign is already ${campaign.status}`,
+        message: `Campaign already ${campaign.status}, cannot review again`,
       });
     }
 
     if (action === "approve") {
       campaign.status = "approved";
+      campaign.rejectionReason = null;
     } else {
       if (!remarks || remarks.trim() === "") {
         return res.status(400).json({
@@ -206,21 +280,16 @@ exports.reviewCampaign = async (req, res) => {
 
     await campaign.save();
 
-    const statusMessage =
-      action === "approve"
-        ? `Congratulations! Your campaign titled "${campaign.title}" has been approved and will be visible to the public soon.`
-        : `Unfortunately, your campaign titled "${campaign.title}" has been rejected. Reason: ${remarks}`;
-
     await sendEmail({
       email: campaign.fundraiser.email,
       subject: "Campaign Review Update",
-      html: campaignStatusEmail(campaign.fundraiser.organizationName, action, campaign.title, remarks),
+      html: campaignStatusEmail(campaign.fundraiser.organizationName, action, campaign.campaignTitle, remarks),
     });
 
     await adminActivityModel.create({
       admin: req.admin.id,
       action: `${action === "approve" ? "Approved" : "Rejected"} Campaign`,
-      details: `Campaign titled "${campaign.title}" has been ${campaign.status}`,
+      details: `Campaign titled "${campaign.campaignTitle}" has been ${campaign.status}`,
     });
 
     res.status(200).json({
@@ -231,6 +300,41 @@ exports.reviewCampaign = async (req, res) => {
   } catch (error) {
     res.status(500).json({
       statusCode: false,
+      message: error.message,
+    });
+  }
+};
+
+exports.adminActivateCampaign = async (req, res) => {
+  try {
+    const { campaignId } = req.params;
+
+    const campaign = await campaignModel.findById(campaignId);
+    if (!campaign) {
+      return res.status(404).json({
+        status: false,
+        message: "Campaign not found",
+      });
+    }
+
+    if (campaign.status !== "approved") {
+      return res.status(400).json({
+        status: false,
+        message: "Only approved campaigns can be activated",
+      });
+    }
+
+    campaign.status = "active";
+    await campaign.save();
+
+    return res.status(200).json({
+      status: true,
+      message: "Campaign is now active and live for donations",
+      data: campaign,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      status: false,
       message: error.message,
     });
   }
@@ -372,5 +476,104 @@ exports.releaseMilestoneFunds = async (req, res) => {
     session.endSession();
     console.error(err);
     return res.status(500).json({ statusCode: false, statusText: "Internal Server Error", message: err.message });
+  }
+};
+
+exports.getAllKycGrouped = async (req, res) => {
+  try {
+    const fundraiserId = req.query.fundraiserId; // optional
+    const kycs = await kycModel.find().populate("user");
+
+    if (!kycs || kycs.length === 0) {
+      return res.status(404).json({
+        statusCode: false,
+        statusText: "Not Found",
+        message: "No KYC records found",
+      });
+    }
+
+    // Filter by fundraiserId if provided
+    const filteredKycs = fundraiserId ? kycs.filter((kyc) => kyc.user && kyc.user._id.toString() === fundraiserId) : kycs;
+
+    // Group by verificationStatus
+    const groupedKycs = filteredKycs.reduce((acc, kyc) => {
+      const status = kyc.verificationStatus || "unknown";
+      if (!acc[status]) acc[status] = [];
+      acc[status].push(kyc);
+      return acc;
+    }, {});
+
+    res.status(200).json({
+      statusCode: true,
+      statusText: "Success",
+      message: fundraiserId ? `KYC records grouped by status for fundraiser ${fundraiserId}` : "KYC records grouped by status",
+      data: groupedKycs,
+    });
+  } catch (error) {
+    res.status(500).json({
+      statusCode: false,
+      statusText: "Internal Server Error",
+      message: error.message,
+    });
+  }
+};
+
+exports.getAllFundraisers = async (req, res) => {
+  try {
+    const fundraisers = await fundraiserModel.find().select("-password -phoneNumber -token -otp -otpExpiredAt").sort({ createdAt: -1 }).lean();
+
+    if (!fundraisers || fundraisers.length === 0) {
+      return res.status(404).json({
+        statusCode: false,
+        statusText: "Not Found",
+        message: "No fundraisers found",
+      });
+    }
+
+    res.status(200).json({
+      statusCode: true,
+      statusText: "Success",
+      message: "Fundraisers retrieved successfully",
+      data: {
+        total: fundraisers.length,
+        fundraisers,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({
+      statusCode: false,
+      statusText: "Internal Server Error",
+      message: error.message,
+    });
+  }
+};
+
+exports.getAllDonors = async (req, res) => {
+  try {
+    const donors = await donorModel.find().select("-password -phoneNumber -token -otp -otpExpiredAt").sort({ createdAt: -1 }).lean();
+
+    if (!donors || donors.length === 0) {
+      return res.status(404).json({
+        statusCode: false,
+        statusText: "Not Found",
+        message: "No donors found",
+      });
+    }
+
+    res.status(200).json({
+      statusCode: true,
+      statusText: "Success",
+      message: "Donors retrieved successfully",
+      data: {
+        total: donors.length,
+        donors,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({
+      statusCode: false,
+      statusText: "Internal Server Error",
+      message: error.message,
+    });
   }
 };

@@ -7,9 +7,10 @@ const {
   updateProfile,
   forgotPassword,
   resetPassword,
+  fundraiserActivateCampaign,
   getOne,
 } = require("../controller/fundraiserController");
-const { authenticate } = require("../middleware/auth");
+const { authenticate, isFundraiser } = require("../middleware/auth");
 const uploads = require("../utils/multer");
 const {
   organizationRegisterValidator,
@@ -966,6 +967,10 @@ router.put(
   updateProfile
 );
 
+
+router.patch("/campaigns/activate/:campaignId", authenticate, isFundraiser, fundraiserActivateCampaign)
+
 router.get("/user/:id", getOne)
+
 
 module.exports = router;

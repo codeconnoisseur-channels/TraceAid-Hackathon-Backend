@@ -8,7 +8,7 @@ const campaignSchema = new mongoose.Schema(
       ref: "Fundraiser",
       required: true,
     },
-   campaignTitle: {
+    campaignTitle: {
       type: String,
       required: true,
       trim: true,
@@ -50,8 +50,8 @@ const campaignSchema = new mongoose.Schema(
     ],
     status: {
       type: String,
-      enum: ["draft", "pending", "approved", "active", "completed", "rejected"],
-      default: "draft",
+      enum: ["pending", "approved", "active", "completed", "rejected"],
+      default: "pending",
     },
     rejectionReason: {
       type: String,
