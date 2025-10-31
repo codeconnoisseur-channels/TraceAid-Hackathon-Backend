@@ -558,3 +558,30 @@ exports.updateProfile = async (req, res) => {
     });
   }
 };
+
+
+exports.getOne = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const user = await fundraiserModel.findById(id).select("-password -otp -otpExpiredAt -token -status");
+
+    if (!user) {
+      return res.status(404).json({
+        statusCode: false,
+        statusText: "Not Found",
+        message: "Fundraiser not found",
+      });
+    }
+    res.status(200).json({
+      statusCode: true,
+      statusText: "OK",
+      data: user,
+    });
+  } catch (error) {
+    res.status(500).json({
+      statusCode: false,
+      statusText: "Internal Server Error",
+      message: error.message,
+    });
+  }
+};

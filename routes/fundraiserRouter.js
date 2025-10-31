@@ -7,6 +7,7 @@ const {
   updateProfile,
   forgotPassword,
   resetPassword,
+  getOne,
 } = require("../controller/fundraiserController");
 const { authenticate } = require("../middleware/auth");
 const uploads = require("../utils/multer");
@@ -964,5 +965,7 @@ router.put(
   uploads.single("profilePicture"),
   updateProfile
 );
+
+router.get("/user/:id", getOne)
 
 module.exports = router;
