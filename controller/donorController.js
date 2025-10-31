@@ -290,6 +290,7 @@ exports.loginUser = async (req, res) => {
       _id: user._id,
       email: email,
       token,
+      role: user.role,
     };
 
     res.status(200).json({
