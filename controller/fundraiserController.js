@@ -265,6 +265,7 @@ exports.loginOrganization = async (req, res) => {
       organizationName: user.organizationName,
       email,
       token,
+      role: user.role,
     };
 
     res.status(200).json({
