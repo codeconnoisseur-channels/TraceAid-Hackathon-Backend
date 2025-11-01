@@ -556,7 +556,7 @@ router.post("/forgot-password", forgotPasswordValidator, forgotPassword);
 
 /**
  * @swagger
- * /admin-auth/api/v1/reset-password/{token}/{id}:
+ * /admin-auth/api/v1/admin-reset-password/{token}/{id}:
  *   put:
  *     summary: Reset admin password
  *     description: Allows an admin to reset their password using a valid password reset token and user ID.
@@ -678,7 +678,7 @@ router.post("/forgot-password", forgotPasswordValidator, forgotPassword);
  *                   example: "An unexpected error occurred while resetting the password."
  */
 router.put(
-  "/reset-password/:token/:id",
+  "/admin-reset-password/:token/:id",
   resetPasswordValidator,
   resetPassword
 );
