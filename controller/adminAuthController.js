@@ -350,7 +350,7 @@ exports.forgotPassword = async (req, res) => {
 
     await adminAuthModel.findByIdAndUpdate(admin._id, { token }, { new: true });
 
-    const link = `https://trace-aid.vercel.app/#/reset-password/${token}/${admin._id}`;
+    const link = `https://trace-aid.vercel.app/reset-password/${token}/${admin._id}`;
 
     const mailDetails = {
       email: admin.email,
