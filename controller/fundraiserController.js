@@ -89,7 +89,7 @@ exports.registerOrganization = async (req, res) => {
       organizationName,
       email,
       phoneNumber,
-      role: newUser.role
+      role: newUser.role,
     };
 
     res.status(201).json({
@@ -152,10 +152,29 @@ exports.verifyOrganization = async (req, res) => {
 
     await user.save();
 
+    const jwtPayload = {
+      _id: user._id,
+      email: user.email,
+      organizationName: user.organizationName,
+      role: user.role,
+    };
+
+    const jwtSecret = process.env.JWT_SECRET;
+    const token = jwt.sign(jwtPayload, jwtSecret, { expiresIn: "1d" });
+
     res.status(200).json({
       statusCode: true,
       statusText: "OK",
       message: "Email verification successful",
+      data: {
+        token: token,
+        _user: {
+          id: user._id,
+          organizationName: user.organizationName,
+          email: user.email,
+          role: user.role,
+        },
+      },
     });
   } catch (error) {
     console.error("Error verifying user:", error);
@@ -578,7 +597,6 @@ exports.updateProfile = async (req, res) => {
   }
 };
 
-
 exports.fundraiserActivateCampaign = async (req, res) => {
   try {
     const { campaignId } = req.params;
@@ -623,8 +641,6 @@ exports.fundraiserActivateCampaign = async (req, res) => {
   }
 };
 
-
-
 exports.getOne = async (req, res) => {
   try {
     const { id } = req.params;
@@ -642,7 +658,7 @@ exports.getOne = async (req, res) => {
       _id: user._id,
       email: user.email,
       role: user.role,
-      organizationName: user.organizationName
+      organizationName: user.organizationName,
     };
 
     res.status(200).json({
