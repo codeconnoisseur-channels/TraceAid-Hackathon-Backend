@@ -20,7 +20,6 @@ const campaignSchema = new mongoose.Schema(
     },
     campaignCategory: {
       type: String,
-      enum: CAMPAIGN_CATEGORY_VALUES,
       required: true,
     },
     totalCampaignGoalAmount: {
@@ -36,11 +35,16 @@ const campaignSchema = new mongoose.Schema(
       imageUrl: String,
       publicId: String,
     },
-    campaignDuration: {
-      endDate: {
-        type: Date,
-        required: true,
-      },
+    durationDays: {
+      type: Number,
+      required: true,
+      min: 30,
+    },
+    startDate: {
+      type: Date,
+    },
+    endDate: {
+      type: Date,
     },
     supportingDocuments: [
       {
@@ -50,9 +54,22 @@ const campaignSchema = new mongoose.Schema(
     ],
     status: {
       type: String,
-      enum: ["pending", "approved", "active", "completed", "rejected"],
+      enum: ["pending", "approved", "active", "completed", "rejected", "ended"],
       default: "pending",
     },
+    isActive: {
+      type: Boolean,
+      default: false,
+    },
+    extensionRequests: [
+      {
+        days: { type: Number, required: true },
+        status: { type: String, enum: ["pending", "approved", "rejected"], default: "pending" },
+        requestedBy: { type: mongoose.Schema.Types.ObjectId, ref: "Fundraiser", required: true },
+        reviewedBy: { type: mongoose.Schema.Types.ObjectId, ref: "Admin", default: null },
+        requestDate: { type: Date, default: Date.now },
+      },
+    ],
     rejectionReason: {
       type: String,
       trim: true,

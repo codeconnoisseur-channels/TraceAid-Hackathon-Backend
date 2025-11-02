@@ -11,7 +11,7 @@ exports.addKyc = async (req, res) => {
 
     const file = req.files || [];
 
-    console.log("FILE:", file);
+    // console.log("FILE:", file);
 
     // const existingKyc = await kycModel.findOne({ user: userId });
     // if (existingKyc) {
@@ -49,9 +49,9 @@ exports.addKyc = async (req, res) => {
       bankName,
     } = req.body;
 
-    console.log("BODY:", req.body);
+    // console.log("BODY:", req.body);
 
-    console.log(file);
+    // console.log(file);
 
     // const certFile = file.find((f) => f.fieldname === "registrationCertificate");
     // console.log(certFile)
@@ -133,7 +133,6 @@ exports.addKyc = async (req, res) => {
       verificationStatus: newKyc.verificationStatus,
       createdAt: newKyc.createdAt,
       updatedAt: newKyc.updatedAt,
-      id: newKyc._id.toString(),
     };
 
     res.status(201).json({

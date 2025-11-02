@@ -7,6 +7,11 @@ const milestoneSchema = new mongoose.Schema(
       ref: "Campaign",
       required: true,
     },
+    sequence: {
+      type: Number,
+      required: true,
+      min: 1,
+    },
     milestoneTitle: {
       type: String,
       required: true,
@@ -26,33 +31,22 @@ const milestoneSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
-    evidenceUploads: [
-      {
-        imageUrl: String,
-        publicId: String,
-        uploadedAt: Date,
-      },
-    ],
     status: {
       type: String,
-      enum: ["pending", "approved", "in-progress", "completed", "rejected"],
+      enum: ["pending", "ready_for_release", "released", "completed"],
       default: "pending",
     },
-    verificationStatus: {
+    evidenceApprovalStatus: {
       type: String,
-      enum: ["waiting-release", "funds-released", "evidence-pending", "evidence-reviewed", "approved", "rejected"],
-      default: "waiting-release",
+      enum: ["required", "submitted", "approved", "rejected"],
+      default: "required",
     },
-    verifiedAt: {
-      type: Date,
-    },
-    endDate: {
-      type: Date,
+    evidenceRef: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "MilestoneEvidence",
+      default: null,
     },
     fundsReleasedAt: {
-      type: Date,
-    },
-    rejectedAt: {
       type: Date,
     },
   },

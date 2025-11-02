@@ -552,7 +552,10 @@ exports.updateProfile = async (req, res) => {
 
     const user = await donorModel.findById(id);
     if (!user) {
-      if (file && file.path) fs.unlinkSync(file.path);
+      if (file?.path && fs.existsSync(file.path)) {
+        fs.unlinkSync(file.path);
+      }
+
       return res.status(404).json({
         statusCode: false,
         statusText: "Not Found",
@@ -560,12 +563,17 @@ exports.updateProfile = async (req, res) => {
       });
     }
 
-    if (file && file.path) {
-      uploadProfilePicture = await cloudinary.uploader.upload(file.path, {
-        folder: "TraceAid-Profile-Pictures",
-        transformation: [{ width: 500, height: 500, crop: "fill" }],
-      });
-      fs.unlinkSync(file.path);
+    if (file?.path) {
+      try {
+        uploadProfilePicture = await cloudinary.uploader.upload(file.path, {
+          folder: "profile",
+          transformation: [{ width: 500, height: 500, crop: "fill" }],
+        });
+      } finally {
+        if (file?.path && fs.existsSync(file.path)) {
+          fs.unlinkSync(file.path);
+        }
+      }
     }
 
     const updateProfile = {
@@ -582,11 +590,11 @@ exports.updateProfile = async (req, res) => {
     }
 
     const updatedUser = await donorModel
-      .findByIdAndUpdate(user._id, updateProfile, {
+      .findByIdAndUpdate(id, updateProfile, {
         new: true,
         runValidators: true,
       })
-      .select(-password - otp - token);
+      .select("-password -otp -token");
 
     const response = {
       _id: updatedUser._id,
@@ -602,7 +610,9 @@ exports.updateProfile = async (req, res) => {
       data: { update: response },
     });
   } catch (error) {
-    if (req.file && req.file.path) fs.unlinkSync(req.file.path);
+    if (req.file?.path && fs.existsSync(req.file.path)) {
+      fs.unlinkSync(req.file.path);
+    }
     res.status(500).json({
       statusCode: false,
       statusText: "Internal Server Error",

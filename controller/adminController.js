@@ -11,6 +11,14 @@ const donorModel = require("../model/donorModel");
 const adminAuthModel = require("../model/adminAuth");
 const Milestone = require("../model/milestoneModel");
 
+
+// Helper function to calculate date
+const addDays = (date, days) => {
+    const result = new Date(date);
+    result.setDate(result.getDate() + days);
+    return result;
+};
+
 exports.verifyKyc = async (req, res) => {
   try {
     const { action, remarks } = req.body;
@@ -576,4 +584,437 @@ exports.getAllDonors = async (req, res) => {
       message: error.message,
     });
   }
+};
+
+exports.activateCampaign = async (req, res) => {
+    // Assuming req.user is the Admin object
+    const adminId = req.user.id || req.user._id;
+    const { campaignId } = req.params;
+
+    try {
+        const campaign = await campaignModel.findById(campaignId);
+
+        if (!campaign) {
+            return res.status(404).json({ statusCode: false, statusText: "Not Found", message: "Campaign not found." });
+        }
+
+        // Only allow activation if the campaign is pending review
+        if (campaign.status !== "pending" && campaign.status !== "approved") {
+            return res.status(403).json({ statusCode: false, statusText: "Forbidden", message: `Campaign is already ${campaign.status}.` });
+        }
+
+        const today = new Date();
+        const endDate = addDays(today, campaign.durationDays);
+
+        // **CRITICAL UPDATE: Activation**
+        const updatedCampaign = await campaignModel.findByIdAndUpdate(
+            campaignId,
+            {
+                status: "active",
+                isActive: true, // Allow donations
+                startDate: today,
+                endDate: endDate,
+            },
+            { new: true }
+        );
+
+        // Optionally, send a notification to the fundraiser here (e.g., using a notification service)
+
+        res.status(200).json({
+            statusCode: true,
+            statusText: "OK",
+            message: "Campaign successfully activated and is now accepting donations.",
+            data: updatedCampaign,
+        });
+
+    } catch (error) {
+        console.error("Error activating campaign:", error);
+        res.status(500).json({ statusCode: false, statusText: "Internal Server Error", message: error.message });
+    }
+};
+
+/**
+ * Admin handles a request from a fundraiser to extend the campaign duration.
+ */
+exports.handleExtensionRequest = async (req, res) => {
+    const adminId = req.user.id || req.user._id;
+    const { campaignId, requestId } = req.params;
+    const { status, rejectionReason } = req.body; // status: 'approved' or 'rejected'
+
+    if (!['approved', 'rejected'].includes(status)) {
+        return res.status(400).json({ statusCode: false, statusText: "Bad Request", message: "Invalid status provided. Must be 'approved' or 'rejected'." });
+    }
+
+    if (status === 'rejected' && !rejectionReason) {
+        return res.status(400).json({ statusCode: false, statusText: "Bad Request", message: "Rejection reason is required for rejected requests." });
+    }
+
+    try {
+        const campaign = await campaignModel.findById(campaignId);
+
+        if (!campaign) {
+            return res.status(404).json({ statusCode: false, statusText: "Not Found", message: "Campaign not found." });
+        }
+
+        const requestIndex = campaign.extensionRequests.findIndex(req => req._id.toString() === requestId);
+
+        if (requestIndex === -1) {
+            return res.status(404).json({ statusCode: false, statusText: "Not Found", message: "Extension request not found." });
+        }
+        
+        const request = campaign.extensionRequests[requestIndex];
+
+        if (request.status !== 'pending') {
+            return res.status(403).json({ statusCode: false, statusText: "Forbidden", message: `This request has already been ${request.status}.` });
+        }
+
+        // Update the request status
+        request.status = status;
+        request.reviewedBy = adminId;
+        
+        let message = `Extension request successfully ${status}.`;
+
+        if (status === 'approved') {
+            // **CRITICAL UPDATE: Extend Campaign End Date**
+            const newEndDate = addDays(campaign.endDate, request.days);
+            campaign.endDate = newEndDate;
+            campaign.durationDays += request.days; // Optional: update total duration
+            message = `Campaign end date extended by ${request.days} days to ${newEndDate.toDateString()}.`;
+        } else {
+            campaign.extensionRequests[requestIndex].rejectionReason = rejectionReason;
+        }
+        
+        await campaign.save();
+
+        res.status(200).json({
+            statusCode: true,
+            statusText: "OK",
+            message: message,
+            data: campaign,
+        });
+
+    } catch (error) {
+        console.error("Error handling extension request:", error);
+        res.status(500).json({ statusCode: false, statusText: "Internal Server Error", message: error.message });
+    }
+};
+
+/**
+ * Admin handles review of milestone evidence submitted by the fundraiser.
+ */
+exports.reviewMilestoneEvidence = async (req, res) => {
+    const adminId = req.user.id || req.user._id;
+    const { evidenceId } = req.params;
+    const { status, rejectionReason } = req.body; // status: 'approved' or 'rejected'
+
+    if (!['approved', 'rejected'].includes(status)) {
+        return res.status(400).json({ statusCode: false, statusText: "Bad Request", message: "Invalid status provided. Must be 'approved' or 'rejected'." });
+    }
+    if (status === 'rejected' && !rejectionReason) {
+        return res.status(400).json({ statusCode: false, statusText: "Bad Request", message: "Rejection reason is required for rejected requests." });
+    }
+
+    try {
+        const evidence = await milestoneEvidenceModel.findById(evidenceId);
+        if (!evidence) {
+            return res.status(404).json({ statusCode: false, statusText: "Not Found", message: "Evidence document not found." });
+        }
+        if (evidence.status !== 'pending') {
+            return res.status(403).json({ statusCode: false, statusText: "Forbidden", message: `Evidence has already been ${evidence.status}.` });
+        }
+        
+        const milestone = await milestoneModel.findById(evidence.milestone);
+        if (!milestone) {
+            return res.status(404).json({ statusCode: false, statusText: "Not Found", message: "Milestone linked to evidence not found." });
+        }
+
+        // Update Evidence Document
+        evidence.status = status;
+        evidence.reviewedBy = adminId;
+        evidence.reviewedAt = new Date();
+        if (status === 'rejected') {
+            evidence.rejectionReason = rejectionReason;
+        }
+        await evidence.save();
+
+        // Update Milestone Document
+        milestone.evidenceApprovalStatus = status; // 'approved' or 'rejected'
+        
+        let message;
+        if (status === 'approved') {
+            // Funds are now ready to be released for this milestone
+            milestone.status = "ready_for_release"; 
+            message = `Milestone evidence approved. Funds are now ready for release to the fundraiser.`;
+        } else {
+            // Fundraiser needs to resubmit evidence
+            milestone.evidenceRef = null; // Clear reference so fundraiser can submit new evidence
+            milestone.evidenceApprovalStatus = "required"; 
+            message = `Milestone evidence rejected. Fundraiser notified to resubmit.`;
+        }
+        await milestone.save();
+        
+        res.status(200).json({
+            statusCode: true,
+            statusText: "OK",
+            message: message,
+            data: { evidence, milestone },
+        });
+
+    } catch (error) {
+        console.error("Error reviewing evidence:", error);
+        res.status(500).json({ statusCode: false, statusText: "Internal Server Error", message: error.message });
+    }
+};
+
+// Admin: get all donations (with filters)
+exports.getAllDonations = async function (req, res) {
+  try {
+    const statusFilter = req.query.status || null;
+    const query = {};
+    if (statusFilter) {
+      query.paymentStatus = statusFilter;
+    }
+
+    const donations = await Donation.find(query).sort({ createdAt: -1 });
+
+    return res.status(200).json({
+      statusCode: true,
+      statusText: "OK",
+      message: "Donations retrieved",
+      data: donations,
+    });
+  } catch (error) {
+    console.error("Error getting all donations:", error);
+    return res.status(500).json({
+      statusCode: false,
+      statusText: "Internal Server Error",
+      message: error.message,
+    });
+  }
+};
+
+// Admin: create manual payout record (when admin approves disbursement to fundraiser bank)
+exports.createPayout = async function (req, res) {
+  try {
+    // admin triggers payout: pass fundraiserId, campaignId (optional), amount, reference
+    const fundraiserId = req.body.fundraiserId;
+    const campaignId = req.body.campaignId || null;
+    const amountStr = req.body.amount;
+    if (!fundraiserId) {
+      return res.status(400).json({
+        statusCode: false,
+        statusText: "Bad Request",
+        message: "fundraiserId is required",
+      });
+    }
+    if (!amountStr) {
+      return res.status(400).json({
+        statusCode: false,
+        statusText: "Bad Request",
+        message: "amount is required",
+      });
+    }
+    const amount = Number(amountStr);
+    if (isNaN(amount) || amount <= 0) {
+      return res.status(400).json({
+        statusCode: false,
+        statusText: "Bad Request",
+        message: "amount must be a positive number",
+      });
+    } // ensure wallet exists and has enough balance
+
+    const wallet = await FundraiserWallet.findOne({ fundraiser: fundraiserId });
+    if (!wallet) {
+      return res.status(404).json({
+        statusCode: false,
+        statusText: "Not Found",
+        message: "Fundraiser wallet not found",
+      });
+    }
+
+    if (wallet.availableBalance < amount) {
+      return res.status(400).json({
+        statusCode: false,
+        statusText: "Bad Request",
+        message: "Insufficient wallet balance",
+      });
+    } // create payout record
+
+    const payoutReference = "PAYOUT_" + uuidv4();
+    const payout = new Payout({
+      fundraiser: fundraiserId,
+      referenceID: payoutReference,
+      campaign: campaignId,
+      amount: amount,
+      status: "processing",
+    });
+
+    await payout.save(); // deduct availableBalance and add to totalWithdrawn when marked paid
+
+    wallet.availableBalance = wallet.availableBalance - amount;
+    wallet.totalWithdrawn = wallet.totalWithdrawn + amount;
+    await wallet.save();
+
+    return res.status(201).json({
+      statusCode: true,
+      statusText: "Created",
+      message: "Payout created and wallet debited (processing).",
+      data: payout,
+    });
+  } catch (error) {
+    console.error("Error creating payout:", error);
+    return res.status(500).json({
+      statusCode: false,
+      statusText: "Internal Server Error",
+      message: error.message,
+    });
+  }
+};
+
+/**
+ * @description Admin: Get all pending or requested payout requests.
+ * @route GET /api/admin/payouts/pending
+ * @access Private (Admin only)
+ */
+exports.getPendingPayoutRequests = async function (req, res) {
+    try {
+        // Retrieve all payout requests that the fundraiser has initiated (status: 'requested')
+        const pendingRequests = await Payout.find({ status: 'requested' })
+            .populate('fundraiser', 'firstName lastName email') // Populate Fundraiser details
+            .populate('campaign', 'campaignTitle totalCampaignGoalAmount') // Populate Campaign details
+            .sort({ requestedAt: 1 });
+
+        return res.status(200).json({
+            statusCode: true,
+            statusText: "OK",
+            message: "Pending payout requests retrieved successfully.",
+            data: pendingRequests,
+        });
+
+    } catch (error) {
+        console.error("Error fetching pending payout requests:", error);
+        return res.status(500).json({
+            statusCode: false,
+            statusText: "Internal Server Error",
+            message: error.message,
+        });
+    }
+};
+
+/**
+ * @description Admin: Approve a payout request and mark it as 'processing'.
+ * @route POST /api/admin/payouts/approve/:payoutId
+ * @access Private (Admin only)
+ */
+exports.approvePayoutRequest = async function (req, res) {
+    try {
+        const { payoutId } = req.params;
+        // Optionally, admin can provide a transaction ID from the bank transfer
+        const adminTransactionId = req.body.adminTransactionId || null; 
+
+        const payout = await Payout.findById(payoutId);
+
+        if (!payout || payout.status !== 'requested') {
+            return res.status(404).json({
+                statusCode: false,
+                statusText: "Not Found",
+                message: "Payout request not found or not in 'requested' status.",
+            });
+        }
+        
+        // --- ADMIN APPROVAL LOGIC ---
+        // 1. Mark the Payout as processing/paid
+        payout.status = 'paid'; 
+        payout.adminApprovedAt = new Date();
+        if (adminTransactionId) {
+            payout.adminTransactionId = adminTransactionId;
+        }
+
+        await payout.save();
+        
+        // 2. Update Fundraiser Wallet (Final step based on previous wallet deduction)
+        // NOTE: The amount was already deducted from availableBalance during requestPayout.
+        // Here, we just add the amount to totalWithdrawn.
+
+        const wallet = await FundraiserWallet.findOne({ fundraiser: payout.fundraiser });
+
+        if (wallet) {
+            // Note: The deduction of payout.amount from availableBalance was done in requestPayout.
+            // We just ensure totalWithdrawn is correctly incremented.
+            // If the amount was already deducted in Fundraiser Wallet Controller, no need to touch availableBalance again.
+            // If it wasn't, uncomment the deduction below.
+            
+            // wallet.availableBalance -= payout.amount; // Use this if you only track it as 'pending' and not deducted
+            wallet.totalWithdrawn += payout.amount; // Finalize the withdrawal amount
+            await wallet.save();
+        }
+
+
+        return res.status(200).json({
+            statusCode: true,
+            statusText: "OK",
+            message: `Payout request ${payoutId} approved and marked as 'paid'. Wallet updated.`,
+            data: payout,
+        });
+
+    } catch (error) {
+        console.error("Error approving payout request:", error);
+        return res.status(500).json({
+            statusCode: false,
+            statusText: "Internal Server Error",
+            message: error.message,
+        });
+    }
+};
+
+/**
+ * @description Admin: Reject a payout request and refund the amount to the wallet.
+ * @route POST /api/admin/payouts/reject/:payoutId
+ * @access Private (Admin only)
+ */
+exports.rejectPayoutRequest = async function (req, res) {
+    try {
+        const { payoutId } = req.params;
+        const rejectReason = req.body.reason || "Admin rejected the request.";
+
+        const payout = await Payout.findById(payoutId);
+
+        if (!payout || payout.status !== 'requested') {
+            return res.status(404).json({
+                statusCode: false,
+                statusText: "Not Found",
+                message: "Payout request not found or not in 'requested' status.",
+            });
+        }
+        
+        // --- ADMIN REJECTION LOGIC ---
+        // 1. Mark the Payout as rejected
+        payout.status = 'rejected';
+        payout.rejectionReason = rejectReason;
+        await payout.save();
+
+        // 2. Refund the amount back to the Fundraiser Wallet's availableBalance
+        const wallet = await FundraiserWallet.findOne({ fundraiser: payout.fundraiser });
+
+        if (wallet) {
+            // Add the deducted amount back to availableBalance
+            wallet.availableBalance += payout.amount;
+            await wallet.save();
+        }
+
+        return res.status(200).json({
+            statusCode: true,
+            statusText: "OK",
+            message: `Payout request ${payoutId} rejected. Funds returned to wallet.`,
+            data: payout,
+        });
+
+    } catch (error) {
+        console.error("Error rejecting payout request:", error);
+        return res.status(500).json({
+            statusCode: false,
+            statusText: "Internal Server Error",
+            message: error.message,
+        });
+    }
 };

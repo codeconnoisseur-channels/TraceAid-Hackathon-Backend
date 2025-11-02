@@ -12,6 +12,11 @@ const donationSchema = new mongoose.Schema(
       ref: "Campaign",
       required: [true, "Donation must be linked to a campaign"],
     },
+    fundraiser: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Fundraiser",
+      required: [true, "Donation must be linked to a fundraiser"],
+    },
     amount: {
       type: Number,
       required: [true, "Donation amount is required"],
@@ -22,15 +27,16 @@ const donationSchema = new mongoose.Schema(
       enum: ["NGN"],
       default: "NGN",
     },
-    paymentReference: {
+    ourTransactionRef: {
       type: String,
       required: true,
       unique: true,
     },
-    transactionId: {
+    koraTransactionId: {
       type: String,
-      required: true,
+      default: null,
       unique: true,
+      sparse: true,
     },
     paymentStatus: {
       type: String,

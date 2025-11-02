@@ -4,6 +4,9 @@ const Donor = require("../model/donorModel");
 const FundraiserWallet = require("../model/fundraiserWallet");
 const Payout = require("../model/payoutModel");
 const { v4: uuidv4 } = require("uuid"); // for generating references
+const crypto = require("crypto");
+
+const KORA_SECRET_KEY = process.env.KORA_SECRET_KEY; // **Ensure this is set in your .env**
 
 // Create a donation record (initial request from frontend).
 // Frontend should call your payment gateway with paymentReference produced here
@@ -40,17 +43,16 @@ exports.createDonation = async function (req, res) {
       });
     }
 
-    var amount = Number(amountStr);
+    const amount = Number(amountStr);
     if (isNaN(amount) || amount <= 0) {
       return res.status(400).json({
         statusCode: false,
         statusText: "Bad Request",
         message: "amount must be a positive number",
       });
-    }
+    } // check campaign exists
 
-    // check campaign exists
-    var campaign = await Campaign.findById(campaignId);
+    const campaign = await Campaign.findById(campaignId);
     if (!campaign) {
       return res.status(404).json({
         statusCode: false,
@@ -59,12 +61,43 @@ exports.createDonation = async function (req, res) {
       });
     }
 
-    // create unique payment reference to be used by frontend -> gateway
-    var paymentReference = "DON_" + uuidv4();
-    var transactionId = "TXN_" + uuidv4();
+    // ----------------------------------------------------------------------
+    // 🔥 CRITICAL UPDATE 1: Campaign Status and Duration Check
+    // ----------------------------------------------------------------------
+    const today = new Date();
+    // Check if campaign is active AND if end date has not passed
+    if (campaign.status !== "active" || (campaign.endDate && campaign.endDate < today)) {
+      const message =
+        campaign.status !== "active"
+          ? `Donations are not accepted. Campaign status is '${campaign.status}'.`
+          : "The campaign duration has ended and no longer accepts donations.";
 
-    // create donation record with pending status
-    var donation = new Donation({
+      // We assume 'active' is the status that allows donations
+      return res.status(403).json({
+        statusCode: false,
+        statusText: "Forbidden",
+        message: message,
+      });
+    }
+
+    // ----------------------------------------------------------------------
+    // 🔥 CRITICAL UPDATE 2: Over-Donation Check
+    // ----------------------------------------------------------------------
+    const remainingGoal = campaign.totalCampaignGoalAmount - campaign.amountRaised;
+
+    // Check if the donation amount is greater than the remaining required amount
+    if (amount > remainingGoal) {
+      return res.status(400).json({
+        statusCode: false,
+        statusText: "Bad Request",
+        message: `Donation amount (${amount}) exceeds the remaining goal (${remainingGoal}). The maximum allowed donation is ${remainingGoal}.`,
+      });
+    } // create unique payment reference to be used by frontend -> gateway
+
+    let paymentReference = "DON_" + uuidv4();
+    let transactionId = "TXN_" + uuidv4(); // create donation record with pending status
+
+    let donation = new Donation({
       donor: donorId,
       campaign: campaignId,
       amount: amount,
@@ -77,9 +110,8 @@ exports.createDonation = async function (req, res) {
       verifiedAt: null,
     });
 
-    await donation.save();
+    await donation.save(); // return donation and paymentReference for frontend to call gateway
 
-    // return donation and paymentReference for frontend to call gateway
     return res.status(201).json({
       statusCode: true,
       statusText: "Created",
@@ -99,21 +131,41 @@ exports.createDonation = async function (req, res) {
   }
 };
 
-// Webhook or callback from payment gateway to verify transaction.
-// This endpoint should be hit by your payment provider (server-side) after payment.
-// This function will:
-// 1) find donation by paymentReference or transactionId
-// 2) check payment result (we assume provider gives status and transaction id)
-// 3) mark donation successful and update campaign amountRaised and donor count
-// 4) update fundraiser wallet (increase availableBalance) - here we do not auto-payout, admin handles payout
 exports.verifyPaymentWebhook = async function (req, res) {
   try {
+    // --- 1. KORA SIGNATURE VERIFICATION (CRITICAL SECURITY STEP) ---
+    const signature = req.headers["x-korapay-signature"];
+    const bodyData = req.body.data; // Kora signs ONLY the 'data' object.
+
+    if (!signature || !KORA_SECRET_KEY) {
+      console.error("Webhook Error: Missing signature header or KORA_SECRET_KEY.");
+      // Important: Respond 401 or 403 on failed security check
+      return res.status(401).json({
+        statusCode: false,
+        statusText: "Unauthorized",
+        message: "Security check failed: Missing signature or key.",
+      });
+    }
+
+    // Calculate expected signature (HMAC SHA256 of the JSON string of the 'data' object)
+    const expectedSignature = crypto.createHmac("sha256", KORA_SECRET_KEY).update(JSON.stringify(bodyData)).digest("hex");
+
+    if (expectedSignature !== signature) {
+      console.error("Webhook Security Error: Signature mismatch. Request dropped.");
+      return res.status(403).json({
+        statusCode: false,
+        statusText: "Forbidden",
+        message: "Security check failed: Invalid signature.",
+      });
+    }
+    // --- END KORA SIGNATURE VERIFICATION ---
+
     // NOTE: The exact body depends on your gateway. We assume:
-    // req.body.paymentReference, req.body.transactionId, req.body.status (successful/failed), req.body.amount
-    var paymentReference = req.body.paymentReference || req.body.reference || null;
-    var transactionIdFromGateway = req.body.transactionId || req.body.transaction_id || null;
-    var gatewayStatus = req.body.status || req.body.payment_status || null;
-    var amountFromGateway = req.body.amount || null;
+    const paymentReference = req.body.paymentReference || req.body.reference || null;
+    const transactionIdFromGateway = req.body.transactionId || req.body.transaction_id || null;
+    const gatewayStatus = req.body.status || req.body.payment_status || null;
+    const amountFromGateway = req.body.amount || null;
+    const campaignId = req.body.campaignId || req.body.campaign_id || null;
 
     if (!paymentReference) {
       return res.status(400).json({
@@ -124,7 +176,8 @@ exports.verifyPaymentWebhook = async function (req, res) {
     }
 
     // find donation by paymentReference
-    var donation = await Donation.findOne({ paymentReference: paymentReference });
+    const donation = await Donation.findOne({ paymentReference: paymentReference });
+
     if (!donation) {
       return res.status(404).json({
         statusCode: false,
@@ -142,17 +195,23 @@ exports.verifyPaymentWebhook = async function (req, res) {
       });
     }
 
-    // Decide status mapping (gateway-specific). We'll map common positive value to 'successful'
-    var normalizedStatus = "failed";
-    if (String(gatewayStatus).toLowerCase() === "successful" || String(gatewayStatus).toLowerCase() === "success" || String(gatewayStatus).toLowerCase() === "paid") {
+    // Decide status mapping (gateway-specific).
+    let normalizedStatus = "pending"; // Default to pending if not a clear success or failure
+
+    if (
+      String(gatewayStatus).toLowerCase() === "successful" ||
+      String(gatewayStatus).toLowerCase() === "success" ||
+      String(gatewayStatus).toLowerCase() === "paid"
+    ) {
       normalizedStatus = "successful";
     } else {
-      normalizedStatus = "failed";
+      normalizedStatus = "failed"; // Explicitly set to failed if not a success state
     }
 
     // Update donation record
     donation.transactionId = transactionIdFromGateway || donation.transactionId;
     donation.paymentStatus = normalizedStatus;
+
     if (normalizedStatus === "successful") {
       donation.verifiedAt = Date.now();
     }
@@ -160,49 +219,57 @@ exports.verifyPaymentWebhook = async function (req, res) {
 
     // If payment successful, update campaign and fundraiser wallet
     if (normalizedStatus === "successful") {
-      // update campaign amountRaised and donorCount
-      var campaign = await Campaign.findById(donation.campaign);
-      if (campaign) {
-        // increment amountRaised
-        var newAmountRaised = campaign.amountRaised + donation.amount;
-        campaign.amountRaised = newAmountRaised;
+      // Find campaign before update to get current goal and status
+      const campaign = await Campaign.findById(donation.campaign);
 
-        // increment donorCount by 1 (be careful if donor can donate multiple times; you may dedupe by donor)
-        var newDonorCount = campaign.donorCount + 1;
+      if (campaign) {
+        // 1. Update campaign amountRaised and donorCount
+        const newAmountRaised = campaign.amountRaised + donation.amount;
+        campaign.amountRaised = newAmountRaised;
+        const newDonorCount = campaign.donorCount + 1;
         campaign.donorCount = newDonorCount;
 
-        await campaign.save();
-      }
-
-      // update fundraiser wallet (increase availableBalance)
-      // find the fundraiser id from campaign
-      if (campaign && campaign.fundraiser) {
-        var fundraiserId = campaign.fundraiser;
-        var wallet = await FundraiserWallet.findOne({ fundraiser: fundraiserId });
-        if (!wallet) {
-          // create wallet if not exists
-          wallet = new FundraiserWallet({
-            fundraiser: fundraiserId,
-            availableBalance: 0,
-            totalWithdrawn: 0,
-          });
+        // 🔥 CRITICAL UPDATE: Campaign Auto-Close Check
+        // If the new total amount raised meets or exceeds the goal, close the campaign.
+        if (newAmountRaised >= campaign.totalCampaignGoalAmount && campaign.status === "active") {
+          campaign.status = "completed"; // Set status to completed
+          campaign.endDate = new Date(); // Set the completion date/time
         }
-        wallet.availableBalance = wallet.availableBalance + donation.amount;
-        await wallet.save();
+
+        await campaign.save();
+
+        // 2. Update fundraiser wallet (increase availableBalance)
+        // find the fundraiser id from campaign
+        if (campaign.fundraiser) {
+          const fundraiserId = campaign.fundraiser;
+          let wallet = await FundraiserWallet.findOne({ fundraiser: fundraiserId });
+
+          if (!wallet) {
+            // create wallet if not exists
+            wallet = new FundraiserWallet({
+              fundraiser: fundraiserId,
+              availableBalance: 0,
+              totalWithdrawn: 0,
+            });
+          }
+          wallet.availableBalance = wallet.availableBalance + donation.amount;
+          await wallet.save();
+        }
       }
     }
 
-    // respond 200 to webhook
+    // respond 200 to webhook upon successful processing
     return res.status(200).json({
       statusCode: true,
       statusText: "OK",
-      message: "Webhook processed",
+      message: "Webhook processed successfully",
       data: {
         donation: donation,
       },
     });
   } catch (error) {
     console.error("Error processing webhook:", error);
+    // Respond 500 in the event of an internal server error during processing
     return res.status(500).json({
       statusCode: false,
       statusText: "Internal Server Error",
@@ -214,7 +281,7 @@ exports.verifyPaymentWebhook = async function (req, res) {
 // Get donations for a campaign (public)
 exports.getDonationsByCampaign = async function (req, res) {
   try {
-    var campaignId = req.params.id;
+    const campaignId = req.params.id;
     if (!campaignId) {
       return res.status(400).json({
         statusCode: false,
@@ -223,7 +290,11 @@ exports.getDonationsByCampaign = async function (req, res) {
       });
     }
 
-    var donations = await Donation.find({ campaign: campaignId }).sort({ createdAt: -1 });
+    // Only return successful and non-anonymous donations for public viewing
+    const donations = await Donation.find({ campaign: campaignId, paymentStatus: "successful", isAnonymous: false })
+      .populate("donor", "name") // Optionally populate donor name if needed
+      .sort({ createdAt: -1 })
+      .select("amount message createdAt"); // Select minimal fields
 
     return res.status(200).json({
       statusCode: true,
@@ -244,7 +315,7 @@ exports.getDonationsByCampaign = async function (req, res) {
 // Get donations for a logged-in donor (private)
 exports.getDonationsByUser = async function (req, res) {
   try {
-    var donorId = req.user && req.user.id ? req.user.id : null;
+    const donorId = req.user && req.user.id ? req.user.id : null;
     if (!donorId) {
       return res.status(401).json({
         statusCode: false,
@@ -253,7 +324,7 @@ exports.getDonationsByUser = async function (req, res) {
       });
     }
 
-    var donations = await Donation.find({ donor: donorId }).sort({ createdAt: -1 });
+    const donations = await Donation.find({ donor: donorId }).sort({ createdAt: -1 });
 
     return res.status(200).json({
       statusCode: true,
@@ -271,110 +342,3 @@ exports.getDonationsByUser = async function (req, res) {
   }
 };
 
-// Admin: get all donations (with filters)
-exports.getAllDonations = async function (req, res) {
-  try {
-    var statusFilter = req.query.status || null;
-    var query = {};
-    if (statusFilter) {
-      query.paymentStatus = statusFilter;
-    }
-
-    var donations = await Donation.find(query).sort({ createdAt: -1 });
-
-    return res.status(200).json({
-      statusCode: true,
-      statusText: "OK",
-      message: "Donations retrieved",
-      data: donations,
-    });
-  } catch (error) {
-    console.error("Error getting all donations:", error);
-    return res.status(500).json({
-      statusCode: false,
-      statusText: "Internal Server Error",
-      message: error.message,
-    });
-  }
-};
-
-// Admin: create manual payout record (when admin approves disbursement to fundraiser bank)
-exports.createPayout = async function (req, res) {
-  try {
-    // admin triggers payout: pass fundraiserId, campaignId (optional), amount, reference
-    var fundraiserId = req.body.fundraiserId;
-    var campaignId = req.body.campaignId || null;
-    var amountStr = req.body.amount;
-    if (!fundraiserId) {
-      return res.status(400).json({
-        statusCode: false,
-        statusText: "Bad Request",
-        message: "fundraiserId is required",
-      });
-    }
-    if (!amountStr) {
-      return res.status(400).json({
-        statusCode: false,
-        statusText: "Bad Request",
-        message: "amount is required",
-      });
-    }
-    var amount = Number(amountStr);
-    if (isNaN(amount) || amount <= 0) {
-      return res.status(400).json({
-        statusCode: false,
-        statusText: "Bad Request",
-        message: "amount must be a positive number",
-      });
-    }
-
-    // ensure wallet exists and has enough balance
-    var wallet = await FundraiserWallet.findOne({ fundraiser: fundraiserId });
-    if (!wallet) {
-      return res.status(404).json({
-        statusCode: false,
-        statusText: "Not Found",
-        message: "Fundraiser wallet not found",
-      });
-    }
-
-    if (wallet.availableBalance < amount) {
-      return res.status(400).json({
-        statusCode: false,
-        statusText: "Bad Request",
-        message: "Insufficient wallet balance",
-      });
-    }
-
-    // create payout record
-    var payoutReference = "PAYOUT_" + uuidv4();
-    var payout = new Payout({
-      fundraiser: fundraiserId,
-      referenceID: payoutReference,
-      campaign: campaignId,
-      amount: amount,
-      status: "processing",
-    });
-
-    await payout.save();
-
-    // deduct availableBalance and add to totalWithdrawn when marked paid
-    wallet.availableBalance = wallet.availableBalance - amount;
-    wallet.totalWithdrawn = wallet.totalWithdrawn + amount;
-    await wallet.save();
-
-    return res.status(201).json({
-      statusCode: true,
-      statusText: "Created",
-      message: "Payout created and wallet debited (processing).",
-      data: payout,
-    });
-  } catch (error) {
-    console.error("Error creating payout:", error);
-    return res.status(500).json({
-      statusCode: false,
-      statusText: "Internal Server Error",
-      message: error.message,
-    });
-  }
-};
