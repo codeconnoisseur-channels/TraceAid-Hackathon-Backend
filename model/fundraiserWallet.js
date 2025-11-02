@@ -6,7 +6,7 @@ const fundraiserWalletSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Fundraiser",
       required: true,
-      // unique: true,
+      unique: true,
     },
     availableBalance: {
       type: Number,
@@ -20,6 +20,29 @@ const fundraiserWalletSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Bank",
     },
+    campaignFunds: [
+      {
+        campaign: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "Campaign",
+          required: true,
+        },
+        milestone: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "Milestone",
+          required: false,
+        },
+        amountReadyForPayout: {
+          type: Number,
+          default: 0,
+          required: true,
+        },
+        isPendingPayout: {
+          type: Boolean,
+          default: false,
+        },
+      },
+    ],
   },
   { timestamps: true }
 );

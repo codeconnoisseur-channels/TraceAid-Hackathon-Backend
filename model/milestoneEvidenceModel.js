@@ -30,11 +30,13 @@ const milestoneEvidenceSchema = new mongoose.Schema(
           type: Date,
           default: Date.now,
         },
+        latitude: { type: Number },
+        longitude: { type: Number },
       },
     ],
     status: {
       type: String,
-      enum: ["pending", "approved", "rejected"],
+      enum: ["pending", "in_review", "approved", "rejected"],
       default: "pending",
     },
     reviewedBy: {
@@ -42,9 +44,6 @@ const milestoneEvidenceSchema = new mongoose.Schema(
       ref: "Admin",
     },
     reviewedAt: {
-      type: Date,
-    },
-    verifiedAt: {
       type: Date,
     },
     rejectionReason: {

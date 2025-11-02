@@ -1,37 +1,90 @@
 const campaignModel = require("../model/campaignModel");
-const fs = require("fs");
-const path = require("path");
-const cloudinary = require("../config/cloudinary");
-const { campaignNameToTitleCase } = require("../helper/nameConverter");
 const fundraiserModel = require("../model/fundraiserModel");
 const kycModel = require("../model/kycModel");
 const milestoneModel = require("../model/milestoneModel");
 const milestoneEvidenceModel = require("../model/milestoneEvidenceModel");
+const cloudinary = require("../config/cloudinary");
+const { campaignNameToTitleCase } = require("../helper/nameConverter");
+const fs = require("fs");
+const path = require("path");
+
+// Helper function to calculate date
+const addDays = (date, days) => {
+  const result = new Date(date);
+  result.setDate(result.getDate() + days);
+  return result;
+};
+
+// -------------------- FUNDRAISER ACTIONS --------------------
 
 exports.createACampaign = async (req, res) => {
-  console.log("AUTH USER OBJECT:", req.user);
-
   const fundraiserId = req.user.id || req.user._id;
   const file = req.file;
 
   try {
-    let { campaignTitle, campaignDescription, totalCampaignGoalAmount, campaignCategory, campaignDuration, milestones } = req.body;
+    let { campaignTitle, campaignDescription, totalCampaignGoalAmount, campaignCategory, durationDays, milestones } = req.body;
 
-    if (!campaignTitle || !campaignDescription || !totalCampaignGoalAmount || !campaignCategory || !campaignDuration) {
-      if (file && file.path && fs.existsSync(file.path)) {
-        fs.unlinkSync(file.path);
-      }
+    if (!campaignTitle || !campaignDescription || !totalCampaignGoalAmount || !campaignCategory || !durationDays) {
+      if (file && file.path && fs.existsSync(file.path)) fs.unlinkSync(file.path);
       return res.status(400).json({
         statusCode: false,
         statusText: "Bad Request",
-        message: "All fields are required (Title, Description, Goal, Category, Duration).",
+        message: "All campaign fields are required.",
       });
     }
-    // If milestones came as a string (from form-data), parse it
+
+    const goalAmount = Number(totalCampaignGoalAmount);
+    const duration = Number(durationDays);
+    if (isNaN(goalAmount) || goalAmount <= 0) {
+      if (file && file.path && fs.existsSync(file.path)) fs.unlinkSync(file.path);
+      return res.status(400).json({
+        statusCode: false,
+        statusText: "Bad Request",
+        message: "Total Campaign Goal Amount must be a positive number.",
+      });
+    }
+    if (isNaN(duration) || duration < 30) {
+      if (file && file.path && fs.existsSync(file.path)) fs.unlinkSync(file.path);
+      return res.status(400).json({
+        statusCode: false,
+        statusText: "Bad Request",
+        message: "Campaign duration must be at least 30 days.",
+      });
+    }
+    if (!file) {
+      return res.status(400).json({
+        statusCode: false,
+        statusText: "Bad Request",
+        message: "Campaign cover image or video is required.",
+      });
+    }
+
+    // --- 2. Fundraiser/KYC Checks (Retained from original code) ---
+    const user = await fundraiserModel.findById(fundraiserId);
+    if (!user || user.status !== "active" || user.isVerified === false || user.kycStatus !== "verified") {
+      if (file && file.path && fs.existsSync(file.path)) fs.unlinkSync(file.path);
+      return res.status(403).json({
+        statusCode: false,
+        statusText: "Forbidden",
+        message: "Account is not verified or active. Please verify KYC.",
+      });
+    }
+    const checkVerifiedKyc = await kycModel.findOne({ fundraiserId: fundraiserId, verificationStatus: "verified" });
+    if (!checkVerifiedKyc) {
+      if (file && file.path && fs.existsSync(file.path)) fs.unlinkSync(file.path);
+      return res.status(403).json({
+        statusCode: false,
+        statusText: "Forbidden",
+        message: "KYC not verified. Please verify your KYC first.",
+      });
+    }
+
+    // --- 3. Milestones Parsing and Validation ---
     if (typeof milestones === "string") {
       try {
         milestones = JSON.parse(milestones);
       } catch (err) {
+        if (file && file.path && fs.existsSync(file.path)) fs.unlinkSync(file.path);
         return res.status(400).json({
           statusCode: false,
           statusText: "Bad Request",
@@ -39,110 +92,8 @@ exports.createACampaign = async (req, res) => {
         });
       }
     }
-
-    if (!file) {
-      return res.status(400).json({
-        statusCode: false,
-        statusText: "Bad Request",
-        message: "Campaign cover image or video is required.",
-      });
-    }
-
-    const user = await fundraiserModel.findById(fundraiserId);
-    console.log("USER:", user);
-
-    if (!user) {
-      return res.status(404).json({
-        statusCode: false,
-        statusText: "Not Found",
-        message: "Authenticated Fundraiser user not found.",
-      });
-    }
-
-    if (user.status !== "active") {
-      return res.status(403).json({
-        statusCode: false,
-        statusText: "Forbidden",
-        message: "Only active fundraisers can create a campaign.",
-      });
-    }
-
-    if (user.isVerified === false) {
-      return res.status(403).json({
-        statusCode: false,
-        statusText: "Forbidden",
-        message: "Account not verified. Please verify your email first.",
-      });
-    }
-
-    if (user.kycStatus === "not_submitted") {
-      return res.status(403).json({
-        statusCode: false,
-        statusText: "Forbidden",
-        message: "You must submit your KYC before creating a campaign.",
-      });
-    }
-
-    if (user.kycStatus === "pending") {
-      return res.status(403).json({
-        statusCode: false,
-        statusText: "Forbidden",
-        message: "KYC is under review. You can create a campaign after approval.",
-      });
-    }
-
-    if (user.kycStatus === "rejected") {
-      return res.status(403).json({
-        statusCode: false,
-        statusText: "Forbidden",
-        message: "Your KYC was rejected. Please resubmit and wait for approval.",
-      });
-    }
-
-    if (user.kycStatus !== "verified") {
-      return res.status(403).json({
-        statusCode: false,
-        statusText: "Forbidden",
-        message: "KYC not verified. Please verify your KYC first.",
-      });
-    }
-
-    const checkVerifiedKyc = await kycModel.findOne({ fundraiserId: req.user.id, verificationStatus: "verified" });
-    console.log("KYC:", checkVerifiedKyc);
-
-    if (!checkVerifiedKyc) {
-      return res.status(403).json({
-        statusCode: false,
-        statusText: "Forbidden",
-        message: "KYC not verified. Please verify your KYC first.",
-      });
-    }
-
-    if (isNaN(totalCampaignGoalAmount) || Number(totalCampaignGoalAmount) <= 0) {
-      if (file && file.path && fs.existsSync(file.path)) {
-        fs.unlinkSync(file.path);
-      }
-      return res.status(400).json({
-        statusCode: false,
-        statusText: "Bad Request",
-        message: "Total Campaign Goal Amount must be a positive number.",
-      });
-    }
-
-    if (!file) {
-      return res.status(400).json({
-        statusCode: false,
-        statusText: "Bad Request",
-        message: "Campaign cover image or video is required.",
-      });
-    }
-
-    console.log("RAW BODY:", req.body);
-
-    if (!milestones || !Array.isArray(milestones) || milestones.length === 0) {
-      if (file && file.path && fs.existsSync(file.path)) {
-        fs.unlinkSync(file.path);
-      }
+    if (!milestones || !Array.isArray(milestones) || milestones.length < 1) {
+      if (file && file.path && fs.existsSync(file.path)) fs.unlinkSync(file.path);
       return res.status(400).json({
         statusCode: false,
         statusText: "Bad Request",
@@ -150,57 +101,63 @@ exports.createACampaign = async (req, res) => {
       });
     }
 
+    // **CRITICAL BUSINESS RULE: Sum of Milestone Targets MUST equal Campaign Goal**
+    const totalMilestoneAmount = milestones.reduce((sum, m) => sum + Number(m.targetAmount), 0);
+    if (totalMilestoneAmount !== goalAmount) {
+      if (file && file.path && fs.existsSync(file.path)) fs.unlinkSync(file.path);
+      return res.status(400).json({
+        statusCode: false,
+        statusText: "Bad Request",
+        message: `Sum of all milestone targets (${totalMilestoneAmount}) must exactly match the Total Campaign Goal Amount (${goalAmount}).`,
+      });
+    }
+
     const campaignCoverImageOrVideoUrl = await cloudinary.uploader.upload(file.path, {
       folder: "campaign_covers",
       resource_type: "auto",
     });
-
     fs.unlinkSync(file.path);
 
     const newCampaign = new campaignModel({
-      fundraiser: fundraiserId, // Use the secured ID
+      fundraiser: fundraiserId,
       campaignTitle: campaignNameToTitleCase(campaignTitle),
       campaignDescription,
-      totalCampaignGoalAmount: Number(totalCampaignGoalAmount),
+      totalCampaignGoalAmount: goalAmount,
       campaignCategory,
+      durationDays: duration, // Store the number of days
       campaignCoverImageOrVideo: {
         imageUrl: campaignCoverImageOrVideoUrl.secure_url,
         publicId: campaignCoverImageOrVideoUrl.public_id,
       },
-      campaignDuration: {
-        endDate: new Date(campaignDuration),
-      },
+      // startDate, endDate, isActive are set by Admin on activation
+      status: "pending", // Default status
     });
 
     await newCampaign.save();
+    const campaignId = newCampaign._id;
 
-    const campaignId = newCampaign._id; // Store the ID for milestones
-
-    // Map the incoming milestone data to the Milestone model structure
-    const milestoneDocuments = milestones.map((m) => ({
-      campaign: campaignId, // 💡 KEY FIX: Use the newly generated campaignId
+    // --- 5. Milestone Insertion with Sequence ---
+    const milestoneDocuments = milestones.map((m, index) => ({
+      campaign: campaignId,
       milestoneTitle: m.milestoneTitle,
       milestoneDescription: m.milestoneDescription,
-      targetAmount: Number(m.targetAmount), // Ensure it's a number
-      endDate: m.endDate, // Assuming format matches your schema's Date type
+      targetAmount: Number(m.targetAmount),
+      sequence: index + 1,
     }));
 
-    // Insert all milestones into the database efficiently
     const createdMilestones = await milestoneModel.insertMany(milestoneDocuments);
 
     res.status(201).json({
       statusCode: true,
       statusText: "Created",
-      message: "Campaign created successfully",
+      message: "Campaign created successfully. Pending Admin review.",
       data: {
         campaign: newCampaign,
         milestones: createdMilestones,
       },
     });
   } catch (error) {
-    if (file && file.path && fs.existsSync(file.path)) {
-      fs.unlinkSync(file.path);
-    }
+    if (file && file.path && fs.existsSync(file.path)) fs.unlinkSync(file.path);
     console.error("Error creating campaign:", error);
     res.status(500).json({
       statusCode: false,
@@ -209,6 +166,73 @@ exports.createACampaign = async (req, res) => {
     });
   }
 };
+
+/**
+ * Fundraiser submits a request to extend the campaign duration.
+ */
+exports.requestExtension = async (req, res) => {
+  const fundraiserId = req.user.id || req.user._id;
+  const { campaignId } = req.params;
+  const { days, reason } = req.body;
+
+  try {
+    if (!days || !reason || Number(days) <= 0) {
+      return res.status(400).json({
+        statusCode: false,
+        statusText: "Bad Request",
+        message: "Days and reason are required for the extension request. Days must be a positive number.",
+      });
+    }
+
+    const campaign = await campaignModel.findById(campaignId);
+
+    if (!campaign) {
+      return res.status(404).json({ statusCode: false, statusText: "Not Found", message: "Campaign not found." });
+    }
+
+    if (campaign.fundraiser.toString() !== fundraiserId.toString()) {
+      return res
+        .status(403)
+        .json({ statusCode: false, statusText: "Forbidden", message: "You are not authorized to request an extension for this campaign." });
+    }
+
+    if (campaign.status !== "active") {
+      return res.status(403).json({ statusCode: false, statusText: "Forbidden", message: "Only active campaigns can request an extension." });
+    }
+
+    // Check for existing pending request
+    const pendingRequest = campaign.extensionRequests.some((r) => r.status === "pending");
+    if (pendingRequest) {
+      return res
+        .status(400)
+        .json({ statusCode: false, statusText: "Bad Request", message: "A pending extension request already exists for this campaign." });
+    }
+
+    // Add the new request to the extensionRequests array
+    const newRequest = {
+      days: Number(days),
+      reason,
+      requestedAt: new Date(),
+      status: "pending", // Admin will change this status
+    };
+
+    campaign.extensionRequests.push(newRequest);
+    await campaign.save();
+
+    res.status(200).json({
+      statusCode: true,
+      statusText: "OK",
+      message: `Extension request for ${days} days submitted successfully. Pending Admin review.`,
+      data: newRequest,
+    });
+  } catch (error) {
+    console.error("Error requesting extension:", error);
+    res.status(500).json({ statusCode: false, statusText: "Internal Server Error", message: error.message });
+  }
+};
+
+// ... (Other existing functions like getAllCampaigns, getOneCampaign, getCampaignWithMilestonesAndEvidence remain here)
+// For brevity, I only show the one you provided, with minor cleanup:
 
 exports.getAllCampaigns = async (req, res) => {
   try {
@@ -224,9 +248,10 @@ exports.getAllCampaigns = async (req, res) => {
       });
     }
 
+    // Status tracking updated to include 'ended'
     const activeCampaigns = allCampaigns.filter((c) => c.status === "active");
     const pendingCampaigns = allCampaigns.filter((c) => c.status === "pending");
-    const completedCampaigns = allCampaigns.filter((c) => c.status === "completed");
+    const completedCampaigns = allCampaigns.filter((c) => c.status === "completed" || c.status === "ended");
 
     res.status(200).json({
       statusCode: true,
@@ -257,7 +282,8 @@ exports.getAllCampaigns = async (req, res) => {
 exports.getOneCampaign = async (req, res) => {
   try {
     const campaignId = req.params.id;
-    const campaign = await campaignModel.findById(campaignId);
+    // Optionally populate fundraiser data here
+    const campaign = await campaignModel.findById(campaignId).populate("fundraiser", "name email");
     if (!campaign) {
       return res.status(404).json({
         statusCode: false,
@@ -291,17 +317,21 @@ exports.getCampaignWithMilestonesAndEvidence = async (req, res) => {
         message: "Campaign not found",
       });
 
-    const milestones = await milestoneModel.find({ campaign: id }).lean();
+    // Milestones should be sorted by sequence for correct display
+    const milestones = await milestoneModel.find({ campaign: id }).sort({ sequence: 1 }).lean();
     const milestoneIds = milestones.map((m) => m._id);
+
+    // Find evidences linked to the milestones
     const evidences = await milestoneEvidenceModel.find({ milestone: { $in: milestoneIds } }).lean();
 
-    // map evidences to milestones
+    // Map evidences to milestones
     const evidenceMap = {};
     evidences.forEach((e) => {
       evidenceMap[e.milestone] = evidenceMap[e.milestone] || [];
       evidenceMap[e.milestone].push(e);
     });
 
+    // Integrate evidence into the respective milestone objects
     const milestonesWithEvidence = milestones.map((m) => ({ ...m, evidences: evidenceMap[m._id] || [] }));
 
     return res.json({
@@ -318,4 +348,3 @@ exports.getCampaignWithMilestonesAndEvidence = async (req, res) => {
     });
   }
 };
-

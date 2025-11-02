@@ -7,7 +7,6 @@ const storage = multer.diskStorage({
     const uploadDir = path.join(process.cwd(), "uploads");
     fs.mkdirSync(uploadDir, { recursive: true });
 
-    console.log("i am uploadsss",uploadDir)
     cb(null, uploadDir);
   },
 

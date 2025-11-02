@@ -11,8 +11,4 @@ router.get("/campaign/:id/donations", authenticate, getDonationsByCampaign);
 
 router.get("/my-donations", authenticate, getDonationsByUser);
 
-router.get("/all", restrictAdmin, protectAdmin, getAllDonations );
-
-router.post("/create-payout", restrictAdmin, protectAdmin, createPayout);
-
 module.exports = router;
