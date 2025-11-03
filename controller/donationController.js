@@ -3,13 +3,12 @@ const Campaign = require("../model/campaignModel");
 const Donor = require("../model/donorModel");
 const FundraiserWallet = require("../model/fundraiserWallet");
 const Payout = require("../model/payoutModel");
-const { v4: uuidv4 } = require("uuid"); // for generating references
+const { v4: uuidv4 } = require("uuid"); 
 const crypto = require("crypto");
 
-const KORA_SECRET_KEY = process.env.KORA_SECRET_KEY; // **Ensure this is set in your .env**
+const KORA_SECRET_KEY = process.env.KORA_SECRET_KEY; 
 
-// Create a donation record (initial request from frontend).
-// Frontend should call your payment gateway with paymentReference produced here
+
 exports.createDonation = async function (req, res) {
   try {
     // avoid destructuring to match your style
@@ -278,7 +277,6 @@ exports.verifyPaymentWebhook = async function (req, res) {
   }
 };
 
-// Get donations for a campaign (public)
 exports.getDonationsByCampaign = async function (req, res) {
   try {
     const campaignId = req.params.id;
@@ -312,7 +310,7 @@ exports.getDonationsByCampaign = async function (req, res) {
   }
 };
 
-// Get donations for a logged-in donor (private)
+
 exports.getDonationsByUser = async function (req, res) {
   try {
     const donorId = req.user && req.user.id ? req.user.id : null;

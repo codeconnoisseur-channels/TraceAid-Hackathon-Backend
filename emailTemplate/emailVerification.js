@@ -179,10 +179,10 @@ exports.passwordResetOTP = (firstName, resetCode) => {
 };
 
 // 3. Admin Verifying KYC (Status Update to NGO / Campaigner)
-exports.kycVerificationInProgress = (firstName) => {
+exports.kycVerificationInProgress = (organizationName) => {
   const mainContent = `
         <h1 style="font-size: 24px; color: ${WARNING_ORANGE}; margin-bottom: 20px;">KYC Verification is in Progress</h1>
-        <p style="font-size: 16px; margin-bottom: 15px; color: #333;">Hi ${firstName},</p>
+        <p style="font-size: 16px; margin-bottom: 15px; color: #333;">Hi ${organizationName},</p>
         <p style="font-size: 16px; margin-bottom: 25px; color: #333;">
             Thank you for submitting your KYC details. Our team is currently reviewing your information to ensure platform safety and compliance.
         </p>
@@ -204,41 +204,48 @@ exports.kycVerificationInProgress = (firstName) => {
   return baseEmailTemplate("Your KYC Verification is in Progress", mainContent, WARNING_ORANGE);
 };
 
-// 4. Admin Verifying Campaigns
-exports.campaignUnderReview = (firstName) => {
+exports.campaignAndMilestonesUnderReview = (organizationName, campaignTitle, milestones) => {
+  const milestoneList = milestones
+    .map(
+      (m, index) => `
+        <tr style="border-bottom: 1px solid #eee;">
+            <td style="padding: 10px 0; font-weight: 600; color: #333;">Milestone ${index + 1}: ${m.milestoneTitle}</td>
+            <td style="padding: 10px 0; text-align: right; color: #555;">${m.targetAmount.toLocaleString()}</td>
+        </tr>
+    `
+    )
+    .join("");
+
   const mainContent = `
-        <h1 style="font-size: 24px; color: ${WARNING_ORANGE}; margin-bottom: 20px;">Your Campaign Is Being Reviewed</h1>
-        <p style="font-size: 16px; margin-bottom: 15px; color: #333;">Hi ${firstName},</p>
+        <h1 style="font-size: 24px; color: ${WARNING_ORANGE}; margin-bottom: 20px;">Campaign & Milestones Under Review 📝</h1>
+        <p style="font-size: 16px; margin-bottom: 15px; color: #333;">Hi ${organizationName},</p>
         <p style="font-size: 16px; margin-bottom: 25px; color: #333;">
-            We’ve received your campaign and it’s currently under review by our verification team to ensure authenticity and compliance with TraceAid guidelines.
+            Thank you for submitting your new campaign, **${campaignTitle}**, along with its associated milestones. 
+            All details are now under review by our team to ensure compliance with TraceAid guidelines.
         </p>
-        <p style="font-size: 16px; margin-top: 20px; color: #333;">
-            We’ll notify you once it’s approved or if we require additional information.
+
+        <h2 style="font-size: 18px; color: ${PRIMARY_BLUE}; margin-top: 30px; margin-bottom: 10px;">Submitted Milestones (${milestones.length})</h2>
+        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse: collapse;">
+            <thead>
+                <tr style="border-bottom: 2px solid ${PRIMARY_BLUE};">
+                    <th style="padding: 10px 0; text-align: left; font-size: 14px; color: ${PRIMARY_BLUE};">Description</th>
+                    <th style="padding: 10px 0; text-align: right; font-size: 14px; color: ${PRIMARY_BLUE};">Target Amount</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${milestoneList}
+            </tbody>
+        </table>
+        
+        <p style="font-size: 16px; margin-top: 30px; color: #333;">
+            We will notify you once the campaign is approved or if any additional information is required.
         </p>
         <p style="font-size: 16px; margin-top: 25px; color: #333;">Thank you for choosing to fundraise transparently,</p>
         <p style="font-size: 16px; font-weight: 600; color: ${PRIMARY_BLUE}; margin: 0;">The TraceAid Team</p>
     `;
-  return baseEmailTemplate("Your Campaign Is Being Reviewed", mainContent, WARNING_ORANGE);
+  return baseEmailTemplate("Campaign and Milestones Under Review", mainContent, WARNING_ORANGE);
 };
 
-// 5. Admin Verifying Milestone Evidence
-exports.milestoneUnderReview = (firstName) => {
-  const mainContent = `
-        <h1 style="font-size: 24px; color: ${WARNING_ORANGE}; margin-bottom: 20px;">Milestone Evidence Submitted — Under Review</h1>
-        <p style="font-size: 16px; margin-bottom: 15px; color: #333;">Hi ${firstName},</p>
-        <p style="font-size: 16px; margin-bottom: 25px; color: #333;">
-            Your milestone update and supporting evidence have been successfully submitted. Our team is now reviewing the details.
-        </p>
-        <p style="font-size: 16px; margin-top: 20px; color: #333;">
-            You will be notified once it’s approved, or if clarification is required.
-        </p>
-        <p style="font-size: 16px; margin-top: 25px; color: #333;">Thanks for keeping your donors informed and accountable,</p>
-        <p style="font-size: 16px; font-weight: 600; color: ${PRIMARY_BLUE}; margin: 0;">The TraceAid Team</p>
-    `;
-  return baseEmailTemplate("Milestone Evidence Submitted — Under Review", mainContent, WARNING_ORANGE);
-};
-
-// 6. Campaign Approval Email
 exports.campaignApproved = (firstName, campaignName) => {
   const mainContent = `
         <h1 style="font-size: 24px; color: ${SUCCESS_GREEN}; margin-bottom: 20px;">Your Campaign Has Been Approved!</h1>
@@ -306,7 +313,44 @@ exports.milestoneApproved = (firstName, campaignName) => {
   return baseEmailTemplate("Milestone Update Successfully Approved", mainContent, SUCCESS_GREEN);
 };
 
-// 9. Milestone Verification (Needs More Info)
+// 8. Campaign Active Email
+exports.campaignActive = (organizationName, campaignTitle, endDate) => {
+    const formattedEndDate = endDate ? new Date(endDate).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+    }) : 'an indefinite date';
+
+  const mainContent = `
+        <h1 style="font-size: 24px; color: ${SUCCESS_GREEN}; margin-bottom: 20px;">Campaign Is Now LIVE! 🚀</h1>
+        <p style="font-size: 16px; margin-bottom: 15px; color: #333;">Hi ${organizationName},</p>
+        <p style="font-size: 16px; margin-bottom: 25px; color: #333;">
+            Fantastic news! Your campaign, **"${campaignTitle}"**, has been officially set to **active** and is now live on the TraceAid platform!
+        </p>
+        <p style="font-size: 16px; font-weight: 600; color: #333; margin-bottom: 15px;">
+            It will run until **${formattedEndDate}**.
+        </p>
+
+        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin: 20px 0;">
+            <tr>
+                <td align="center">
+                    <a href="[[campaign_link]]" target="_blank"
+                       style="display: inline-block; background-color: ${SUCCESS_GREEN}; color: #ffffff; font-size: 16px; 
+                       font-weight: 600; text-decoration: none; padding: 12px 25px; border-radius: 5px; border: 1px solid ${SUCCESS_GREEN};">
+                        View Your Live Campaign
+                    </a>
+                </td>
+            </tr>
+        </table>
+        <p style="font-size: 16px; margin-top: 20px; color: #333;">
+            Start sharing your campaign link with your network! We wish you the best in achieving your goals.
+        </p>
+        <p style="font-size: 16px; margin-top: 25px; color: #333;">Let's create impact together,</p>
+        <p style="font-size: 16px; font-weight: 600; color: ${PRIMARY_BLUE}; margin: 0;">The TraceAid Team</p>
+    `;
+  return baseEmailTemplate("Campaign Is Now LIVE!", mainContent, SUCCESS_GREEN);
+};
+
 exports.milestoneNeedsMoreInfo = (firstName) => {
   const mainContent = `
         <h1 style="font-size: 24px; color: ${WARNING_ORANGE}; margin-bottom: 20px;">Clarification Needed for Your Milestone Update</h1>
@@ -334,31 +378,40 @@ exports.milestoneNeedsMoreInfo = (firstName) => {
   return baseEmailTemplate("Clarification Needed for Your Milestone Update", mainContent, WARNING_ORANGE);
 };
 
-// 10. Campaign Disapproval Email
-exports.campaignDisapproved = (firstName, campaignName) => {
+exports.campaignDisapproved = (organizationName, campaignTitle, rejectionReason) => {
   const mainContent = `
-        <h1 style="font-size: 24px; color: ${ALERT_RED}; margin-bottom: 20px;">Your Campaign Could Not Be Approved</h1>
-        <p style="font-size: 16px; margin-bottom: 15px; color: #333;">Hi ${firstName},</p>
-        <p style="font-size: 16px; margin-bottom: 25px; color: #333;">
-            Thank you for submitting your campaign **"${campaignName}"**. After reviewing your application, we’re unable to approve it at this time due to one or more issues with the information provided.
-        </p>
-        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin: 20px 0;">
-            <tr>
-                <td align="center">
-                    <a href="[[dashboard_link]]" target="_blank"
-                       style="display: inline-block; background-color: ${ALERT_RED}; color: #ffffff; font-size: 16px; 
-                       font-weight: 600; text-decoration: none; padding: 12px 25px; border-radius: 5px; border: 1px solid ${ALERT_RED};">
-                        View Feedback & Corrections
-                    </a>
-                </td>
-            </tr>
-        </table>
-        <p style="font-size: 16px; margin-top: 20px; color: #333;">
-            Please log into your dashboard to view the feedback and required corrections. Once updated, you can resubmit your campaign for verification.
-        </p>
-        <p style="font-size: 16px; margin-top: 25px; color: #333;">We appreciate your understanding,</p>
-        <p style="font-size: 16px; font-weight: 600; color: ${PRIMARY_BLUE}; margin: 0;">The TraceAid Team</p>
-    `;
+        <h1 style="font-size: 24px; color: ${ALERT_RED}; margin-bottom: 20px;">Your Campaign Could Not Be Approved</h1>
+        <p style="font-size: 16px; margin-bottom: 15px; color: #333;">Hi ${organizationName},</p>
+        <p style="font-size: 16px; margin-bottom: 25px; color: #333;">
+            Thank you for submitting your campaign **"${campaignTitle}"**. After reviewing your application, we’re unable to approve it at this time.
+        </p>
+        
+                <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin: 20px 0;">
+            <tr>
+                <td style="padding: 15px; background-color: #fcebeb; border-left: 4px solid ${ALERT_RED}; border-radius: 4px; color: #333;">
+                    <p style="font-size: 16px; font-weight: 600; margin: 0 0 5px 0; color: ${ALERT_RED};">Reason for Disapproval:</p>
+                    <p style="font-size: 16px; margin: 0;">${rejectionReason}</p>
+                </td>
+            </tr>
+        </table>
+        
+        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin: 20px 0;">
+            <tr>
+                <td align="center">
+                    <a href="[[dashboard_link]]" target="_blank"
+                       style="display: inline-block; background-color: ${ALERT_RED}; color: #ffffff; font-size: 16px; 
+                       font-weight: 600; text-decoration: none; padding: 12px 25px; border-radius: 5px; border: 1px solid ${ALERT_RED};">
+                        View Dashboard
+                    </a>
+                </td>
+            </tr>
+        </table>
+        <p style="font-size: 16px; margin-top: 20px; color: #333;">
+            Please log into your dashboard to update your campaign based on the feedback. Once corrected, you can resubmit your campaign for verification.
+        </p>
+        <p style="font-size: 16px; margin-top: 25px; color: #333;">We appreciate your understanding,</p>
+        <p style="font-size: 16px; font-weight: 600; color: ${PRIMARY_BLUE}; margin: 0;">The TraceAid Team</p>
+    `;
   return baseEmailTemplate("Your Campaign Could Not Be Approved", mainContent, ALERT_RED);
 };
 
@@ -390,17 +443,96 @@ exports.milestoneDisapproved = (firstName, campaignName) => {
   return baseEmailTemplate("Your Milestone Evidence Could Not Be Approved", mainContent, ALERT_RED);
 };
 
-// Custom email exports for legacy support (if needed, otherwise remove these)
-// These two mimic the structure of your original exports but use the new template style.
+exports.kycApproved = (organizationName) => {
+  const mainContent = `
+        <h1 style="font-size: 24px; color: ${SUCCESS_GREEN}; margin-bottom: 20px;">KYC Verification Approved! 🎉</h1>
+        <p style="font-size: 16px; margin-bottom: 15px; color: #333;">Hi ${organizationName},</p>
+        <p style="font-size: 16px; margin-bottom: 25px; color: #333;">
+            Congratulations! Your KYC verification has been successfully approved.
+        </p>
+        <p style="font-size: 16px; font-weight: 600; color: ${PRIMARY_BLUE}; margin-bottom: 20px;">
+            This approval confirms your legitimacy and allows you to submit campaigns and receive funds on TraceAid.
+        </p>
+        <p style="font-size: 16px; margin-top: 25px; color: #333;">Welcome aboard, let's start creating impact!</p>
+        <p style="font-size: 16px; font-weight: 600; color: ${PRIMARY_BLUE}; margin: 0;">The TraceAid Team</p>
+    `;
+  return baseEmailTemplate("KYC Verification Approved!", mainContent, SUCCESS_GREEN);
+};
 
-// You had a specific function for "registerOTP"
+exports.kycRejected = (organizationName, rejectionReason) => {
+  const mainContent = `
+        <h1 style="font-size: 24px; color: ${ALERT_RED}; margin-bottom: 20px;">KYC Verification Could Not Be Approved</h1>
+        <p style="font-size: 16px; margin-bottom: 15px; color: #333;">Hi ${organizationName},</p>
+        <p style="font-size: 16px; margin-bottom: 25px; color: #333;">
+            We regret to inform you that your KYC verification could not be approved at this time.
+        </p>
+        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin: 20px 0;">
+            <tr>
+                <td style="padding: 15px; background-color: #fcebeb; border-left: 4px solid ${ALERT_RED}; border-radius: 4px; color: #333;">
+                   <p style="font-size: 16px; font-weight: 600; margin: 0 0 5px 0;">Reason for Rejection:</p>
+                    <p style="font-size: 16px; margin: 0;">${rejectionReason}</p>
+                </td>
+            </tr>
+        </table>
+        <p style="font-size: 16px; margin-top: 20px; color: #333;">
+            Please log into your dashboard to update your information and resubmit for review.
+        </p>
+        <p style="font-size: 16px; margin-top: 25px; color: #333;">We look forward to your resubmission,</p>
+        <p style="font-size: 16px; font-weight: 600; color: ${PRIMARY_BLUE}; margin: 0;">The TraceAid Team</p>
+    `;
+  return baseEmailTemplate("KYC Verification Could Not Be Approved", mainContent, ALERT_RED);
+};
+
+exports.durationExtensionApproved = (firstName, campaignName, newDuration) => {
+  const mainContent = `
+        <h1 style="font-size: 24px; color: ${SUCCESS_GREEN}; margin-bottom: 20px;">Campaign Duration Extended!</h1>
+        <p style="font-size: 16px; margin-bottom: 15px; color: #333;">Hi ${firstName},</p>
+        <p style="font-size: 16px; margin-bottom: 25px; color: #333;">
+            Good news! Your request to extend the duration of **"${campaignName}"** has been **approved**.
+        </p>
+        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin: 20px 0;">
+            <tr>
+                <td style="padding: 15px; background-color: #e8fce8; border-left: 4px solid ${SUCCESS_GREEN}; border-radius: 4px; color: #333;">
+                    <p style="font-size: 16px; font-weight: 600; margin: 0;">The campaign deadline has been successfully updated. Your new end date is **${newDuration}**.</p>
+                </td>
+            </tr>
+        </table>
+        <p style="font-size: 16px; margin-top: 20px; color: #333;">
+            Use this extra time to reach your goal! Don't forget to update your donors.
+        </p>
+        <p style="font-size: 16px; margin-top: 25px; color: #333;">Best regards,</p>
+        <p style="font-size: 16px; font-weight: 600; color: ${PRIMARY_BLUE}; margin: 0;">The TraceAid Team</p>
+    `;
+  return baseEmailTemplate("Campaign Duration Extended", mainContent, SUCCESS_GREEN);
+};
+
+exports.durationExtensionRejected = (firstName, campaignName, rejectionReason) => {
+  const mainContent = `
+        <h1 style="font-size: 24px; color: ${ALERT_RED}; margin-bottom: 20px;">Campaign Extension Request Declined</h1>
+        <p style="font-size: 16px; margin-bottom: 15px; color: #333;">Hi ${firstName},</p>
+        <p style="font-size: 16px; margin-bottom: 25px; color: #333;">
+            We have reviewed your request to extend the duration of **"${campaignName}"** but have decided to **decline** it at this time.
+        </p>
+        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin: 20px 0;">
+            <tr>
+                <td style="padding: 15px; background-color: #fcebeb; border-left: 4px solid ${ALERT_RED}; border-radius: 4px; color: #333;">
+                    <p style="font-size: 16px; font-weight: 600; margin: 0 0 5px 0;">Reason for Decline:</p>
+                    <p style="font-size: 16px; margin: 0;">${rejectionReason}</p>
+                </td>
+            </tr>
+        </table>
+        <p style="font-size: 16px; margin-top: 20px; color: #333;">
+            Please continue to work toward your original deadline.
+        </p>
+        <p style="font-size: 16px; margin-top: 25px; color: #333;">The TraceAid Team</p>
+    `;
+  return baseEmailTemplate("Campaign Extension Request Declined", mainContent, ALERT_RED);
+};
+
 exports.registerOTP = (otp, firstname) => {
   return exports.emailVerificationOTP(firstname, otp);
 };
 
-// You had a specific function for "forgotPasswordLink" which is now replaced by "passwordResetOTP" since the UI/UX used a code.
-// Note: If you require a link-based reset (as in your commented-out code), you would need to adjust this, but since the UI/UX provided a code-based flow, I used that.
-// If you want to use this function to represent a link-based reset, here is how it would look:
 exports.forgotPasswordLink = (resetUrl, firstname) => {
   const mainContent = `
         <h1 style="font-size: 24px; color: ${PRIMARY_BLUE}; margin-bottom: 20px;">Password Reset Request</h1>
@@ -429,28 +561,4 @@ exports.forgotPasswordLink = (resetUrl, firstname) => {
         <p style="font-size: 16px; font-weight: 600; color: ${PRIMARY_BLUE}; margin: 0;">The TraceAid Team</p>
     `;
   return baseEmailTemplate("Password Reset Request", mainContent);
-};
-
-// You had two multi-purpose status functions which are now replaced by the specific 11 scenarios above.
-// The following two exports are deprecated but included for reference on how they were structured.
-// exports.kycStatusEmail = (statusMessage, organizationName) => { /* ... */ };
-// exports.campaignStatusEmail = (organizationName, action, title, remarks) => { /* ... */ };
-
-// Expose all 11 specific templates for direct use:
-module.exports = {
-  emailVerificationOTP: exports.emailVerificationOTP,
-  passwordResetOTP: exports.passwordResetOTP,
-  kycVerificationInProgress: exports.kycVerificationInProgress,
-  campaignUnderReview: exports.campaignUnderReview,
-  milestoneUnderReview: exports.milestoneUnderReview,
-  campaignApproved: exports.campaignApproved,
-  campaignNeedsMoreInfo: exports.campaignNeedsMoreInfo,
-  milestoneApproved: exports.milestoneApproved,
-  milestoneNeedsMoreInfo: exports.milestoneNeedsMoreInfo,
-  campaignDisapproved: exports.campaignDisapproved,
-  milestoneDisapproved: exports.milestoneDisapproved,
-
-  // Legacy exports, now mapped to the new functions for backward compatibility:
-  registerOTP: exports.registerOTP,
-  forgotPasswordLink: exports.forgotPasswordLink,
 };
