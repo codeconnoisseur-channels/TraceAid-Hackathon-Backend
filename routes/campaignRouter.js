@@ -4,6 +4,8 @@ const { createACampaign, getAllCampaigns, getOneCampaign, getCampaignWithMilesto
 
 const router = require("express").Router();
 
+
+
 router.post("/create-campaign", authenticate, isFundraiser, uploads.single("campaignCoverImageOrVideo"), createACampaign);
 router.get("campaign/get-all-campaigns", authenticate, isFundraiser, getAllCampaigns);
 router.post("/campaign/get-one", authenticate, isFundraiser, getOneCampaign);

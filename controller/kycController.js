@@ -1,7 +1,9 @@
+const { kycVerificationInProgress } = require("../emailTemplate/emailVerification");
 const fundraiserModel = require("../model/fundraiserModel");
 const kycModel = require("../model/kycModel");
 const cloudinary = require("cloudinary").v2;
 const fs = require("fs");
+const { sendEmail } = require("../utils/brevo");
 
 exports.addKyc = async (req, res) => {
   try {
@@ -21,6 +23,23 @@ exports.addKyc = async (req, res) => {
     //     message: "KYC document already submitted for this account.",
     //   });
     // }
+
+    const fundraiser = await fundraiserModel.findById(userId);
+    if (!fundraiser) {
+      return res.status(404).json({
+        statusCode: false,
+        statusText: "Not Found",
+        message: "Fundraiser not found.",
+      });
+    }
+
+    if (fundraiser.kycStatus === "pending") {
+      return res.status(400).json({
+        statusCode: false,
+        statusText: "Bad Request",
+        message: "KYC verification is already in progress.",
+      });
+    }
 
     const existingUser = await kycModel.findOne({ user: userId });
 
@@ -118,8 +137,19 @@ exports.addKyc = async (req, res) => {
       { new: true, runValidators: true }
     );
 
+    const pendingKycEmail = kycVerificationInProgress(fundraiser.organizationName);
+
+    const mailDetails = {
+      email: fundraiser.email,
+      subject: "KYC Verification In Progress",
+      html: pendingKycEmail,
+    };
+
+    await sendEmail(mailDetails);
+
     const response = {
       user: newKyc.user,
+      id: newKyc._id,
       organizationName: newKyc.organizationName,
       organizationType: newKyc.organizationType,
       registrationNumber: newKyc.registrationNumber,

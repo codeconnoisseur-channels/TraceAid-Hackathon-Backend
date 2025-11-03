@@ -8,7 +8,7 @@ const {
   getAllKycGrouped,
   getAllFundraisers,
   getAllDonors,
-  adminActivateCampaign,
+  activateCampaign,
 } = require("../controller/adminController");
 const { protectAdmin, restrictAdmin } = require("../middleware/adminAuth");
 
@@ -277,6 +277,6 @@ router.get("/get-all-kyc", protectAdmin, restrictAdmin, getAllKyc);
 router.get("/getkycs", protectAdmin, restrictAdmin, getAllKycGrouped);
 router.get("/get-all-fundraisers", protectAdmin, restrictAdmin, getAllFundraisers);
 router.get("/get-all-donors", protectAdmin, restrictAdmin, getAllDonors);
-router.patch("/campaigns/activate/:campaignId", protectAdmin, restrictAdmin, adminActivateCampaign);
+router.patch("/campaigns/activate/:campaignId", protectAdmin, restrictAdmin, activateCampaign);
 
 module.exports = router;
