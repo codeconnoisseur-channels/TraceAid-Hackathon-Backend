@@ -4,3 +4,4 @@ node_modules
 uploads
 EmailPreview
 ./emailTemplate/emailVerification.js
+./controller/engagementController.js
