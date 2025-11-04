@@ -8,7 +8,7 @@ const engagementSchema = new mongoose.Schema(
     },
     userType: {
       type: String,
-      enum: ["DonorProfile", "Fundraiser"],
+      enum: ["Donor", "Fundraiser"],
       required: true,
     },
     actionType: {
