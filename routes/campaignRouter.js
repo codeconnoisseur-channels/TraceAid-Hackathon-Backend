@@ -5,6 +5,7 @@ const {
   getAllCampaigns,
   getOneCampaign,
   getCampaignWithMilestonesAndEvidence,
+  getAllCampaign,
 } = require("../controller/campaignController");
 
 const router = require("express").Router();
@@ -286,7 +287,7 @@ router.get(
 
 router.get(
   "/campaign/get-all-campaign",
-  getAllCampaigns
+  getAllCampaign
 );
 
 /**
