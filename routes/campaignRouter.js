@@ -284,6 +284,11 @@ router.get(
   getAllCampaigns
 );
 
+router.get(
+  "/campaign/get-all-campaigns",
+  getAllCampaigns
+);
+
 /**
  * @swagger
  * /campaign/api/v1/campaign/get-one:
