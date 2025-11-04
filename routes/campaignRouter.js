@@ -278,7 +278,7 @@ router.post(
  *               message: Error retrieving campaigns
  */
 router.get(
-  "campaign/get-all-campaigns",
+  "/campaign/get-all-campaigns",
   authenticate,
   isFundraiser,
   getAllCampaigns
