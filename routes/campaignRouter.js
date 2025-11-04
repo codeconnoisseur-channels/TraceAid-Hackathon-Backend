@@ -285,7 +285,7 @@ router.get(
 );
 
 router.get(
-  "/campaign/get-all-campaigns",
+  "/campaign/get-all-campaign",
   getAllCampaigns
 );
 
