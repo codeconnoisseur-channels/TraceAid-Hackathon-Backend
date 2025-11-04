@@ -225,7 +225,7 @@ router.post(
  *     summary: Retrieve all campaigns belonging to the authenticated fundraiser
  *     description: Returns all campaigns (active, pending, completed) created by the authenticated fundraiser, along with summary counts for each category.
  *     tags:
- *       - Fundraiser - Campaigns
+ *       - Fundraiser Campaign Management
  *     security:
  *       - bearerAuth: []
  *     responses:
@@ -291,7 +291,7 @@ router.get(
  *     summary: Retrieve a single campaign by ID
  *     description: Fetches a specific campaign's details by its ID. Only accessible to an authenticated fundraiser.
  *     tags:
- *       - Fundraiser - Campaigns
+ *       - Fundraiser Campaign Management
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -354,7 +354,7 @@ router.post("/campaign/get-one", authenticate, isFundraiser, getOneCampaign);
  *     summary: Get campaign details along with milestones and evidence
  *     description: Retrieves a campaign by its ID, including all associated milestones and uploaded milestone evidences. Only accessible to an authenticated fundraiser.
  *     tags:
- *       - Fundraiser - Campaigns
+ *       - Fundraiser Campaign Management
  *     security:
  *       - bearerAuth: []
  *     parameters:
