@@ -22,7 +22,7 @@ const ALERT_RED = "#E76F51"; // For disapproval/rejection
 const baseEmailTemplate = (title, mainContent, accentColor = PRIMARY_BLUE) => {
   // Ensure all styles are inline for maximum email client compatibility.
   const containerStyle =
-    "max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); border: 1px solid #e0e0e0;";
+    "max-width: 600px; margin: 0 auto; background-color: rgba(24, 24, 24, 0.4); font-family: 'Poppins', sans-serif; padding: 20px 0; border-bottom: 1px solid #e0e0e0; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); border: 1px solid #e0e0e0;us: 8px; overflow: hidden; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); border: 1px solid #e0e0e0;";
   const footerBgStyle = `background: url(${WATERMARK_URL}) center / cover no-repeat; padding: 40px 0; text-align: center; color: #fff;`;
 
   return `
@@ -50,7 +50,7 @@ const baseEmailTemplate = (title, mainContent, accentColor = PRIMARY_BLUE) => {
     </style>
 </head>
 
-<body style="margin: 0; padding: 0; background-color: #f4f4f4; font-family: 'Poppins', sans-serif;">
+<body style="margin: 0; padding: 0; background-color: #fff; font-family: 'Poppins', sans-serif;">
     <center style="width: 100%;">
         <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f4f4f4;">
             <tr>
@@ -220,7 +220,7 @@ exports.campaignAndMilestonesUnderReview = (organizationName, campaignTitle, mil
         <h1 style="font-size: 24px; color: ${WARNING_ORANGE}; margin-bottom: 20px;">Campaign & Milestones Under Review 📝</h1>
         <p style="font-size: 16px; margin-bottom: 15px; color: #333;">Hi ${organizationName},</p>
         <p style="font-size: 16px; margin-bottom: 25px; color: #333;">
-            Thank you for submitting your new campaign, **${campaignTitle}**, along with its associated milestones. 
+            Thank you for submitting your new campaign, <strong>${campaignTitle}</strong>, along with its associated milestones. 
             All details are now under review by our team to ensure compliance with TraceAid guidelines.
         </p>
 
@@ -251,10 +251,11 @@ exports.campaignApproved = (firstName, campaignName) => {
         <h1 style="font-size: 24px; color: ${SUCCESS_GREEN}; margin-bottom: 20px;">Your Campaign Has Been Approved!</h1>
         <p style="font-size: 16px; margin-bottom: 15px; color: #333;">Hi ${firstName},</p>
         <p style="font-size: 16px; margin-bottom: 25px; color: #333;">
-            Great news! Your campaign **"${campaignName}"** has been successfully reviewed and approved by our verification team.
+            Great news! Your campaign <strong>${campaignName}</strong> has been successfully reviewed and approved by our verification team.
         </p>
         <p style="font-size: 16px; margin-bottom: 20px; color: #333; font-weight: 600;">
-            Your campaign is now live on TraceAid and ready to receive donations.
+            <em><strong>NOTE :</strong> Your Campaign is not yet live to recevice donation and cannot receive donations until it is live.</em><br/>
+            <em><strong>Next Steps :</strong> Please proceed to set your campaign status to <strong>Active</strong> from your dashboard to start receiving donations.</em>
         </p>
         <p style="font-size: 18px; font-weight: 700; color: ${PRIMARY_BLUE}; margin-bottom: 10px;">Remember:</p>
         <ul style="list-style: none; padding: 0; margin: 0 0 30px 20px; color: #555;">
@@ -325,7 +326,7 @@ exports.campaignActive = (organizationName, campaignTitle, endDate) => {
         <h1 style="font-size: 24px; color: ${SUCCESS_GREEN}; margin-bottom: 20px;">Campaign Is Now LIVE! 🚀</h1>
         <p style="font-size: 16px; margin-bottom: 15px; color: #333;">Hi ${organizationName},</p>
         <p style="font-size: 16px; margin-bottom: 25px; color: #333;">
-            Fantastic news! Your campaign, **"${campaignTitle}"**, has been officially set to **active** and is now live on the TraceAid platform!
+            Fantastic news! Your campaign, <strong>${campaignTitle}</strong>, has been officially set to **active** and is now live on the TraceAid platform!
         </p>
         <p style="font-size: 16px; font-weight: 600; color: #333; margin-bottom: 15px;">
             It will run until **${formattedEndDate}**.
@@ -383,7 +384,7 @@ exports.campaignDisapproved = (organizationName, campaignTitle, rejectionReason)
         <h1 style="font-size: 24px; color: ${ALERT_RED}; margin-bottom: 20px;">Your Campaign Could Not Be Approved</h1>
         <p style="font-size: 16px; margin-bottom: 15px; color: #333;">Hi ${organizationName},</p>
         <p style="font-size: 16px; margin-bottom: 25px; color: #333;">
-            Thank you for submitting your campaign **"${campaignTitle}"**. After reviewing your application, we’re unable to approve it at this time.
+            Thank you for submitting your campaign <strong>${campaignTitle}</strong>. After reviewing your application, we’re unable to approve it at this time.
         </p>
         
                 <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin: 20px 0;">
