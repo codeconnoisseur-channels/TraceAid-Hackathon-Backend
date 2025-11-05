@@ -650,11 +650,10 @@ exports.handleExtensionRequest = async (req, res) => {
   }
 };
 
-
 exports.reviewMilestoneEvidence = async (req, res) => {
   const adminId = req.user.id || req.user._id;
   const { evidenceId } = req.params;
-  const { status, rejectionReason } = req.body; 
+  const { status, rejectionReason } = req.body;
 
   if (!["approved", "rejected"].includes(status)) {
     return res
@@ -709,6 +708,145 @@ exports.reviewMilestoneEvidence = async (req, res) => {
   } catch (error) {
     console.error("Error reviewing evidence:", error);
     res.status(500).json({ statusCode: false, statusText: "Internal Server Error", message: error.message });
+  }
+};
+
+exports.getPendingMilestoneEvidence = async (req, res) => {
+  try {
+    const pendingEvidence = await MilestoneEvidenceModel.find({ status: "pending" })
+      .populate({
+        path: "milestone",
+        select: "milestoneTitle milestoneAmount",
+      })
+      .populate({
+        path: "fundraiser",
+        select: "firstName lastName",
+      })
+      .populate({
+        path: "campaign",
+        select: "campaignTitle",
+      })
+      .sort({ uploadedAt: 1 });
+
+    return res.status(200).json({
+      statusCode: true,
+      statusText: "OK",
+      message: "Pending milestone evidence retrieved successfully.",
+      data: pendingEvidence,
+    });
+  } catch (error) {
+    console.error("Error fetching pending evidence:", error);
+    return res.status(500).json({
+      statusCode: false,
+      statusText: "Internal Server Error",
+      message: error.message,
+    });
+  }
+};
+
+exports.approveMilestoneEvidence = async (req, res) => {
+  try {
+    const { evidenceId } = req.params;
+
+    const evidence = await MilestoneEvidenceModel.findById(evidenceId).populate("milestone").populate("campaign");
+
+    if (!evidence || evidence.status !== "pending") {
+      return res.status(404).json({
+        statusCode: false,
+        statusText: "Not Found",
+        message: "Evidence not found or not currently pending review.",
+      });
+    }
+
+    const milestone = evidence.milestone;
+    const campaign = evidence.campaign;
+
+    if (!milestone || !campaign) {
+      return res.status(404).json({
+        statusCode: false,
+        statusText: "Not Found",
+        message: "Associated milestone or campaign not found.",
+      });
+    }
+
+    const amountToRelease = milestone.milestoneAmount;
+    const fundraiserId = campaign.fundraiser;
+
+    const wallet = await FundraiserWallet.findOneAndUpdate(
+      { fundraiser: fundraiserId },
+      { $inc: { availableBalance: amountToRelease } },
+      { upsert: true, new: true }
+    );
+
+    evidence.status = "approved";
+    milestone.evidenceApprovalStatus = "approved";
+    milestone.status = "completed";
+
+    await evidence.save();
+    await milestone.save();
+
+    return res.status(200).json({
+      statusCode: true,
+      statusText: "OK",
+      message: `Milestone evidence approved. ${amountToRelease} released to fundraiser wallet.`,
+      data: { evidence, wallet },
+    });
+  } catch (error) {
+    console.error("Error approving milestone evidence:", error);
+    return res.status(500).json({
+      statusCode: false,
+      statusText: "Internal Server Error",
+      message: error.message,
+    });
+  }
+};
+
+exports.rejectMilestoneEvidence = async (req, res) => {
+  try {
+    const { evidenceId } = req.params;
+    const { rejectionReason } = req.body;
+
+    if (!rejectionReason) {
+      return res.status(400).json({
+        statusCode: false,
+        statusText: "Bad Request",
+        message: "Rejection reason is required.",
+      });
+    }
+
+    const evidence = await MilestoneEvidence.findById(evidenceId).populate("milestone");
+
+    if (!evidence || evidence.status !== "pending") {
+      return res.status(404).json({
+        statusCode: false,
+        statusText: "Not Found",
+        message: "Evidence not found or not currently pending review.",
+      });
+    }
+
+    const milestone = evidence.milestone;
+
+    evidence.status = "rejected";
+    evidence.rejectionReason = rejectionReason;
+    await evidence.save();
+
+    milestone.evidenceApprovalStatus = "required";
+    milestone.evidenceRef = null;
+    await milestone.save();
+
+    return res.status(200).json({
+      statusCode: true,
+      statusText: "OK",
+      message: "Milestone evidence rejected. Fundraiser notified to resubmit.",
+      data: { evidence, milestone },
+    });
+  } catch (error) {
+    console.error("Error rejecting milestone evidence:", error);
+    return res.status(500).json({
+      statusCode: false,
+      statusText: "Internal Server Error",
+      message: error.message,
+    });
   }
 };
 
@@ -836,6 +974,118 @@ exports.rejectPayoutRequest = async function (req, res) {
   } catch (error) {
     console.error("Error rejecting payout request:", error);
     return res.status(500).json({
+      statusCode: false,
+      statusText: "Internal Server Error",
+      message: error.message,
+    });
+  }
+};
+
+exports.getCampaignWithMilestonesAndEvidence = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const campaign = await campaignModel.findById(id).lean();
+    if (!campaign)
+      return res.status(404).json({
+        statusCode: false,
+        statusText: "Not Found",
+        message: "Campaign not found",
+      });
+
+    const milestones = await milestoneModel.find({ campaign: id }).sort({ sequence: 1 }).lean();
+    const milestoneIds = milestones.map((m) => m._id);
+
+    const evidences = await milestoneEvidenceModel.find({ milestone: { $in: milestoneIds } }).lean();
+
+    const evidenceMap = {};
+    evidences.forEach((e) => {
+      evidenceMap[e.milestone] = evidenceMap[e.milestone] || [];
+      evidenceMap[e.milestone].push(e);
+    });
+
+    const milestonesWithEvidence = milestones.map((m) => ({ ...m, evidences: evidenceMap[m._id] || [] }));
+
+    return res.json({
+      statusCode: true,
+      statusText: "OK",
+      data: { campaign, milestones: milestonesWithEvidence },
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({
+      statusCode: false,
+      statusText: "Internal Server Error",
+      message: error.message,
+    });
+  }
+};
+
+exports.getAllCampaigns = async (req, res) => {
+  try {
+    const allCampaigns = await campaignModel.find({ fundraiser: userId });
+
+    if (allCampaigns.length === 0) {
+      return res.status(404).json({
+        statusCode: false,
+        statusText: "Not Found",
+        message: "No campaigns found",
+      });
+    }
+
+    // Status tracking updated to include 'ended'
+    const activeCampaigns = allCampaigns.filter((c) => c.status === "active");
+    const pendingCampaigns = allCampaigns.filter((c) => c.status === "pending");
+    const completedCampaigns = allCampaigns.filter((c) => c.status === "completed" || c.status === "ended");
+
+    res.status(200).json({
+      statusCode: true,
+      statusText: "OK",
+      message: "Campaigns retrieved successfully",
+      data: {
+        all: allCampaigns,
+        active: activeCampaigns,
+        pending: pendingCampaigns,
+        completed: completedCampaigns,
+        counts: {
+          active: activeCampaigns.length,
+          pending: pendingCampaigns.length,
+          completed: completedCampaigns.length,
+        },
+      },
+    });
+  } catch (error) {
+    console.error("Error retrieving campaigns:", error);
+    res.status(500).json({
+      statusCode: false,
+      statusText: "Internal Server Error",
+      message: error.message,
+    });
+  }
+};
+
+exports.getAllCampaignByFundraiser = async (req, res) => {
+  try {
+    const { fundraiserId } = req.params;
+
+    const campaigns = await campaignModel.find({ fundraiser: fundraiserId });
+
+    if (campaigns.length === 0) {
+      return res.status(404).json({
+        statusCode: false,
+        statusText: "Not Found",
+        message: "No campaigns found for the specified fundraiser",
+      });
+    }
+
+    res.status(200).json({
+      statusCode: true,
+      statusText: "OK",
+      message: "Campaigns retrieved successfully",
+      data: campaigns,
+    });
+  } catch (error) {
+    console.error("Error retrieving campaigns:", error);
+    res.status(500).json({
       statusCode: false,
       statusText: "Internal Server Error",
       message: error.message,

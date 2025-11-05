@@ -14,6 +14,12 @@ const {
   getAllDonations,
   approvePayoutRequest,
   rejectPayoutRequest,
+  getPendingMilestoneEvidence,
+  approveMilestoneEvidence,
+  rejectMilestoneEvidence,
+  getAllCampaigns,
+  getCampaignWithMilestonesAndEvidence,
+  getAllCampaignByFundraiser,
 } = require("../controller/adminController");
 const { protectAdmin, restrictAdmin } = require("../middleware/adminAuth");
 
@@ -369,12 +375,7 @@ router.get("/get-all-kyc", protectAdmin, restrictAdmin, getAllKyc);
  *                   type: string
  *                   example: "Error fetching KYC records by status"
  */
-router.get(
-  "/get-kyc-by-status",
-  protectAdmin,
-  restrictAdmin,
-  getAllKycByTheStatus
-);
+router.get("/get-kyc-by-status", protectAdmin, restrictAdmin, getAllKycByTheStatus);
 
 /**
  * @swagger
@@ -666,12 +667,7 @@ router.get("/getkycs", protectAdmin, restrictAdmin, getAllKycGrouped);
  *                   type: string
  *                   example: "Error reviewing campaign"
  */
-router.patch(
-  "/campaigns/review/:campaignId",
-  protectAdmin,
-  restrictAdmin,
-  reviewCampaign
-);
+router.patch("/campaigns/review/:campaignId", protectAdmin, restrictAdmin, reviewCampaign);
 
 /**
  * @swagger
@@ -811,12 +807,7 @@ router.patch(
  *                   type: string
  *                   example: "Error updating campaign activation status"
  */
-router.patch(
-  "/campaigns/activate/:campaignId",
-  protectAdmin,
-  restrictAdmin,
-  activateCampaign
-);
+router.patch("/campaigns/activate/:campaignId", protectAdmin, restrictAdmin, activateCampaign);
 
 /**
  * @swagger
@@ -960,12 +951,7 @@ router.patch(
  *                   type: string
  *                   example: "Error processing campaign extension request"
  */
-router.patch(
-  "campaigns/:campaignId/extension/:requestId",
-  protectAdmin,
-  restrictAdmin,
-  handleExtensionRequest
-);
+router.patch("campaigns/:campaignId/extension/:requestId", protectAdmin, restrictAdmin, handleExtensionRequest);
 
 /**
  * @swagger
@@ -1105,12 +1091,7 @@ router.patch(
  *                   type: string
  *                   example: "Error reviewing milestone evidence"
  */
-router.put(
-  "/evidence/:evidenceId/review",
-  protectAdmin,
-  restrictAdmin,
-  reviewMilestoneEvidence
-);
+router.put("/evidence/:evidenceId/review", protectAdmin, restrictAdmin, reviewMilestoneEvidence);
 
 /**
  * @swagger
@@ -1246,12 +1227,7 @@ router.put(
  *                   type: string
  *                   example: "Error releasing milestone funds"
  */
-router.post(
-  "/milestones/:milestoneId/release",
-  protectAdmin,
-  restrictAdmin,
-  releaseMilestoneFunds
-);
+router.post("/milestones/:milestoneId/release", protectAdmin, restrictAdmin, releaseMilestoneFunds);
 
 /**
  * @swagger
@@ -1361,12 +1337,7 @@ router.post(
  *                   type: string
  *                   example: "Error retrieving fundraisers"
  */
-router.get(
-  "/get-all-fundraisers",
-  protectAdmin,
-  restrictAdmin,
-  getAllFundraisers
-);
+router.get("/get-all-fundraisers", protectAdmin, restrictAdmin, getAllFundraisers);
 
 /**
  * @swagger
@@ -1714,12 +1685,7 @@ router.get("/get-all-donations", protectAdmin, restrictAdmin, getAllDonations);
  *                   type: string
  *                   example: "Error approving payout request"
  */
-router.patch(
-  "/payout/:payoutId/approve",
-  protectAdmin,
-  restrictAdmin,
-  approvePayoutRequest
-);
+router.patch("/payout/:payoutId/approve", protectAdmin, restrictAdmin, approvePayoutRequest);
 
 /**
  * @swagger
@@ -1857,11 +1823,18 @@ router.patch(
  *                   type: string
  *                   example: "Error rejecting payout request"
  */
-router.patch(
-  "/payout/:payoutId/reject",
-  protectAdmin,
-  restrictAdmin,
-  rejectPayoutRequest
-);
+router.patch("/payout/:payoutId/reject", protectAdmin, restrictAdmin, rejectPayoutRequest);
+
+router.get("/milestone-evidence/pending", protectAdmin, restrictAdmin, getPendingMilestoneEvidence);
+
+router.patch("/milestone-evidence/approve/:evidenceId", protectAdmin, restrictAdmin, approveMilestoneEvidence);
+
+router.patch("/milestone-evidence/reject/:evidenceId", protectAdmin, restrictAdmin, rejectMilestoneEvidence)
+
+router.get("/get-campaigns", protectAdmin, restrictAdmin, getAllCampaigns);
+
+router.get("/campaigns-with-milestones-and-evidence", protectAdmin, restrictAdmin, getCampaignWithMilestonesAndEvidence);
+
+router.get("/fundraiser-campaigns/:id", protectAdmin, restrictAdmin, getAllCampaignByFundraiser);
 
 module.exports = router;
