@@ -1,4 +1,4 @@
-const { toggleEngagement, recordShare } = require("../controller/engagementController");
+const { toggleEngagement, recordShare, getAllSavedCampaignsByID } = require("../controller/engagementController");
 const { authenticate } = require("../middleware/auth");
 
 const router = require("express").Router();
@@ -142,5 +142,7 @@ router.patch("/engagement/:campaignId/:actionType", authenticate, toggleEngageme
  *               message: "Server error recording share action."
  */
 router.patch("/recordShare/:campaignId", authenticate, recordShare);
+
+router.get("/all-saved-campaign", authenticate, getAllSavedCampaignsByID)
 
 module.exports = router;

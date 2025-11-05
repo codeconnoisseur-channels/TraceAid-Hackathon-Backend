@@ -975,7 +975,7 @@ router.get("/user/:id", getOne)
 
 /**
  * @swagger
- * /fundraiser/fundraiser-dashboard:
+ * /fundraiser/api/v1/fundraiser-dashboard:
  *   get:
  *     summary: Get fundraiser dashboard data
  *     tags: [Dashboard]
