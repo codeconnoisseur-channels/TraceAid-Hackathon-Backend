@@ -10,7 +10,6 @@ const path = require("path");
 const { campaignAndMilestonesUnderReview } = require("../emailTemplate/emailVerification");
 const { sendEmail } = require("../utils/brevo");
 
-
 exports.createACampaign = async (req, res) => {
   const fundraiserId = req.user.id || req.user._id;
   const file = req.file;
@@ -322,7 +321,6 @@ exports.getAllCampaigns = async (req, res) => {
 
 exports.getAllCampaign = async (req, res) => {
   try {
-
     const allCampaigns = await campaignModel.find();
 
     if (allCampaigns.length === 0) {
@@ -427,6 +425,36 @@ exports.getCampaignWithMilestonesAndEvidence = async (req, res) => {
   } catch (error) {
     console.error(error);
     return res.status(500).json({
+      statusCode: false,
+      statusText: "Internal Server Error",
+      message: error.message,
+    });
+  }
+};
+
+exports.getACampaignAndMilestone = async (req, res) => {
+  try {
+    const campaignId = req.params.id;
+    const campaign = await campaignModel.findById(campaignId);
+    if (!campaign) {
+      return res.status(404).json({
+        statusCode: false,
+        statusText: "Not Found",
+        message: "Campaign not found.",
+      });
+    }
+    const milestones = await milestoneModel.find({ campaign: campaignId });
+    res.status(200).json({
+      statusCode: true,
+      statusText: "OK",
+      message: "Campaign and its milestones retrieved successfully",
+      data: {
+        campaign,
+        milestones,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({
       statusCode: false,
       statusText: "Internal Server Error",
       message: error.message,

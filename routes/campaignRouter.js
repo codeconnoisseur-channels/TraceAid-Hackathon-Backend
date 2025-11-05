@@ -6,6 +6,7 @@ const {
   getOneCampaign,
   getCampaignWithMilestonesAndEvidence,
   getAllCampaign,
+  getACampaignAndMilestone,
 } = require("../controller/campaignController");
 
 const router = require("express").Router();
@@ -438,5 +439,7 @@ router.get(
   isFundraiser,
   getCampaignWithMilestonesAndEvidence
 );
+
+router.get("/get-campaign-and-milestones/:id", getACampaignAndMilestone)
 
 module.exports = router;

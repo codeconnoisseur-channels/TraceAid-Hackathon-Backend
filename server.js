@@ -15,6 +15,7 @@ const fundraiserRouter = require("./routes/fundraiserRouter");
 const campaignRouter = require("./routes/campaignRouter");
 const milestoneRouter = require("./routes/milestoneRouter");
 const donationRouter = require("./routes/donationRouter");
+const engagementRouter = require("./routes/engagementRouter");
 
 const app = express();
 app.use(express.json());
@@ -95,6 +96,7 @@ app.use("/admin/api/v1", adminRouter);
 app.use("/campaign/api/v1", campaignRouter);
 app.use("/milestone/api/v1", milestoneRouter);
 app.use("donation/api/v1", donationRouter);
+app.use("/engagement/api/v1", engagementRouter);
 
 app.use((error, req, res, next) => {
   if (error) {

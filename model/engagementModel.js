@@ -13,6 +13,7 @@ const engagementSchema = new mongoose.Schema(
     },
     actionType: {
       type: String,
+      // Now includes 'share'
       enum: ["like", "save", "share"],
       required: true,
     },
@@ -21,13 +22,27 @@ const engagementSchema = new mongoose.Schema(
       ref: "Campaign",
       required: true,
     },
+    channel: {
+      type: String,
+      enum: ["X", "Facebook", "Instagram", "CopyLink"],
+      required: function () {
+        return this.actionType === "share";
+      },
+    },
+    userCaption: {
+      type: String,
+      trim: true,
+    },
   },
   {
     timestamps: true,
   }
 );
 
-engagementSchema.index({ userId: 1, userType: 1, actionType: 1, campaign: 1 }, { unique: true });
+engagementSchema.index(
+  { userId: 1, actionType: 1, campaign: 1, userType: 1 },
+  { unique: true, partialFilterExpression: { actionType: { $in: ["like", "save"] } } }
+);
 
 const Engagement = mongoose.model("Engagement", engagementSchema);
 module.exports = Engagement;
