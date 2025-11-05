@@ -440,6 +440,6 @@ router.get(
   getCampaignWithMilestonesAndEvidence
 );
 
-router.get("/get-campaign-and-milestones/:id", getACampaignAndMilestone)
+router.get("/campaign/get-campaign-and-milestones/:id", getACampaignAndMilestone)
 
 module.exports = router;
