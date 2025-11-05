@@ -1829,7 +1829,7 @@ router.get("/milestone-evidence/pending", protectAdmin, restrictAdmin, getPendin
 
 router.patch("/milestone-evidence/approve/:evidenceId", protectAdmin, restrictAdmin, approveMilestoneEvidence);
 
-router.patch("/milestone-evidence/reject/:evidenceId", protectAdmin, restrictAdmin, rejectMilestoneEvidence)
+router.patch("/milestone-evidence/reject/:evidenceId", protectAdmin, restrictAdmin, rejectMilestoneEvidence);
 
 router.get("/get-campaigns", protectAdmin, restrictAdmin, getAllCampaigns);
 

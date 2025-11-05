@@ -201,4 +201,21 @@ exports.uploadMilestoneEvidence = async (req, res) => {
   }
 };
 
-
+exports.getMilestoneAchieved = async (req, res) => {
+  try {
+    const { campaignId } = req.params;
+    const milestones = await Milestone.find({ campaign: campaignId, status: "completed" });
+    res.status(200).json({
+      statusCode: true,
+      statusText: "OK",
+      message: "Milestones retrieved successfully",
+      data: { milestones },
+    });
+  } catch (error) {
+    res.status(500).json({
+      statusCode: false,
+      statusText: "Internal Server Error",
+      message: error.message,
+    });
+  }
+};
