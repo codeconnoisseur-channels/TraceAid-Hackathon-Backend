@@ -973,6 +973,87 @@ router.patch("/campaigns/activate/:campaignId", authenticate, isFundraiser, fund
 
 router.get("/user/:id", getOne)
 
+/**
+ * @swagger
+ * /fundraiser/fundraiser-dashboard:
+ *   get:
+ *     summary: Get fundraiser dashboard data
+ *     tags: [Dashboard]
+ *     description: |
+ *       Retrieves dashboard data for an authenticated fundraiser, including total funds raised, total donations, and other relevant metrics.
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Dashboard data retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 statusCode:
+ *                   type: boolean
+ *                   example: true
+ *                 statusText:
+ *                   type: string
+ *                   example: "OK"
+ *                 message:
+ *                   type: string
+ *                   example: "Dashboard data retrieved successfully."
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     totalFundsRaised:
+ *                       type: number
+ *                       example: 1000000
+ *                     totalDonations:
+ *                       type: number
+ *                       example: 500000
+ *                     totalMilestones:
+ *                       type: number
+ *                       example: 200000
+ *                     totalEngagements:
+ *                       type: number
+ *                       example: 150000
+ *                     totalCampaigns:
+ *                       type: number
+ *                       example: 100000
+ *                     totalActiveCampaigns:
+ *                       type: number
+ *                       example: 50000
+ *       401:
+ *         description: Unauthorized — missing or invalid token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 statusCode:
+ *                   type: boolean
+ *                   example: false
+ *                 statusText:
+ *                   type: string
+ *                   example: "Unauthorized"
+ *                 message:
+ *                   type: string
+ *                   example: "Access denied. Please provide a valid token."
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 statusCode:
+ *                   type: boolean
+ *                   example: false
+ *                 statusText:
+ *                   type: string
+ *                   example: "Internal Server Error"
+ *                 message:
+ *                   type: string
+ *                   example: "Unexpected error occurred while retrieving dashboard data."
+ */
 router.get("/fundraiser-dashboard", authenticate, isFundraiser, fundraiserDashboard)
 
 
