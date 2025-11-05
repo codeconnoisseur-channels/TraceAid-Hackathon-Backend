@@ -3,11 +3,11 @@ const Campaign = require("../model/campaignModel");
 const Donor = require("../model/donorModel");
 const FundraiserWallet = require("../model/fundraiserWallet");
 const Payout = require("../model/payoutModel");
-const { v4: uuidv4 } = require("uuid"); 
+const { v4: uuidv4 } = require("uuid");
 const crypto = require("crypto");
-
-const KORA_SECRET_KEY = process.env.KORA_SECRET_KEY; 
-
+const axios = require("axios");
+const KORA_SECRET_KEY = process.env.KORA_SECRET_KEY;
+const KORA_API_BASE = "https://api.korapay.com/merchant/api/v1/";
 
 exports.createDonation = async function (req, res) {
   try {
@@ -15,7 +15,8 @@ exports.createDonation = async function (req, res) {
     const donorId = req.user && req.user.id ? req.user.id : null;
     const campaignId = req.body.campaignId;
     const amountStr = req.body.amount;
-    const isAnonymous = req.body.isAnonymous === "true" || req.body.isAnonymous === true;
+    const isAnonymous =
+      req.body.isAnonymous === "true" || req.body.isAnonymous === true;
     const message = req.body.message || null;
 
     if (!donorId) {
@@ -65,7 +66,10 @@ exports.createDonation = async function (req, res) {
     // ----------------------------------------------------------------------
     const today = new Date();
     // Check if campaign is active AND if end date has not passed
-    if (campaign.status !== "active" || (campaign.endDate && campaign.endDate < today)) {
+    if (
+      campaign.status !== "active" ||
+      (campaign.endDate && campaign.endDate < today)
+    ) {
       const message =
         campaign.status !== "active"
           ? `Donations are not accepted. Campaign status is '${campaign.status}'.`
@@ -82,7 +86,8 @@ exports.createDonation = async function (req, res) {
     // ----------------------------------------------------------------------
     // 🔥 CRITICAL UPDATE 2: Over-Donation Check
     // ----------------------------------------------------------------------
-    const remainingGoal = campaign.totalCampaignGoalAmount - campaign.amountRaised;
+    const remainingGoal =
+      campaign.totalCampaignGoalAmount - campaign.amountRaised;
 
     // Check if the donation amount is greater than the remaining required amount
     if (amount > remainingGoal) {
@@ -111,13 +116,34 @@ exports.createDonation = async function (req, res) {
 
     await donation.save(); // return donation and paymentReference for frontend to call gateway
 
+    const initializePayment = {
+      amount: donation.amount,
+      currency: donation.currency || "NGN",
+      reference: paymentReference,
+      donor: {
+        email: req.body.email,
+      },
+    };
+    const korapayResponse = await axios.post(
+      `${KORA_API_BASE}/charges/initialize`,
+      initializePayment,
+      {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${KORA_SECRET_KEY}`,
+        },
+      }
+    );
+
     return res.status(201).json({
       statusCode: true,
       statusText: "Created",
-      message: "Donation initiated. Use the paymentReference to complete payment.",
+      message:
+        "Donation initiated. Use the paymentReference or checkout_url to complete payment.",
       data: {
         donation: donation,
         paymentReference: paymentReference,
+        checkoutUrl: korapayResponse?.data?.data?.checkout_url,
       },
     });
   } catch (error) {
@@ -137,7 +163,9 @@ exports.verifyPaymentWebhook = async function (req, res) {
     const bodyData = req.body.data; // Kora signs ONLY the 'data' object.
 
     if (!signature || !KORA_SECRET_KEY) {
-      console.error("Webhook Error: Missing signature header or KORA_SECRET_KEY.");
+      console.error(
+        "Webhook Error: Missing signature header or KORA_SECRET_KEY."
+      );
       // Important: Respond 401 or 403 on failed security check
       return res.status(401).json({
         statusCode: false,
@@ -147,10 +175,15 @@ exports.verifyPaymentWebhook = async function (req, res) {
     }
 
     // Calculate expected signature (HMAC SHA256 of the JSON string of the 'data' object)
-    const expectedSignature = crypto.createHmac("sha256", KORA_SECRET_KEY).update(JSON.stringify(bodyData)).digest("hex");
+    const expectedSignature = crypto
+      .createHmac("sha256", KORA_SECRET_KEY)
+      .update(JSON.stringify(bodyData))
+      .digest("hex");
 
     if (expectedSignature !== signature) {
-      console.error("Webhook Security Error: Signature mismatch. Request dropped.");
+      console.error(
+        "Webhook Security Error: Signature mismatch. Request dropped."
+      );
       return res.status(403).json({
         statusCode: false,
         statusText: "Forbidden",
@@ -160,8 +193,10 @@ exports.verifyPaymentWebhook = async function (req, res) {
     // --- END KORA SIGNATURE VERIFICATION ---
 
     // NOTE: The exact body depends on your gateway. We assume:
-    const paymentReference = req.body.paymentReference || req.body.reference || null;
-    const transactionIdFromGateway = req.body.transactionId || req.body.transaction_id || null;
+    const paymentReference =
+      req.body.paymentReference || req.body.reference || null;
+    const transactionIdFromGateway =
+      req.body.transactionId || req.body.transaction_id || null;
     const gatewayStatus = req.body.status || req.body.payment_status || null;
     const amountFromGateway = req.body.amount || null;
     const campaignId = req.body.campaignId || req.body.campaign_id || null;
@@ -175,7 +210,9 @@ exports.verifyPaymentWebhook = async function (req, res) {
     }
 
     // find donation by paymentReference
-    const donation = await Donation.findOne({ paymentReference: paymentReference });
+    const donation = await Donation.findOne({
+      paymentReference: paymentReference,
+    });
 
     if (!donation) {
       return res.status(404).json({
@@ -230,7 +267,10 @@ exports.verifyPaymentWebhook = async function (req, res) {
 
         // 🔥 CRITICAL UPDATE: Campaign Auto-Close Check
         // If the new total amount raised meets or exceeds the goal, close the campaign.
-        if (newAmountRaised >= campaign.totalCampaignGoalAmount && campaign.status === "active") {
+        if (
+          newAmountRaised >= campaign.totalCampaignGoalAmount &&
+          campaign.status === "active"
+        ) {
           campaign.status = "completed"; // Set status to completed
           campaign.endDate = new Date(); // Set the completion date/time
         }
@@ -241,7 +281,9 @@ exports.verifyPaymentWebhook = async function (req, res) {
         // find the fundraiser id from campaign
         if (campaign.fundraiser) {
           const fundraiserId = campaign.fundraiser;
-          let wallet = await FundraiserWallet.findOne({ fundraiser: fundraiserId });
+          let wallet = await FundraiserWallet.findOne({
+            fundraiser: fundraiserId,
+          });
 
           if (!wallet) {
             // create wallet if not exists
@@ -289,7 +331,11 @@ exports.getDonationsByCampaign = async function (req, res) {
     }
 
     // Only return successful and non-anonymous donations for public viewing
-    const donations = await Donation.find({ campaign: campaignId, paymentStatus: "successful", isAnonymous: false })
+    const donations = await Donation.find({
+      campaign: campaignId,
+      paymentStatus: "successful",
+      isAnonymous: false,
+    })
       .populate("donor", "name") // Optionally populate donor name if needed
       .sort({ createdAt: -1 })
       .select("amount message createdAt"); // Select minimal fields
@@ -310,7 +356,6 @@ exports.getDonationsByCampaign = async function (req, res) {
   }
 };
 
-
 exports.getDonationsByUser = async function (req, res) {
   try {
     const donorId = req.user && req.user.id ? req.user.id : null;
@@ -322,7 +367,9 @@ exports.getDonationsByUser = async function (req, res) {
       });
     }
 
-    const donations = await Donation.find({ donor: donorId }).sort({ createdAt: -1 });
+    const donations = await Donation.find({ donor: donorId }).sort({
+      createdAt: -1,
+    });
 
     return res.status(200).json({
       statusCode: true,
@@ -339,4 +386,3 @@ exports.getDonationsByUser = async function (req, res) {
     });
   }
 };
-
