@@ -13,7 +13,6 @@ const engagementSchema = new mongoose.Schema(
     },
     actionType: {
       type: String,
-      // Now includes 'share'
       enum: ["like", "save", "share"],
       required: true,
     },
