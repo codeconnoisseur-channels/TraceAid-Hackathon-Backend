@@ -9,6 +9,7 @@ const {
   resetPassword,
   fundraiserActivateCampaign,
   getOne,
+  fundraiserDashboard,
 } = require("../controller/fundraiserController");
 const { authenticate, isFundraiser } = require("../middleware/auth");
 const uploads = require("../utils/multer");
@@ -971,6 +972,8 @@ router.put(
 router.patch("/campaigns/activate/:campaignId", authenticate, isFundraiser, fundraiserActivateCampaign)
 
 router.get("/user/:id", getOne)
+
+router.get("/fundraiser-dashboard", authenticate, isFundraiser, fundraiserDashboard)
 
 
 module.exports = router;
