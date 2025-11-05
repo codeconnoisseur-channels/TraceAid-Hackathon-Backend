@@ -3,7 +3,6 @@ const { authenticate } = require("../middleware/auth");
 
 const router = require("express").Router();
 
-
 /**
  * @swagger
  * /engagement/api/v1/engagement/{campaignId}/{actionType}:
@@ -143,6 +142,5 @@ router.patch("/engagement/:campaignId/:actionType", authenticate, toggleEngageme
  *               message: "Server error recording share action."
  */
 router.patch("/recordShare/:campaignId", authenticate, recordShare);
-
 
 module.exports = router;
