@@ -64,7 +64,7 @@ exports.authenticate = async (req, res, next) => {
       kyc: user.kyc || null,
     };
 
-    // console.log("Authenticated User:", req.user)
+    console.log("Authenticated User:", req.user)
 
     next();
   } catch (error) {

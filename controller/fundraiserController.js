@@ -678,11 +678,14 @@ exports.getOne = async (req, res) => {
 };
 
 exports.fundraiserDashboard = async (req, res) => {
+  console.log("I am from the anthentication", req.user)
   try {
-    const { id: fundraiserId } = req.user;
+    const fundraiserId = req.user._id
+
+    console.log("user ID", fundraiserId)
 
     // 1. Basic User Check
-    const user = await fundraiserModel.findById(fundraiserId).select("-password");
+    const user = await fundraiserModel.findById(fundraiserId).select("-password -otp -otpExpiredAt -token -status");
     if (!user) {
       return res.status(404).json({
         statusCode: false,
