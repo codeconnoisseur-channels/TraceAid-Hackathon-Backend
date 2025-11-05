@@ -9,10 +9,10 @@ const axios = require("axios");
 const KORA_SECRET_KEY = process.env.KORA_SECRET_KEY;
 const KORA_API_BASE = "https://api.korapay.com/merchant/api/v1/";
 
-exports.createDonation = async function (req, res) {
+exports.makeDonation = async function (req, res) {
   try {
     // avoid destructuring to match your style
-    const donorId = req.user && req.user.id ? req.user.id : null;
+    const donorId = req.user && req.user.id ? req.user._id : null;
     const campaignId = req.body.campaignId;
     const amountStr = req.body.amount;
     const isAnonymous =

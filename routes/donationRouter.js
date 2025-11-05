@@ -1,9 +1,9 @@
 const router = require("express").Router()
 const { authenticate } = require("../middleware/auth");
-const { createDonation, verifyPaymentWebhook, getDonationsByCampaign, getDonationsByUser, getAllDonations, createPayout } = require("../controller/donationController");
+const { verifyPaymentWebhook, getDonationsByCampaign, getDonationsByUser,makeDonation  } = require("../controller/donationController");
 const { restrictAdmin, protectAdmin } = require("../middleware/adminAuth");
 
-router.post("/donate", authenticate, createDonation );
+router.post("/donate", authenticate, makeDonation );
 
 router.post("/webhook/verify-payment", verifyPaymentWebhook);
 
