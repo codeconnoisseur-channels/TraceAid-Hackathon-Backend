@@ -11,14 +11,6 @@ const SUCCESS_GREEN = "#617437"; // For approval/success status
 const WARNING_ORANGE = "#E9C46A"; // For 'In Progress' or 'Needs More Info' status
 const ALERT_RED = "#E76F51"; // For disapproval/rejection
 
-/**
- * Generates the base HTML structure for all emails, ensuring responsiveness and consistent branding.
- * Uses inline CSS for maximum compatibility.
- * @param {string} title The title/subject for the email.
- * @param {string} mainContent The HTML content for the body section.
- * @param {string} accentColor The color for the header/primary stripe (defaults to PRIMARY_BLUE).
- * @returns {string} The complete HTML email template.
- */
 const baseEmailTemplate = (title, mainContent, accentColor = PRIMARY_BLUE) => {
   // Ensure all styles are inline for maximum email client compatibility.
   const containerStyle =
