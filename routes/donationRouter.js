@@ -5,7 +5,7 @@ const { restrictAdmin, protectAdmin } = require("../middleware/adminAuth");
 
 router.post("/donate", authenticate, createDonation );
 
-router.post("/webhook/verify-payment", authenticate, verifyPaymentWebhook);
+router.post("/webhook/verify-payment", verifyPaymentWebhook);
 
 router.get("/campaign/:id/donations", authenticate, getDonationsByCampaign);
 
