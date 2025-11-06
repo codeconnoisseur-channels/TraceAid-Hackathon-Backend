@@ -18,7 +18,7 @@ const {
 
 /**
  * @swagger
- * /api/donation/donate:
+ * /donation/api/v1/donate:
  *   post:
  *     summary: Make a donation to a campaign
  *     tags: [Donation]
@@ -77,7 +77,7 @@ router.post("/donate", authenticate, makeDonation);
 
 /**
  * @swagger
- * /api/donation/webhook/verify-payment:
+ * /donation/api/v1/webhook/verify-payment:
  *   post:
  *     summary: KoraPay webhook endpoint for verifying payments
  *     tags: [Donation]
@@ -110,7 +110,7 @@ router.post("/webhook/verify-payment", verifyPaymentWebhook);
 
 /**
  * @swagger
- * /api/donation/campaign/{id}/donations:
+ * /donation/api/v1/campaign/{id}/donations:
  *   get:
  *     summary: Get all successful, non-anonymous donations for a campaign
  *     tags: [Donation]
@@ -137,7 +137,7 @@ router.get("/campaign/:id/donations", authenticate, getDonationsByCampaign);
 
 /**
  * @swagger
- * /api/donation/campaign/{id}/donations/all:
+ * /donation/api/v1/campaign/{id}/donations/all:
  *   get:
  *     summary: Get all successful donations for a campaign (admin/fundraiser only)
  *     tags: [Donation]
@@ -164,7 +164,7 @@ router.get("/campaign/:id/donations/all", authenticate, getAllDonationsForCampai
 
 /**
  * @swagger
- * /api/donation/campaign/{id}/donors/top:
+ * /donation/api/v1/campaign/{id}/donors/top:
  *   get:
  *     summary: Get top donors for a campaign
  *     tags: [Donation]
@@ -194,7 +194,7 @@ router.get("/campaign/:id/donors/top", getTopDonorsForCampaign);
 
 /**
  * @swagger
- * /api/donation/my-donations:
+ * /donation/api/v1/my-donations:
  *   get:
  *     summary: Get donations made by the currently logged-in donor
  *     tags: [Donation]
