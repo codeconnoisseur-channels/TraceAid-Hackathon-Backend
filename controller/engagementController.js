@@ -22,7 +22,7 @@ exports.toggleEngagement = async (req, res) => {
     }
 
     const counterField = `${actionType}Count`;
-    const filter = { userId, campaign: campaignId, type: actionType };
+    const filter = { userId, campaign: campaignId, actionType };
 
     const existing = await Engagement.findOne(filter).lean();
 
