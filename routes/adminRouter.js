@@ -26,7 +26,7 @@ const { getWalletSummaryByAdmin, createPayoutByAdmin, listTransactions } = requi
 
 /**
  * @swagger
- * /api/v1/admin/verify/{kycId}:
+ * /admin/api/v1/verify/{kycId}:
  *   patch:
  *     summary: Verify or reject a fundraiser's KYC
  *     description: Allows an admin to verify or reject a fundraiser's KYC record. Only accessible by authorized admins.
@@ -142,7 +142,7 @@ router.patch("/verify/:kycId", protectAdmin, restrictAdmin, verifyKyc);
 
 /**
  * @swagger
- * /api/v1/admin/get-all-kyc:
+ * /admin/api/v1/get-all-kyc:
  *   get:
  *     summary: Retrieve all fundraiser KYC submissions
  *     description: Allows an admin to fetch all KYC records submitted by fundraisers. Only accessible by authorized admins.
@@ -249,7 +249,7 @@ router.get("/get-all-kyc", protectAdmin, restrictAdmin, getAllKyc);
 
 /**
  * @swagger
- * /api/v1/admin/get-kyc-by-status:
+ * /admin/api/v1/get-kyc-by-status:
  *   get:
  *     summary: Retrieve all KYC records by status
  *     description: Allows an admin to fetch all fundraiser KYC records filtered by their status (e.g., pending, verified, rejected).
@@ -380,7 +380,7 @@ router.get("/get-kyc-by-status", protectAdmin, restrictAdmin, getAllKycByTheStat
 
 /**
  * @swagger
- * /api/v1/admin/getkycs:
+ * /admin/api/v1/getkycs:
  *   get:
  *     summary: Retrieve all KYC records grouped by their verification status
  *     description: Allows an admin to view all fundraiser KYC submissions, grouped by their status (e.g., pending, verified, rejected) for easier analysis.
@@ -532,7 +532,7 @@ router.get("/getkycs", protectAdmin, restrictAdmin, getAllKycGrouped);
 
 /**
  * @swagger
- * /api/v1/admin/campaigns/review/{campaignId}:
+ * /admin/api/v1/campaigns/review/{campaignId}:
  *   patch:
  *     summary: Review a campaign (approve or reject)
  *     description: Allows an admin to review a fundraiser campaign submission and either approve or reject it with optional remarks.
@@ -672,7 +672,7 @@ router.patch("/campaigns/review/:campaignId", protectAdmin, restrictAdmin, revie
 
 /**
  * @swagger
- * /api/v1/admin/campaigns/activate/{campaignId}:
+ * /admin/api/v1/campaigns/activate/{campaignId}:
  *   patch:
  *     summary: Activate or deactivate a campaign
  *     description: Allows an admin to change the activation status of a campaign (e.g., from inactive to active or vice versa).
@@ -812,7 +812,7 @@ router.patch("/campaigns/activate/:campaignId", protectAdmin, restrictAdmin, act
 
 /**
  * @swagger
- * /api/v1/admin/campaigns/{campaignId}/extension/{requestId}:
+ * /admin/api/v1/campaigns/{campaignId}/extension/{requestId}:
  *   patch:
  *     summary: Approve or reject a campaign extension request
  *     description: This endpoint allows an admin to handle a campaign duration extension request by either approving or rejecting it.
@@ -956,7 +956,7 @@ router.patch("/campaigns/:campaignId/extension/:requestId", protectAdmin, restri
 
 /**
  * @swagger
- * /api/v1/admin/evidence/{evidenceId}/review:
+ * /admin/api/v1/evidence/{evidenceId}/review:
  *   put:
  *     summary: Review milestone evidence submission
  *     description: This endpoint allows an admin to review a fundraiser’s milestone evidence submission by approving or rejecting it with remarks.
@@ -1096,7 +1096,7 @@ router.put("/evidence/:evidenceId/review", protectAdmin, restrictAdmin, reviewMi
 
 /**
  * @swagger
- * /api/v1/admin/milestones/{milestoneId}/release:
+ * /admin/api/v1/milestones/{milestoneId}/release:
  *   post:
  *     summary: Release funds for a specific milestone
  *     description: Allows an admin to approve and release funds for a milestone that has been successfully verified and approved.
@@ -1232,7 +1232,7 @@ router.post("/milestones/:milestoneId/release", protectAdmin, restrictAdmin, rel
 
 /**
  * @swagger
- * /api/v1/admin/get-all-fundraisers:
+ * /admin/api/v1/get-all-fundraisers:
  *   get:
  *     summary: Retrieve all registered fundraisers
  *     description: Allows an admin to fetch a comprehensive list of all registered fundraisers, including profile and campaign information.
@@ -1342,7 +1342,7 @@ router.get("/get-all-fundraisers", protectAdmin, restrictAdmin, getAllFundraiser
 
 /**
  * @swagger
- * /api/v1/admin/get-all-donors:
+ * /admin/api/v1/get-all-donors:
  *   get:
  *     summary: Retrieve all donors
  *     description: Allows an admin to fetch a comprehensive list of all donors registered on the platform, including donation statistics.
@@ -1448,7 +1448,7 @@ router.get("/get-all-donors", protectAdmin, restrictAdmin, getAllDonors);
 
 /**
  * @swagger
- * /api/v1/admin/get-all-donations:
+ * /admin/api/v1/get-all-donations:
  *   get:
  *     summary: Retrieve all donations
  *     description: Allows an admin to fetch a detailed list of all donations made across all campaigns and users.
@@ -1566,7 +1566,7 @@ router.get("/get-all-donations", protectAdmin, restrictAdmin, getAllDonations);
 
 /**
  * @swagger
- * /api/v1/admin/payout/{payoutId}/approve:
+ * /admin/api/v1/payout/{payoutId}/approve:
  *   patch:
  *     summary: Approve a payout request
  *     description: Allows an admin to review and approve a pending payout request made by a fundraiser.
@@ -1690,7 +1690,7 @@ router.patch("/payout/:payoutId/approve", protectAdmin, restrictAdmin, approvePa
 
 /**
  * @swagger
- * /api/v1/admin/payout/{payoutId}/reject:
+ * /admin/api/v1/payout/{payoutId}/reject:
  *   patch:
  *     summary: Reject a payout request
  *     description: Allows an admin to reject a pending payout request, providing a reason for rejection.
@@ -1826,16 +1826,514 @@ router.patch("/payout/:payoutId/approve", protectAdmin, restrictAdmin, approvePa
  */
 router.patch("/payout/:payoutId/reject", protectAdmin, restrictAdmin, rejectPayoutRequest);
 
+
+/**
+ * @swagger
+ * /admin/api/v1/milestone-evidence/pending:
+ *   get:
+ *     summary: Retrieve all pending milestone evidence submissions
+ *     description: |
+ *       This endpoint allows **admins** to view all milestone evidences currently marked as `"pending"`.  
+ *       Each evidence entry includes information about its related milestone, campaign, and fundraiser.
+ *     tags:
+ *       - Admin - Milestone Evidence
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Successfully retrieved all pending milestone evidences
+ *         content:
+ *           application/json:
+ *             example:
+ *               statusCode: true
+ *               statusText: "OK"
+ *               message: "Pending milestone evidence retrieved successfully."
+ *               data:
+ *                 - _id: "6720d6b8ab4d5c4fddaf91b1"
+ *                   imageUrl: "https://res.cloudinary.com/traceaid/image/upload/v1728324912/evidence1.jpg"
+ *                   videoUrl: "https://res.cloudinary.com/traceaid/video/upload/v1728324912/evidence1.mp4"
+ *                   description: "Progress update showing construction completion."
+ *                   status: "pending"
+ *                   uploadedAt: "2025-10-25T14:32:00.000Z"
+ *                   milestone:
+ *                     _id: "671fbb78d6b73c74b49f9d5b"
+ *                     milestoneTitle: "Phase 1 Construction"
+ *                     milestoneAmount: 200000
+ *                   fundraiser:
+ *                     _id: "671fae58e4b73c74b49f8a5a"
+ *                     firstName: "Jane"
+ *                     lastName: "Doe"
+ *                   campaign:
+ *                     _id: "671faa12c3f2c68b92f4b52c"
+ *                     campaignTitle: "Clean Water Initiative"
+ *       401:
+ *         description: Unauthorized (Admin not authenticated)
+ *         content:
+ *           application/json:
+ *             example:
+ *               statusCode: false
+ *               statusText: "Unauthorized"
+ *               message: "Access denied. Please provide a valid token."
+ *       403:
+ *         description: Forbidden (User not an admin)
+ *         content:
+ *           application/json:
+ *             example:
+ *               statusCode: false
+ *               statusText: "Forbidden"
+ *               message: "Access denied. Admin privileges required."
+ *       404:
+ *         description: No pending milestone evidence found
+ *         content:
+ *           application/json:
+ *             example:
+ *               statusCode: false
+ *               statusText: "Not Found"
+ *               message: "No pending milestone evidence found."
+ *       500:
+ *         description: Internal server error while fetching pending evidences
+ *         content:
+ *           application/json:
+ *             example:
+ *               statusCode: false
+ *               statusText: "Internal Server Error"
+ *               message: "Error fetching pending evidence: Database connection timeout."
+ */
 router.get("/milestone-evidence/pending", protectAdmin, restrictAdmin, getPendingMilestoneEvidence);
 
+
+/**
+ * @swagger
+ * /admin/api/v1/milestone-evidence/approve/{evidenceId}:
+ *   patch:
+ *     summary: Approve a milestone evidence submission
+ *     description: |
+ *       This endpoint allows **admins** to approve a milestone evidence that has been reviewed and verified.  
+ *       Once approved, the milestone's status is updated to reflect progress, and the campaign owner may become eligible for the next milestone release.
+ *     tags:
+ *       - Admin - Milestone Evidence
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: evidenceId
+ *         in: path
+ *         required: true
+ *         description: The unique ID of the milestone evidence to approve
+ *         schema:
+ *           type: string
+ *           example: 6720d6b8ab4d5c4fddaf91b1
+ *     responses:
+ *       200:
+ *         description: Milestone evidence approved successfully
+ *         content:
+ *           application/json:
+ *             example:
+ *               statusCode: true
+ *               statusText: "OK"
+ *               message: "Milestone evidence approved successfully."
+ *               data:
+ *                 _id: "6720d6b8ab4d5c4fddaf91b1"
+ *                 description: "Completed foundation work for the school building."
+ *                 imageUrl: "https://res.cloudinary.com/traceaid/image/upload/v1728324912/evidence1.jpg"
+ *                 videoUrl: "https://res.cloudinary.com/traceaid/video/upload/v1728324912/evidence1.mp4"
+ *                 status: "approved"
+ *                 milestone:
+ *                   _id: "671fbb78d6b73c74b49f9d5b"
+ *                   milestoneTitle: "Foundation Completion"
+ *                   milestoneAmount: 150000
+ *                 campaign:
+ *                   _id: "671faa12c3f2c68b92f4b52c"
+ *                   campaignTitle: "Community School Project"
+ *                 approvedBy:
+ *                   _id: "671fae58e4b73c74b49f8a5a"
+ *                   role: "admin"
+ *                   name: "Admin John"
+ *                 approvedAt: "2025-10-29T12:43:00.000Z"
+ *       400:
+ *         description: Invalid or already approved evidence
+ *         content:
+ *           application/json:
+ *             example:
+ *               statusCode: false
+ *               statusText: "Bad Request"
+ *               message: "Evidence has already been approved or rejected."
+ *       401:
+ *         description: Unauthorized (Admin not authenticated)
+ *         content:
+ *           application/json:
+ *             example:
+ *               statusCode: false
+ *               statusText: "Unauthorized"
+ *               message: "Access denied. Please provide a valid token."
+ *       403:
+ *         description: Forbidden (User not an admin)
+ *         content:
+ *           application/json:
+ *             example:
+ *               statusCode: false
+ *               statusText: "Forbidden"
+ *               message: "Access denied. Admin privileges required."
+ *       404:
+ *         description: Milestone evidence not found
+ *         content:
+ *           application/json:
+ *             example:
+ *               statusCode: false
+ *               statusText: "Not Found"
+ *               message: "No milestone evidence found with the provided ID."
+ *       500:
+ *         description: Internal server error while approving milestone evidence
+ *         content:
+ *           application/json:
+ *             example:
+ *               statusCode: false
+ *               statusText: "Internal Server Error"
+ *               message: "Error approving milestone evidence: Database update failed."
+ */
 router.patch("/milestone-evidence/approve/:evidenceId", protectAdmin, restrictAdmin, approveMilestoneEvidence);
 
+/**
+ * @swagger
+ * /admin/api/v1/milestone-evidence/reject/{evidenceId}:
+ *   patch:
+ *     summary: Reject a milestone evidence submission
+ *     description: |
+ *       This endpoint allows **admins** to reject a submitted milestone evidence that does not meet verification standards.  
+ *       The rejection is recorded, and the fundraiser will be notified to review and re-upload valid evidence.
+ *     tags:
+ *       - Admin - Milestone Evidence
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: evidenceId
+ *         in: path
+ *         required: true
+ *         description: The unique ID of the milestone evidence to reject
+ *         schema:
+ *           type: string
+ *           example: 6720d6b8ab4d5c4fddaf91b1
+ *     requestBody:
+ *       required: false
+ *       description: Optional rejection reason from admin
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               rejectionReason:
+ *                 type: string
+ *                 example: "Insufficient proof of milestone completion."
+ *     responses:
+ *       200:
+ *         description: Milestone evidence rejected successfully
+ *         content:
+ *           application/json:
+ *             example:
+ *               statusCode: true
+ *               statusText: "OK"
+ *               message: "Milestone evidence rejected successfully."
+ *               data:
+ *                 _id: "6720d6b8ab4d5c4fddaf91b1"
+ *                 description: "Completed foundation work for the school building."
+ *                 imageUrl: "https://res.cloudinary.com/traceaid/image/upload/v1728324912/evidence1.jpg"
+ *                 status: "rejected"
+ *                 rejectionReason: "Insufficient proof of milestone completion."
+ *                 reviewedBy:
+ *                   _id: "671fae58e4b73c74b49f8a5a"
+ *                   name: "Admin John"
+ *                 reviewedAt: "2025-10-29T14:10:00.000Z"
+ *       400:
+ *         description: Invalid request or evidence already rejected/approved
+ *         content:
+ *           application/json:
+ *             example:
+ *               statusCode: false
+ *               statusText: "Bad Request"
+ *               message: "Evidence has already been processed."
+ *       401:
+ *         description: Unauthorized (Admin not authenticated)
+ *         content:
+ *           application/json:
+ *             example:
+ *               statusCode: false
+ *               statusText: "Unauthorized"
+ *               message: "Access denied. Please provide a valid token."
+ *       403:
+ *         description: Forbidden (User not an admin)
+ *         content:
+ *           application/json:
+ *             example:
+ *               statusCode: false
+ *               statusText: "Forbidden"
+ *               message: "Access denied. Admin privileges required."
+ *       404:
+ *         description: Milestone evidence not found
+ *         content:
+ *           application/json:
+ *             example:
+ *               statusCode: false
+ *               statusText: "Not Found"
+ *               message: "No milestone evidence found with the provided ID."
+ *       500:
+ *         description: Internal server error while rejecting milestone evidence
+ *         content:
+ *           application/json:
+ *             example:
+ *               statusCode: false
+ *               statusText: "Internal Server Error"
+ *               message: "Error rejecting milestone evidence: Database update failed."
+ */
 router.patch("/milestone-evidence/reject/:evidenceId", protectAdmin, restrictAdmin, rejectMilestoneEvidence);
 
+/**
+ * @swagger
+ * /admin/api/v1/get-campaigns:
+ *   get:
+ *     summary: Retrieve all campaigns on the platform
+ *     description: |
+ *       This endpoint allows **admins** to retrieve all campaigns created by fundraisers.  
+ *       It returns detailed information about each campaign, including title, description, status, category, target amount, and fundraiser details.
+ *     tags:
+ *       - Admin - Campaign Management
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Campaigns retrieved successfully
+ *         content:
+ *           application/json:
+ *             example:
+ *               statusCode: true
+ *               statusText: "OK"
+ *               message: "Campaigns retrieved successfully"
+ *               data:
+ *                 - _id: "6720d6b8ab4d5c4fddaf91b1"
+ *                   campaignTitle: "Help Build a School in Makoko"
+ *                   campaignDescription: "Raising funds to construct classrooms for underprivileged children."
+ *                   targetAmount: 5000000
+ *                   amountRaised: 2000000
+ *                   category: "Education"
+ *                   status: "active"
+ *                   createdAt: "2025-10-25T09:10:00.000Z"
+ *                   fundraiser:
+ *                     _id: "671fae58e4b73c74b49f8a5a"
+ *                     firstName: "John"
+ *                     lastName: "Doe"
+ *                     email: "john.doe@example.com"
+ *       401:
+ *         description: Unauthorized (Admin not logged in)
+ *         content:
+ *           application/json:
+ *             example:
+ *               statusCode: false
+ *               statusText: "Unauthorized"
+ *               message: "Access denied. Please provide a valid token."
+ *       403:
+ *         description: Forbidden (User is not an admin)
+ *         content:
+ *           application/json:
+ *             example:
+ *               statusCode: false
+ *               statusText: "Forbidden"
+ *               message: "Access denied. Admin privileges required."
+ *       404:
+ *         description: No campaigns found in the system
+ *         content:
+ *           application/json:
+ *             example:
+ *               statusCode: false
+ *               statusText: "Not Found"
+ *               message: "No campaigns found."
+ *       500:
+ *         description: Internal server error while fetching campaigns
+ *         content:
+ *           application/json:
+ *             example:
+ *               statusCode: false
+ *               statusText: "Internal Server Error"
+ *               message: "Error retrieving campaigns from database."
+ */
 router.get("/get-campaigns", protectAdmin, restrictAdmin, getAllCampaigns);
 
+
+/**
+ * @swagger
+ * /admin/api/v1/campaigns-with-milestones-and-evidence:
+ *   get:
+ *     summary: Retrieve all campaigns with their milestones and attached evidences
+ *     description: |
+ *       This endpoint allows **admins** to fetch all campaigns along with their associated milestones and the evidences submitted for each milestone.
+ *       It provides a complete hierarchical view for campaign performance tracking and transparency reporting.
+ *     tags:
+ *       - Admin - Campaign Management
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Campaigns with milestones and evidences retrieved successfully
+ *         content:
+ *           application/json:
+ *             example:
+ *               statusCode: true
+ *               statusText: "OK"
+ *               message: "Campaigns with milestones and evidences retrieved successfully."
+ *               data:
+ *                 - campaign:
+ *                     _id: "6720d6b8ab4d5c4fddaf91b1"
+ *                     campaignTitle: "Help Build a School in Makoko"
+ *                     targetAmount: 5000000
+ *                     amountRaised: 2000000
+ *                     category: "Education"
+ *                     status: "active"
+ *                     createdAt: "2025-10-25T09:10:00.000Z"
+ *                     fundraiser:
+ *                       _id: "671fae58e4b73c74b49f8a5a"
+ *                       firstName: "John"
+ *                       lastName: "Doe"
+ *                       email: "john.doe@example.com"
+ *                   milestones:
+ *                     - _id: "6720d7e5ab4d5c4fddaf91b5"
+ *                       milestoneTitle: "Foundation Construction"
+ *                       milestoneAmount: 1000000
+ *                       status: "completed"
+ *                       sequence: 1
+ *                       evidences:
+ *                         - _id: "6720d9a3ab4d5c4fddaf91b9"
+ *                           imageUrl: "https://res.cloudinary.com/demo/image/upload/v1/foundation.jpg"
+ *                           status: "approved"
+ *                           uploadedAt: "2025-10-26T09:00:00.000Z"
+ *                         - _id: "6720d9a3ab4d5c4fddaf91c0"
+ *                           imageUrl: "https://res.cloudinary.com/demo/image/upload/v1/foundation2.jpg"
+ *                           status: "pending"
+ *                           uploadedAt: "2025-10-26T09:10:00.000Z"
+ *                     - _id: "6720d7e5ab4d5c4fddaf91b8"
+ *                       milestoneTitle: "Roofing Phase"
+ *                       milestoneAmount: 1500000
+ *                       status: "pending"
+ *                       sequence: 2
+ *                       evidences: []
+ *       401:
+ *         description: Unauthorized — Admin not authenticated
+ *         content:
+ *           application/json:
+ *             example:
+ *               statusCode: false
+ *               statusText: "Unauthorized"
+ *               message: "Access denied. Please provide a valid token."
+ *       403:
+ *         description: Forbidden — User does not have admin privileges
+ *         content:
+ *           application/json:
+ *             example:
+ *               statusCode: false
+ *               statusText: "Forbidden"
+ *               message: "Access denied. Admin privileges required."
+ *       404:
+ *         description: No campaigns found in the database
+ *         content:
+ *           application/json:
+ *             example:
+ *               statusCode: false
+ *               statusText: "Not Found"
+ *               message: "No campaigns found."
+ *       500:
+ *         description: Internal server error while retrieving campaigns with milestones and evidences
+ *         content:
+ *           application/json:
+ *             example:
+ *               statusCode: false
+ *               statusText: "Internal Server Error"
+ *               message: "Error fetching campaign data."
+ */
 router.get("/campaigns-with-milestones-and-evidence", protectAdmin, restrictAdmin, getCampaignWithMilestonesAndEvidence);
 
+/**
+ * @swagger
+ * /admin/api/v1/fundraiser-campaigns/{id}:
+ *   get:
+ *     summary: Retrieve all campaigns belonging to a specific fundraiser
+ *     description: |
+ *       This endpoint allows **admins** to fetch all campaigns created by a specific fundraiser using their ID.
+ *       It helps administrators review fundraiser activities, campaign statuses, and monitor compliance or performance.
+ *     tags:
+ *       - Admin - Campaign Management
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: id
+ *         in: path
+ *         description: The unique ID of the fundraiser whose campaigns you want to retrieve.
+ *         required: true
+ *         schema:
+ *           type: string
+ *           example: "671fae58e4b73c74b49f8a5a"
+ *     responses:
+ *       200:
+ *         description: Campaigns retrieved successfully for the specified fundraiser
+ *         content:
+ *           application/json:
+ *             example:
+ *               statusCode: true
+ *               statusText: "OK"
+ *               message: "Campaigns retrieved successfully"
+ *               data:
+ *                 - _id: "6720d6b8ab4d5c4fddaf91b1"
+ *                   campaignTitle: "Help Build a School in Makoko"
+ *                   targetAmount: 5000000
+ *                   amountRaised: 2000000
+ *                   category: "Education"
+ *                   status: "active"
+ *                   createdAt: "2025-10-25T09:10:00.000Z"
+ *                   fundraiser:
+ *                     _id: "671fae58e4b73c74b49f8a5a"
+ *                     firstName: "John"
+ *                     lastName: "Doe"
+ *                     email: "john.doe@example.com"
+ *                 - _id: "6720d7e5ab4d5c4fddaf91b8"
+ *                   campaignTitle: "Clean Water for Yaba"
+ *                   targetAmount: 2000000
+ *                   amountRaised: 500000
+ *                   category: "Health"
+ *                   status: "pending"
+ *                   createdAt: "2025-09-20T12:00:00.000Z"
+ *                   fundraiser:
+ *                     _id: "671fae58e4b73c74b49f8a5a"
+ *                     firstName: "John"
+ *                     lastName: "Doe"
+ *                     email: "john.doe@example.com"
+ *       401:
+ *         description: Unauthorized — Admin not authenticated
+ *         content:
+ *           application/json:
+ *             example:
+ *               statusCode: false
+ *               statusText: "Unauthorized"
+ *               message: "Access denied. Please provide a valid token."
+ *       403:
+ *         description: Forbidden — User does not have admin privileges
+ *         content:
+ *           application/json:
+ *             example:
+ *               statusCode: false
+ *               statusText: "Forbidden"
+ *               message: "Access denied. Admin privileges required."
+ *       404:
+ *         description: No campaigns found for the given fundraiser ID
+ *         content:
+ *           application/json:
+ *             example:
+ *               statusCode: false
+ *               statusText: "Not Found"
+ *               message: "No campaigns found for the specified fundraiser"
+ *       500:
+ *         description: Internal server error while fetching fundraiser campaigns
+ *         content:
+ *           application/json:
+ *             example:
+ *               statusCode: false
+ *               statusText: "Internal Server Error"
+ *               message: "Error retrieving campaigns for fundraiser."
+ */
 router.get("/fundraiser-campaigns/:id", protectAdmin, restrictAdmin, getAllCampaignByFundraiser);
 
 // Admin wallet routes
