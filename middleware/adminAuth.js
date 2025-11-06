@@ -8,8 +8,7 @@ exports.protectAdmin = async (req, res, next) => {
       return res.status(401).json({
         statusCode: false,
         statusText: "Authentication Failed",
-        message:
-          "No token provided or token format is invalid (Bearer <token>)",
+        message: "No token provided or token format is invalid (Bearer <token>)",
       });
     }
 
@@ -34,7 +33,11 @@ exports.protectAdmin = async (req, res, next) => {
         message: "Access denied. Admin only",
       });
     }
-    req.admin = admin;
+    req.user = admin;
+
+    req.user.id = admin._id;
+
+    req.user.role = admin.role;
     next();
   } catch (error) {
     if (error instanceof jwt.TokenExpiredError) {
@@ -55,7 +58,7 @@ exports.protectAdmin = async (req, res, next) => {
 
 exports.restrictAdmin = async (req, res, next) => {
   try {
-    if (req.admin && req.admin.role === "admin") {
+    if (req.user && req.user.role === "admin") {
       next();
     } else {
       return res.status(403).json({
