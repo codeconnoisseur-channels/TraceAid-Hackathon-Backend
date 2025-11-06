@@ -1,6 +1,7 @@
 const jwt = require("jsonwebtoken");
 const fundraiserModel = require("../model/fundraiserModel");
 const donorModel = require("../model/donorModel");
+const adminModel = require("../model/adminModel");
 
 exports.authenticate = async (req, res, next) => {
   try {
@@ -21,16 +22,10 @@ exports.authenticate = async (req, res, next) => {
       decoded = jwt.verify(token, process.env.JWT_SECRET);
     } catch (error) {
       const isExpired = error instanceof jwt.TokenExpiredError;
-      const isInvalid = error instanceof jwt.JsonWebTokenError;
-
       return res.status(401).json({
         statusCode: false,
         statusText: "Authentication Failed",
-        message: isExpired
-          ? "Session expired. Please login again."
-          : isInvalid
-          ? "Invalid token signature or format."
-          : "Token verification failed.",
+        message: isExpired ? "Session expired. Please login again." : "Invalid token signature or format.",
       });
     }
 
@@ -43,7 +38,15 @@ exports.authenticate = async (req, res, next) => {
       });
     }
 
-    let user = await fundraiserModel.findById(userId).select("role isVerified kyc");
+    let user = null;
+
+    user = await adminModel.findById(userId).select("role");
+
+    console.log("Admin User FOUND:", user)
+
+    if (!user) {
+      user = await fundraiserModel.findById(userId).select("role isVerified kyc");
+    }
 
     if (!user) {
       user = await donorModel.findById(userId).select("role isVerified");
@@ -58,13 +61,14 @@ exports.authenticate = async (req, res, next) => {
     }
 
     req.user = {
-      _id: user._id, 
+      id: user._id,
+      _id: user._id,
       role: user.role,
-      isVerified: user.isVerified,
+      isVerified: user.isVerified || false,
       kyc: user.kyc || null,
     };
 
-    console.log("Authenticated User:", req.user)
+    console.log("Authenticated User:", req.user);
 
     next();
   } catch (error) {
@@ -89,8 +93,7 @@ exports.isFundraiser = (req, res, next) => {
 
     const userRole = req.user.role;
 
-    const isFundraiser =
-      Array.isArray(userRole) ? userRole.includes("fundraiser") : userRole === "fundraiser";
+    const isFundraiser = Array.isArray(userRole) ? userRole.includes("fundraiser") : userRole === "fundraiser";
 
     if (!isFundraiser) {
       return res.status(403).json({

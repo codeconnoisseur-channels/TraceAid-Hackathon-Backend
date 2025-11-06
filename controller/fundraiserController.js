@@ -218,14 +218,14 @@ exports.resendOTP = async (req, res) => {
       });
     }
 
-    if (user.otpExpiredAt > Date.now() && user.otp) {
-      const waitOtpTime = new Date(user.otpExpiredAt).toLocaleTimeString();
-      return res.status(400).json({
-        statusCode: false,
-        statusText: "Bad Request",
-        message: `OTP has already been sent. Please try again after ${waitOtpTime}`,
-      });
-    }
+    // if (user.otpExpiredAt > Date.now() && user.otp) {
+    //   const waitOtpTime = new Date(user.otpExpiredAt).toLocaleTimeString();
+    //   return res.status(400).json({
+    //     statusCode: false,
+    //     statusText: "Bad Request",
+    //     message: `OTP has already been sent. Please try again after ${waitOtpTime}`,
+    //   });
+    // }
 
     const { otp, expiresAt } = generateOTPCode();
     user.otp = otp;

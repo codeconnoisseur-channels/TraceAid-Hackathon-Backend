@@ -250,12 +250,6 @@ exports.reviewCampaign = async (req, res) => {
     await campaign.save();
     await sendEmail(mailDetails);
 
-    await sendEmail({
-      email: campaign.fundraiser.email,
-      subject: "Campaign Review Update",
-      html: campaignStatusEmail(campaign.fundraiser.organizationName, action, campaign.campaignTitle, remarks),
-    });
-
     await adminActivityModel.create({
       admin: req.admin.id,
       action: `${action === "approve" ? "Approved" : "Rejected"} Campaign`,
@@ -276,11 +270,20 @@ exports.reviewCampaign = async (req, res) => {
 };
 
 exports.activateCampaign = async (req, res) => {
-  const adminId = req.user.id || req.user._id;
-  const { campaignId } = req.params;
+  const adminId = req.user;
+
+  if (!adminId) {
+    return res.status(401).json({
+      statusCode: false,
+      statusText: "Unauthorized",
+      message: "Authentication failed: Admin user ID is missing.",
+    });
+  }
+
+  const campaignId = req.params.campaignId;
 
   try {
-    const campaign = await campaignModel.findById(campaignId);
+    const campaign = await campaignModel.findById(campaignId).populate("fundraiser");
 
     if (!campaign) {
       return res.status(404).json({
@@ -290,12 +293,12 @@ exports.activateCampaign = async (req, res) => {
       });
     }
 
-    const fundraiser = await fundraiserModel.findById(campaign.fundraiser);
+    const fundraiser = campaign.fundraiser;
     if (!fundraiser) {
       return res.status(404).json({
         statusCode: false,
         statusText: "Not Found",
-        message: "Fundraiser not found.",
+        message: "Fundraiser linked to campaign not found.",
       });
     }
 
@@ -307,11 +310,11 @@ exports.activateCampaign = async (req, res) => {
       });
     }
 
-    if (campaign.status !== "pending" && campaign.status !== "approved") {
+    if (campaign.status === "active") {
       return res.status(403).json({
         statusCode: false,
         statusText: "Forbidden",
-        message: `Campaign is already ${campaign.status}.`,
+        message: "Campaign is already active.",
       });
     }
 
@@ -336,9 +339,9 @@ exports.activateCampaign = async (req, res) => {
     });
 
     await sendEmail({
-      email: campaign.fundraiser.email,
-      subject: `Campaign LIVE: ${campaign.campaignTitle}`,
-      html: campaignActive(campaign.fundraiser.firstName, campaign.campaignTitle, updatedCampaign.endDate),
+      email: fundraiser.email,
+      subject: `Campaign LIVE: ${updatedCampaign.campaignTitle}`,
+      html: campaignActive(fundraiser.organizationName, updatedCampaign.campaignTitle, updatedCampaign.endDate),
     });
 
     res.status(200).json({

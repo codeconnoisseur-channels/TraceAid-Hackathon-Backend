@@ -27,15 +27,14 @@ const donationSchema = new mongoose.Schema(
       enum: ["NGN"],
       default: "NGN",
     },
-    ourTransactionRef: {
+    paymentReference: {
       type: String,
       required: true,
       unique: true,
     },
-    koraTransactionId: {
+    transactionId: {
       type: String,
       default: null,
-      unique: true,
       sparse: true,
     },
     paymentStatus: {
