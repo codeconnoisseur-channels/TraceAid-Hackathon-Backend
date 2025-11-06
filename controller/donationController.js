@@ -386,3 +386,8 @@ exports.getDonationsByUser = async function (req, res) {
     });
   }
 };
+<<<<<<< HEAD
+=======
+
+
+>>>>>>> 4772078 (added fundraiser dashboard)

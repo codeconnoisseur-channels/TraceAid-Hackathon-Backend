@@ -9,9 +9,9 @@ const router = require("express").Router();
  *   patch:
  *     summary: Toggle campaign engagement (like or save)
  *     description: |
- *       Allows an authenticated user (donor or fundraiser) to like or save a campaign.  
- *       - If the user has already performed the action, it will be undone (unlike or unsave).  
- *       - If not, the engagement will be created.  
+ *       Allows an authenticated user (donor or fundraiser) to like or save a campaign.
+ *       - If the user has already performed the action, it will be undone (unlike or unsave).
+ *       - If not, the engagement will be created.
  *       This endpoint automatically increments or decrements the respective counter on the campaign.
  *     tags:
  *       - Engagement
@@ -68,8 +68,11 @@ const router = require("express").Router();
  *               statusText: "Internal Server Error"
  *               message: "Error toggling like: Campaign not found or server issue."
  */
-router.patch("/engagement/:campaignId/:actionType", authenticate, toggleEngagement);
-
+router.patch(
+  "/engagement/:campaignId/:actionType",
+  authenticate,
+  toggleEngagement
+);
 
 /**
  * @swagger
@@ -77,7 +80,7 @@ router.patch("/engagement/:campaignId/:actionType", authenticate, toggleEngageme
  *   patch:
  *     summary: Record a campaign share action
  *     description: |
- *       Allows an authenticated user (donor or fundraiser) to record a share action for a campaign.  
+ *       Allows an authenticated user (donor or fundraiser) to record a share action for a campaign.
  *       Each share increases the campaign’s `shareCount` by 1 and stores details such as the channel and optional caption.
  *     tags:
  *       - Engagement
@@ -143,6 +146,65 @@ router.patch("/engagement/:campaignId/:actionType", authenticate, toggleEngageme
  */
 router.patch("/recordShare/:campaignId", authenticate, recordShare);
 
-router.get("/all-saved-campaign", authenticate, getAllSavedCampaignsByID)
+/**
+ * @swagger
+ * /engagement/api/v1/all-saved-campaign:
+ *   get:
+ *     summary: Retrieve all campaigns saved by the authenticated user
+ *     description: |
+ *       Returns a list of all campaigns that the currently authenticated user has **saved** (bookmarked).
+ *       The response includes campaign details and engagement metadata.
+ *     tags:
+ *       - Engagement
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Successfully retrieved all saved campaigns
+ *         content:
+ *           application/json:
+ *             example:
+ *               statusCode: true
+ *               statusText: "OK"
+ *               message: "Saved campaigns retrieved successfully."
+ *               data:
+ *                 - _id: "671c2ef97e4f91a4fc7123a0"
+ *                   title: "Clean Water Project for Lagos"
+ *                   goalAmount: 500000
+ *                   currentAmount: 250000
+ *                   imageUrl: "https://res.cloudinary.com/traceaid/image/upload/v1723456789/water_project.jpg"
+ *                   fundraiser:
+ *                     _id: "671b1df57e4f91a4fc712291"
+ *                     name: "John Doe Foundation"
+ *                   likeCount: 32
+ *                   saveCount: 15
+ *                   shareCount: 9
+ *                   createdAt: "2025-10-29T12:00:00.000Z"
+ *       401:
+ *         description: Unauthorized access (missing or invalid token)
+ *         content:
+ *           application/json:
+ *             example:
+ *               statusCode: false
+ *               statusText: "Unauthorized"
+ *               message: "Access denied. No token provided or token invalid."
+ *       404:
+ *         description: No saved campaigns found
+ *         content:
+ *           application/json:
+ *             example:
+ *               statusCode: false
+ *               statusText: "Not Found"
+ *               message: "No saved campaigns found for this user."
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             example:
+ *               statusCode: false
+ *               statusText: "Internal Server Error"
+ *               message: "An unexpected error occurred while fetching saved campaigns."
+ */
+router.get("/all-saved-campaign", authenticate, getAllSavedCampaignsByID);
 
 module.exports = router;
