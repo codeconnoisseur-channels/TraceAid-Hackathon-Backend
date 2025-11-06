@@ -48,12 +48,12 @@ exports.createACampaign = async (req, res) => {
       });
     }
 
-    if (duration > 30) {
+    if (duration > 365) {
       if (file && file.path && fs.existsSync(file.path)) fs.unlinkSync(file.path);
       return res.status(400).json({
         statusCode: false,
         statusText: "Bad Request",
-        message: "Campaign duration must not exceed 30 days.",
+        message: "Campaign duration must not exceed 365 days.",
       });
     }
 
