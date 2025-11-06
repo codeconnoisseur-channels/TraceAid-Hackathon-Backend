@@ -22,7 +22,7 @@ exports.protectAdmin = async (req, res, next) => {
       return res.status(404).json({
         statusCode: false,
         statusText: "Not Found",
-        message: "admin not found",
+        message: "Admin not found",
       });
     }
 
@@ -33,11 +33,11 @@ exports.protectAdmin = async (req, res, next) => {
         message: "Access denied. Admin only",
       });
     }
-    req.user = admin;
+    req.admin = admin;
 
-    req.user.id = admin._id;
+    req.admin.id = admin._id;
 
-    req.user.role = admin.role;
+    req.admin.role = admin.role;
     next();
   } catch (error) {
     if (error instanceof jwt.TokenExpiredError) {
@@ -58,7 +58,7 @@ exports.protectAdmin = async (req, res, next) => {
 
 exports.restrictAdmin = async (req, res, next) => {
   try {
-    if (req.user && req.user.role === "admin") {
+    if (req.admin && req.admin.role === "admin") {
       next();
     } else {
       return res.status(403).json({
