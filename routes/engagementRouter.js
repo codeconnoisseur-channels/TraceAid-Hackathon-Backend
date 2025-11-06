@@ -1,8 +1,4 @@
-const {
-  toggleEngagement,
-  recordShare,
-  getAllSavedCampaignsByID,
-} = require("../controller/engagementController");
+const { toggleEngagement, recordShare, getAllSavedCampaignsByID } = require("../controller/engagementController");
 const { authenticate } = require("../middleware/auth");
 
 const router = require("express").Router();
