@@ -22,6 +22,7 @@ const {
   getAllCampaignByFundraiser,
 } = require("../controller/adminController");
 const { protectAdmin, restrictAdmin } = require("../middleware/adminAuth");
+const { getWalletSummaryByAdmin, createPayoutByAdmin, listTransactions } = require("../controller/fundraiserWalletController");
 
 /**
  * @swagger
@@ -951,7 +952,7 @@ router.patch("/campaigns/activate/:campaignId", protectAdmin, restrictAdmin, act
  *                   type: string
  *                   example: "Error processing campaign extension request"
  */
-router.patch("campaigns/:campaignId/extension/:requestId", protectAdmin, restrictAdmin, handleExtensionRequest);
+router.patch("/campaigns/:campaignId/extension/:requestId", protectAdmin, restrictAdmin, handleExtensionRequest);
 
 /**
  * @swagger
@@ -1836,5 +1837,10 @@ router.get("/get-campaigns", protectAdmin, restrictAdmin, getAllCampaigns);
 router.get("/campaigns-with-milestones-and-evidence", protectAdmin, restrictAdmin, getCampaignWithMilestonesAndEvidence);
 
 router.get("/fundraiser-campaigns/:id", protectAdmin, restrictAdmin, getAllCampaignByFundraiser);
+
+// Admin wallet routes
+router.get("/wallet/:fundraiserId/summary", protectAdmin, restrictAdmin, getWalletSummaryByAdmin);
+router.post("/wallet/payout", protectAdmin, restrictAdmin, createPayoutByAdmin);
+router.get("/wallet/:fundraiserId/transactions", protectAdmin, restrictAdmin, listTransactions);
 
 module.exports = router;

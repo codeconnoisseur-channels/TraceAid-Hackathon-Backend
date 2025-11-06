@@ -16,8 +16,18 @@ const campaignRouter = require("./routes/campaignRouter");
 const milestoneRouter = require("./routes/milestoneRouter");
 const donationRouter = require("./routes/donationRouter");
 const engagementRouter = require("./routes/engagementRouter");
+const fundraiserWalletRouter = require("./routes/fundraiserWalletRouter");
+const bodyParser = require("body-parser");
 
 const app = express();
+app.use(
+  "/donation/api/v1/webhook/verify-payment",
+  bodyParser.json({
+    verify: (req, res, buf) => {
+      req.rawBody = buf.toString();
+    },
+  })
+);
 app.use(express.json());
 app.use(cors());
 app.use(
@@ -95,8 +105,9 @@ app.use("/admin-auth/api/v1", adminAuthRouter);
 app.use("/admin/api/v1", adminRouter);
 app.use("/campaign/api/v1", campaignRouter);
 app.use("/milestone/api/v1", milestoneRouter);
-app.use("donation/api/v1", donationRouter);
+app.use("/donation/api/v1", donationRouter);
 app.use("/engagement/api/v1", engagementRouter);
+app.use("/fundraiser/api/v1/wallet", fundraiserWalletRouter);
 
 app.use((error, req, res, next) => {
   if (error) {

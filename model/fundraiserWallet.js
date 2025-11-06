@@ -20,6 +20,7 @@ const fundraiserWalletSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Bank",
     },
+    // Legacy per-campaign bucket (kept for compatibility if used elsewhere)
     campaignFunds: [
       {
         campaign: {
@@ -40,6 +41,55 @@ const fundraiserWalletSchema = new mongoose.Schema(
         isPendingPayout: {
           type: Boolean,
           default: false,
+        },
+      },
+    ],
+    // Immutable ledger capturing campaign-specific wallet movements
+    transactions: [
+      {
+        type: {
+          type: String,
+          enum: ["credit", "debit"],
+          required: true,
+        },
+        campaign: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "Campaign",
+          required: true,
+        },
+        amount: {
+          type: Number,
+          required: true,
+          min: 1,
+        },
+        donor: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "Donor",
+          required: false,
+          index: true,
+        },
+        donation: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "Donation",
+          required: false,
+          index: true,
+        },
+        source: {
+          type: String,
+          enum: ["donation", "payout", "adjustment"],
+          required: true,
+        },
+        reference: {
+          type: String,
+          index: true,
+        },
+        note: {
+          type: String,
+          trim: true,
+        },
+        createdAt: {
+          type: Date,
+          default: Date.now,
         },
       },
     ],
