@@ -1839,8 +1839,235 @@ router.get("/campaigns-with-milestones-and-evidence", protectAdmin, restrictAdmi
 router.get("/fundraiser-campaigns/:id", protectAdmin, restrictAdmin, getAllCampaignByFundraiser);
 
 // Admin wallet routes
+
+/**
+ * @swagger
+ * tags:
+ *   name: Admin Wallet
+ *   description: Admin endpoints for managing fundraisers' wallets, payouts, and transactions.
+ */
+
+/**
+ * @swagger
+ * /admin/api/v1/wallet/{fundraiserId}/summary:
+ *   get:
+ *     summary: Get wallet summary for a specific fundraiser
+ *     tags: [Admin Wallet]
+ *     security:
+ *       - bearerAuth: []
+ *     description: >
+ *       Allows admin to fetch detailed wallet summary of a specific fundraiser, including balances, campaign totals, and transactions.
+ *     parameters:
+ *       - in: path
+ *         name: fundraiserId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The unique ID of the fundraiser.
+ *     responses:
+ *       200:
+ *         description: Fundraiser wallet summary retrieved successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 statusCode:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     fundraiser:
+ *                       type: string
+ *                       example: "672e24b1d62a99e9e01cde23"
+ *                     availableBalance:
+ *                       type: number
+ *                       example: 80000
+ *                     totalWithdrawn:
+ *                       type: number
+ *                       example: 120000
+ *                     perCampaign:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           campaign:
+ *                             type: string
+ *                             example: "Save the Children"
+ *                           credited:
+ *                             type: number
+ *                             example: 100000
+ *                           debited:
+ *                             type: number
+ *                             example: 20000
+ *                           balance:
+ *                             type: number
+ *                             example: 80000
+ *       401:
+ *         description: Unauthorized — invalid or missing admin token.
+ *       403:
+ *         description: Forbidden — admin role restricted.
+ *       404:
+ *         description: Fundraiser not found.
+ *       500:
+ *         description: Internal Server Error.
+ */
 router.get("/wallet/:fundraiserId/summary", protectAdmin, restrictAdmin, getWalletSummaryByAdmin);
+
+/**
+ * @swagger
+ * /admin/api/v1/wallet/payout:
+ *   post:
+ *     summary: Create payout for a fundraiser
+ *     tags: [Admin Wallet]
+ *     security:
+ *       - bearerAuth: []
+ *     description: >
+ *       Admin manually creates a payout transaction for a fundraiser (e.g., after verifying balance and documents).
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - fundraiserId
+ *               - campaignId
+ *               - amount
+ *             properties:
+ *               fundraiserId:
+ *                 type: string
+ *                 example: "672e24b1d62a99e9e01cde23"
+ *               campaignId:
+ *                 type: string
+ *                 example: "672f7be53d8dca5312b0ef1d"
+ *               amount:
+ *                 type: number
+ *                 example: 50000
+ *               note:
+ *                 type: string
+ *                 example: "Manual payout approved by admin for medical expenses"
+ *     responses:
+ *       201:
+ *         description: Payout created successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 statusCode:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     payout:
+ *                       type: object
+ *                       properties:
+ *                         referenceID:
+ *                           type: string
+ *                           example: "PAYOUT_8c33a721-f31d-44c7-b8e5-20f20e25a7d9"
+ *                         status:
+ *                           type: string
+ *                           example: "completed"
+ *                         amount:
+ *                           type: number
+ *                           example: 50000
+ *                         createdAt:
+ *                           type: string
+ *                           example: "2025-11-05T11:00:00Z"
+ *       400:
+ *         description: Invalid request body or missing fields.
+ *       401:
+ *         description: Unauthorized — invalid admin token.
+ *       403:
+ *         description: Forbidden — admin role restricted.
+ *       404:
+ *         description: Fundraiser or wallet not found.
+ *       500:
+ *         description: Internal Server Error.
+ */
 router.post("/wallet/payout", protectAdmin, restrictAdmin, createPayoutByAdmin);
+
+/**
+ * @swagger
+ * /admin/api/v1/wallet/{fundraiserId}/transactions:
+ *   get:
+ *     summary: Get all transactions of a specific fundraiser
+ *     tags: [Admin Wallet]
+ *     security:
+ *       - bearerAuth: []
+ *     description: >
+ *       Fetches all wallet transactions (credit and debit) for a specific fundraiser, with optional filters.
+ *     parameters:
+ *       - in: path
+ *         name: fundraiserId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The fundraiser’s unique ID.
+ *       - in: query
+ *         name: campaignId
+ *         required: false
+ *         schema:
+ *           type: string
+ *         description: Filter by campaign ID.
+ *       - in: query
+ *         name: type
+ *         required: false
+ *         schema:
+ *           type: string
+ *           enum: [credit, debit]
+ *         description: Filter by transaction type.
+ *     responses:
+ *       200:
+ *         description: Transactions retrieved successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 statusCode:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       type:
+ *                         type: string
+ *                         example: "credit"
+ *                       amount:
+ *                         type: number
+ *                         example: 10000
+ *                       source:
+ *                         type: string
+ *                         example: "donation"
+ *                       campaign:
+ *                         type: string
+ *                         example: "Help Esther Heal"
+ *                       reference:
+ *                         type: string
+ *                         example: "DON_923be7"
+ *                       createdAt:
+ *                         type: string
+ *                         example: "2025-11-05T08:00:00Z"
+ *       401:
+ *         description: Unauthorized — invalid or missing admin token.
+ *       403:
+ *         description: Forbidden — admin role restricted.
+ *       404:
+ *         description: Fundraiser not found or has no transactions.
+ *       500:
+ *         description: Internal Server Error.
+ */
 router.get("/wallet/:fundraiserId/transactions", protectAdmin, restrictAdmin, listTransactions);
+
+module.exports = router;
 
 module.exports = router;
