@@ -119,7 +119,7 @@ exports.makeDonation = async function (req, res) {
     const donor = await Donor.findById(donorId).select("firstName lastName email");
 
     // Use a frontend redirect URL, not the webhook URL
-    const FRONTEND_REDIRECT_URL = process.env.PAYMENT_REDIRECT_URL || `${process.env.BASE_URL || "http://localhost:3000"}/payment/korapay/redirect`;
+    const FRONTEND_REDIRECT_URL = process.env.PAYMENT_REDIRECT_URL || `${process.env.BASE_URL || "http://localhost:5173"}/payment-success`;
 
     const korapayResponse = await axios.post(
       "https://api.korapay.com/merchant/api/v1/charges/initialize",
