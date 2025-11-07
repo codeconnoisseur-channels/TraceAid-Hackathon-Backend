@@ -299,7 +299,7 @@ exports.verifyPaymentWebhook = async function (req, res) {
       }
     }
 
-    console.log("✅ Webhook processed successfully for:", paymentReference);
+    console.log("Webhook processed successfully for:", paymentReference);
     return res.status(200).json({
       statusCode: true,
       statusText: "OK",

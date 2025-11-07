@@ -270,7 +270,7 @@ exports.reviewCampaign = async (req, res) => {
 };
 
 exports.activateCampaign = async (req, res) => {
-  const adminId = req.user;
+  const adminId = req.admin;
 
   if (!adminId) {
     return res.status(401).json({
@@ -364,7 +364,7 @@ exports.reviewMilestoneEvidence = async (req, res) => {
   try {
     const { evidenceId } = req.params;
     const { action, rejectionReason } = req.body; // action = 'approve' | 'reject'
-    const adminId = req.user.id;
+    const adminId = req.admin.id;
 
     const evidence = await MilestoneEvidenceModel.findById(evidenceId).populate("milestone campaign fundraiser");
     if (!evidence) return res.status(404).json({ statusCode: false, statusText: "Not Found", message: "Evidence not found" });
@@ -437,7 +437,7 @@ exports.releaseMilestoneFunds = async (req, res) => {
   session.startTransaction();
   try {
     const { milestoneId } = req.params;
-    const adminId = req.user.id;
+    const adminId = req.admin.id;
 
     const milestone = await MilestoneModel.findById(milestoneId).session(session);
     if (!milestone) throw new Error("Milestone not found");
@@ -592,7 +592,7 @@ exports.getAllDonors = async (req, res) => {
 };
 
 exports.handleExtensionRequest = async (req, res) => {
-  const adminId = req.user.id || req.user._id;
+  const adminId = req.admin.id || req.admin._id;
   const { campaignId, requestId } = req.params;
   const { status, rejectionReason } = req.body;
 
@@ -654,7 +654,7 @@ exports.handleExtensionRequest = async (req, res) => {
 };
 
 exports.reviewMilestoneEvidence = async (req, res) => {
-  const adminId = req.user.id || req.user._id;
+  const adminId = req.admin.id || req.admin._id;
   const { evidenceId } = req.params;
   const { status, rejectionReason } = req.body;
 
