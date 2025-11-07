@@ -274,6 +274,43 @@ exports.createACampaign = async (req, res) => {
   }
 };
 
+exports.getAllActiveCampaigns = async (req, res) => {
+  try {
+
+    const allCampaigns = await campaignModel.find();
+
+    if (allCampaigns.length === 0) {
+      return res.status(404).json({
+        statusCode: false,
+        statusText: "Not Found",
+        message: "No campaigns found for this fundraiser.",
+      });
+    }
+
+    // Status tracking updated to include 'ended'
+    const activeCampaigns = allCampaigns.filter((c) => c.status === "active");
+
+    res.status(200).json({
+      statusCode: true,
+      statusText: "OK",
+      message: "Campaigns retrieved successfully",
+      data: {
+        active: activeCampaigns,
+        counts: {
+          active: activeCampaigns.length,
+        },
+      },
+    });
+  } catch (error) {
+    console.error("Error retrieving campaigns:", error);
+    res.status(500).json({
+      statusCode: false,
+      statusText: "Internal Server Error",
+      message: error.message,
+    });
+  }
+};
+
 exports.getAllCampaigns = async (req, res) => {
   try {
     const userId = req.user.id;

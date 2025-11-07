@@ -119,7 +119,7 @@ exports.makeDonation = async function (req, res) {
     const donor = await Donor.findById(donorId).select("firstName lastName email");
 
     // Use a frontend redirect URL, not the webhook URL
-    const FRONTEND_REDIRECT_URL = process.env.PAYMENT_REDIRECT_URL 
+    const FRONTEND_REDIRECT_URL = process.env.PAYMENT_REDIRECT_URL;
 
     const korapayResponse = await axios.post(
       "https://api.korapay.com/merchant/api/v1/charges/initialize",
@@ -161,7 +161,6 @@ exports.makeDonation = async function (req, res) {
     });
   }
 };
-
 
 exports.verifyPaymentWebhook = async function (req, res) {
   try {
@@ -350,7 +349,17 @@ exports.getTopDonorsForCampaign = async function (req, res) {
       { $limit: limit },
       { $lookup: { from: "donors", localField: "_id", foreignField: "_id", as: "donor" } },
       { $unwind: "$donor" },
-      { $project: { _id: 0, donorId: "$donor._id", firstName: "$donor.firstName", lastName: "$donor.lastName", email: "$donor.email", totalAmount: 1, donationCount: 1 } },
+      {
+        $project: {
+          _id: 0,
+          donorId: "$donor._id",
+          firstName: "$donor.firstName",
+          lastName: "$donor.lastName",
+          email: "$donor.email",
+          totalAmount: 1,
+          donationCount: 1,
+        },
+      },
     ];
 
     const result = await Donation.aggregate(pipeline);
