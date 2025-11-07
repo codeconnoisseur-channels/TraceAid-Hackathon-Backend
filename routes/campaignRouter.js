@@ -7,6 +7,7 @@ const {
   getCampaignWithMilestonesAndEvidence,
   getAllCampaign,
   getACampaignAndMilestone,
+  getAllActiveCampaigns,
 } = require("../controller/campaignController");
 
 const router = require("express").Router();
@@ -212,13 +213,7 @@ const router = require("express").Router();
  *                   type: string
  *                   example: "Failed to save milestones."
  */
-router.post(
-  "/create-campaign",
-  authenticate,
-  isFundraiser,
-  uploads.single("campaignCoverImageOrVideo"),
-  createACampaign
-);
+router.post("/create-campaign", authenticate, isFundraiser, uploads.single("campaignCoverImageOrVideo"), createACampaign);
 
 /**
  * @swagger
@@ -279,17 +274,54 @@ router.post(
  *               statusText: Internal Server Error
  *               message: Error retrieving campaigns
  */
-router.get(
-  "/campaign/get-all-campaigns",
-  authenticate,
-  isFundraiser,
-  getAllCampaigns
-);
+router.get("/campaign/get-all-campaigns", authenticate, isFundraiser, getAllCampaigns);
 
-router.get(
-  "/campaign/get-all-campaign",
-  getAllCampaign
-);
+router.get("/campaign/get-all-campaign", getAllCampaign);
+
+/**
+ * @swagger
+ * /campaign/api/v1/get-all-active-campaign:
+ *   get:
+ *     summary: Retrieve all active campaigns
+ *     description: Fetches all campaigns that are currently active. This endpoint is accessible to all users.
+ *     tags:
+ *       - Campaign Management
+ *     responses:
+ *       200:
+ *         description: Active campaigns retrieved successfully
+ *         content:
+ *           application/json:
+ *             example:
+ *               statusCode: true
+ *               statusText: OK
+ *               message: Active campaigns retrieved successfully
+ *               data:
+ *                 - _id: "XXXXXXXXXXXXXXXXXXXXXXXX"
+ *                   fundraiser: "66f1a12b8efb9f1234abcd99"
+ *                   campaignTitle: "Education for All"
+ *                   campaignDescription: "Raising funds to provide education for underprivileged children."
+ *                   totalCampaignGoalAmount: 500000
+ *                   campaignCategory: "Education"
+ *                   durationDays: 30
+ *                   status: "active"
+ *       404:
+ *         description: No active campaigns found
+ *         content:
+ *           application/json:
+ *             example:
+ *               statusCode: false
+ *               statusText: Not Found
+ *               message: No active campaigns found.
+ *       500:
+ *         description: Internal Server Error
+ *         content:
+ *           application/json:
+ *             example:
+ *               statusCode: false
+ *               statusText: Internal Server Error
+ *               message: Error retrieving active campaigns
+ */
+router.get("/get-all-active-campaign", getAllActiveCampaigns);
 
 /**
  * @swagger
@@ -433,13 +465,8 @@ router.post("/campaign/get-one", authenticate, isFundraiser, getOneCampaign);
  *               statusText: Internal Server Error
  *               message: Unexpected server error
  */
-router.get(
-  "/campaign/get-campaigns-milestones",
-  authenticate,
-  isFundraiser,
-  getCampaignWithMilestonesAndEvidence
-);
+router.get("/campaign/get-campaigns-milestones", authenticate, isFundraiser, getCampaignWithMilestonesAndEvidence);
 
-router.get("/campaign/get-campaign-and-milestones/:id", getACampaignAndMilestone)
+router.get("/campaign/get-campaign-and-milestones/:id", getACampaignAndMilestone);
 
 module.exports = router;
