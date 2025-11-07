@@ -13,10 +13,14 @@ const KORA_API_BASE = "https://api.korapay.com/merchant/api/v1/";
 exports.makeDonation = async function (req, res) {
   try {
     // avoid destructuring to match your style
-    const donorId = req.user && (req.user.id || req.user._id) ? req.user._id || req.user.id : null;
+    const donorId =
+      req.user && (req.user.id || req.user._id)
+        ? req.user._id || req.user.id
+        : null;
     const campaignId = req.body.campaignId;
     const amountStr = req.body.amount;
-    const isAnonymous = req.body.isAnonymous === "true" || req.body.isAnonymous === true;
+    const isAnonymous =
+      req.body.isAnonymous === "true" || req.body.isAnonymous === true;
     const message = req.body.message || null;
 
     // if (!donorId) {
@@ -68,7 +72,10 @@ exports.makeDonation = async function (req, res) {
     // ----------------------------------------------------------------------
     const today = new Date();
     // Check if campaign is active AND if end date has not passed
-    if (campaign.status !== "active" || (campaign.endDate && campaign.endDate < today)) {
+    if (
+      campaign.status !== "active" ||
+      (campaign.endDate && campaign.endDate < today)
+    ) {
       const message =
         campaign.status !== "active"
           ? `Donations are not accepted. Campaign status is '${campaign.status}'.`
@@ -85,7 +92,8 @@ exports.makeDonation = async function (req, res) {
     // ----------------------------------------------------------------------
     // 🔥 CRITICAL UPDATE 2: Over-Donation Check
     // ----------------------------------------------------------------------
-    const remainingGoal = campaign.totalCampaignGoalAmount - campaign.amountRaised;
+    const remainingGoal =
+      campaign.totalCampaignGoalAmount - campaign.amountRaised;
 
     // Check if the donation amount is greater than the remaining required amount
     if (amount > remainingGoal) {
@@ -116,10 +124,12 @@ exports.makeDonation = async function (req, res) {
 
     await donation.save();
 
-    const donor = await Donor.findById(donorId).select("firstName lastName email");
+    const donor = await Donor.findById(donorId).select(
+      "firstName lastName email"
+    );
 
     // Use a frontend redirect URL, not the webhook URL
-    const FRONTEND_REDIRECT_URL = process.env.PAYMENT_REDIRECT_URL 
+    const FRONTEND_REDIRECT_URL = process.env.PAYMENT_REDIRECT_URL;
 
     const korapayResponse = await axios.post(
       "https://api.korapay.com/merchant/api/v1/charges/initialize",
@@ -129,7 +139,11 @@ exports.makeDonation = async function (req, res) {
         reference: donation.paymentReference,
         redirect_url: FRONTEND_REDIRECT_URL,
         customer: {
-          name: donor ? `${donor.firstName || ""} ${donor.lastName || ""}`.trim() : isAnonymous ? "Anonymous Donor" : "Unknown Donor",
+          name: donor
+            ? `${donor.firstName || ""} ${donor.lastName || ""}`.trim()
+            : isAnonymous
+            ? "Anonymous Donor"
+            : "Unknown Donor",
           email: donor?.email || "noemail@donor.com",
         },
         narration: `Donation for campaign: ${campaign.campaignTitle}`,
@@ -145,7 +159,8 @@ exports.makeDonation = async function (req, res) {
     return res.status(201).json({
       statusCode: true,
       statusText: "Created",
-      message: "Donation initiated. Use the paymentReference or checkout_url to complete payment.",
+      message:
+        "Donation initiated. Use the paymentReference or checkout_url to complete payment.",
       data: {
         donation: donation,
         paymentReference: paymentReference,
@@ -162,7 +177,6 @@ exports.makeDonation = async function (req, res) {
   }
 };
 
-
 exports.verifyPaymentWebhook = async function (req, res) {
   try {
     // Log for diagnostics
@@ -170,7 +184,9 @@ exports.verifyPaymentWebhook = async function (req, res) {
     console.log("Kora Webhook body (parsed):", req.body);
 
     // --- 1. Signature Verification ---
-    const signature = req.headers["x-korapay-signature"] || req.headers["X-Korapay-Signature".toLowerCase()];
+    const signature =
+      req.headers["x-korapay-signature"] ||
+      req.headers["X-Korapay-Signature".toLowerCase()];
 
     if (!signature || !KORA_SECRET_KEY) {
       return res.status(401).json({
@@ -209,7 +225,10 @@ exports.verifyPaymentWebhook = async function (req, res) {
     }
 
     // Signature is computed over the data object per Kora docs
-    const expectedSignature = crypto.createHmac("sha256", KORA_SECRET_KEY).update(JSON.stringify(payload)).digest("hex");
+    const expectedSignature = crypto
+      .createHmac("sha256", KORA_SECRET_KEY)
+      .update(JSON.stringify(payload))
+      .digest("hex");
 
     if (expectedSignature !== signature) {
       return res.status(403).json({
@@ -220,8 +239,12 @@ exports.verifyPaymentWebhook = async function (req, res) {
     }
 
     // --- 2. Extract Payment Info ---
-    const paymentReference = payload.paymentReference || payload.payment_reference || payload.reference;
-    const transactionId = payload.transactionId || payload.transaction_id || null;
+    const paymentReference =
+      payload.paymentReference ||
+      payload.payment_reference ||
+      payload.reference;
+    const transactionId =
+      payload.transactionId || payload.transaction_id || null;
     const status = payload.status || payload.payment_status || null;
     const amount = payload.amount || payload.amount_paid || null;
 
@@ -233,7 +256,9 @@ exports.verifyPaymentWebhook = async function (req, res) {
       });
     }
 
-    const donation = await Donation.findOne({ paymentReference: paymentReference });
+    const donation = await Donation.findOne({
+      paymentReference: paymentReference,
+    });
 
     if (!donation) {
       return res.status(404).json({
@@ -252,7 +277,11 @@ exports.verifyPaymentWebhook = async function (req, res) {
     }
 
     // --- 3. Normalize Status ---
-    const normalizedStatus = ["successful", "success", "paid"].includes(String(status).toLowerCase()) ? "successful" : "failed";
+    const normalizedStatus = ["successful", "success", "paid"].includes(
+      String(status).toLowerCase()
+    )
+      ? "successful"
+      : "failed";
 
     // --- 4. Update Donation ---
     donation.transactionId = transactionId || donation.transactionId;
@@ -269,7 +298,10 @@ exports.verifyPaymentWebhook = async function (req, res) {
         campaign.amountRaised = (campaign.amountRaised || 0) + donation.amount;
         campaign.donorCount = (campaign.donorCount || 0) + 1;
 
-        if (campaign.amountRaised >= campaign.totalCampaignGoalAmount && campaign.status === "active") {
+        if (
+          campaign.amountRaised >= campaign.totalCampaignGoalAmount &&
+          campaign.status === "active"
+        ) {
           campaign.status = "completed";
           campaign.isActive = false;
           campaign.endDate = new Date();
@@ -277,12 +309,20 @@ exports.verifyPaymentWebhook = async function (req, res) {
         await campaign.save();
 
         if (campaign.fundraiser) {
-          let wallet = await FundraiserWallet.findOne({ fundraiser: campaign.fundraiser });
+          let wallet = await FundraiserWallet.findOne({
+            fundraiser: campaign.fundraiser,
+          });
           if (!wallet) {
-            wallet = new FundraiserWallet({ fundraiser: campaign.fundraiser, availableBalance: 0, totalWithdrawn: 0, transactions: [] });
+            wallet = new FundraiserWallet({
+              fundraiser: campaign.fundraiser,
+              availableBalance: 0,
+              totalWithdrawn: 0,
+              transactions: [],
+            });
           }
           // Credit wallet and record ledger entry tied to the campaign and donation reference
-          wallet.availableBalance = (wallet.availableBalance || 0) + donation.amount;
+          wallet.availableBalance =
+            (wallet.availableBalance || 0) + donation.amount;
           wallet.transactions.push({
             type: "credit",
             campaign: campaign._id,
@@ -321,43 +361,118 @@ exports.getAllDonationsForCampaign = async function (req, res) {
   try {
     const campaignId = req.params.id;
     if (!campaignId) {
-      return res.status(400).json({ statusCode: false, statusText: "Bad Request", message: "campaign id is required" });
+      return res
+        .status(400)
+        .json({
+          statusCode: false,
+          statusText: "Bad Request",
+          message: "campaign id is required",
+        });
     }
-    const donations = await Donation.find({ campaign: campaignId, paymentStatus: "successful" })
+    const donations = await Donation.find({
+      campaign: campaignId,
+      paymentStatus: "successful",
+    })
       .populate("donor", "firstName lastName email")
       .sort({ createdAt: -1 });
-    return res.status(200).json({ statusCode: true, statusText: "OK", message: "All donations retrieved", data: donations });
+    return res
+      .status(200)
+      .json({
+        statusCode: true,
+        statusText: "OK",
+        message: "All donations retrieved",
+        data: donations,
+      });
   } catch (error) {
     console.error("Error getting all donations for campaign:", error);
-    return res.status(500).json({ statusCode: false, statusText: "Internal Server Error", message: error.message });
+    return res
+      .status(500)
+      .json({
+        statusCode: false,
+        statusText: "Internal Server Error",
+        message: error.message,
+      });
   }
 };
 
 // Public: get top donors for a campaign (by total contributed amount)
-exports.getTopDonorsForCampaign = async function (req, res) {
+exports.getTopDonorsForCampaign = async (req, res) => {
   try {
     const campaignId = req.params.id;
     const limit = Math.max(1, Math.min(100, Number(req.query.limit) || 10));
+
     if (!campaignId) {
-      return res.status(400).json({ statusCode: false, statusText: "Bad Request", message: "campaign id is required" });
+      return res.status(400).json({
+        statusCode: false,
+        statusText: "Bad Request",
+        message: "Campaign ID is required",
+      });
     }
 
-    // Aggregate successful, non-anonymous donations by donor
+    // Validate ObjectId — if invalid, respond early
+    if (!mongoose.Types.ObjectId.isValid(campaignId)) {
+      return res.status(400).json({
+        statusCode: false,
+        statusText: "Bad Request",
+        message: "Invalid campaign ID format",
+      });
+    }
+
+    //  Match donations only for this campaign
     const pipeline = [
-      { $match: { campaign: require("mongoose").Types.ObjectId(campaignId), paymentStatus: "successful", isAnonymous: false } },
-      { $group: { _id: "$donor", totalAmount: { $sum: "$amount" }, donationCount: { $sum: 1 } } },
+      {
+        $match: {
+          campaign: mongoose.Types.ObjectId(campaignId),
+          paymentStatus: "successful",
+          isAnonymous: false,
+        },
+      },
+      {
+        $group: {
+          _id: "$donor", // ensure donation model field is "donor"
+          totalAmount: { $sum: "$amount" },
+          donationCount: { $sum: 1 },
+        },
+      },
       { $sort: { totalAmount: -1 } },
       { $limit: limit },
-      { $lookup: { from: "donors", localField: "_id", foreignField: "_id", as: "donor" } },
-      { $unwind: "$donor" },
-      { $project: { _id: 0, donorId: "$donor._id", firstName: "$donor.firstName", lastName: "$donor.lastName", email: "$donor.email", totalAmount: 1, donationCount: 1 } },
+      {
+        $lookup: {
+          from: "donors", //  must match your donor collection name
+          localField: "_id",
+          foreignField: "_id",
+          as: "donorInfo",
+        },
+      },
+      { $unwind: "$donorInfo" },
+      {
+        $project: {
+          _id: 0,
+          donorId: "$donorInfo._id",
+          firstName: "$donorInfo.firstName",
+          lastName: "$donorInfo.lastName",
+          email: "$donorInfo.email",
+          totalAmount: 1,
+          donationCount: 1,
+        },
+      },
     ];
 
     const result = await Donation.aggregate(pipeline);
-    return res.status(200).json({ statusCode: true, statusText: "OK", message: "Top donors retrieved", data: result });
+
+    return res.status(200).json({
+      statusCode: true,
+      statusText: "OK",
+      message: "Top donors retrieved successfully",
+      data: result,
+    });
   } catch (error) {
     console.error("Error getting top donors for campaign:", error);
-    return res.status(500).json({ statusCode: false, statusText: "Internal Server Error", message: error.message });
+    return res.status(500).json({
+      statusCode: false,
+      statusText: "Internal Server Error",
+      message: error.message,
+    });
   }
 };
 
