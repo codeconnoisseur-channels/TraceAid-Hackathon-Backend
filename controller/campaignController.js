@@ -468,7 +468,7 @@ exports.getCampaignAndMilestoneOfAFundraiser = async(req, res)=>{
       });
     }
     const campaignIds = campaigns.map((c) => c._id);
-    const milestones = await Milestone.find({ campaign: { $in: campaignIds } }).lean();
+    const milestones = await milestoneModel.find({ campaign: { $in: campaignIds } }).lean();
     const milestoneMap = {};
     milestones.forEach((m) => {
       milestoneMap[m.campaign] = milestoneMap[m.campaign] || [];
