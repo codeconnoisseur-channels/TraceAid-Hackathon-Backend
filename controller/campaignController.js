@@ -455,3 +455,40 @@ exports.getACampaignAndMilestone = async (req, res) => {
     });
   }
 };
+
+exports.getCampaignAndMilestoneOfAFundraiser = async(req, res)=>{
+  try {
+  const fundraiserId = req.user.id || req.user._id;
+    const campaigns = await campaignModel.find({ fundraiser: fundraiserId }).lean();
+    if (campaigns.length === 0) {
+      return res.status(404).json({
+        statusCode: false,
+        statusText: "Not Found",
+        message: "No campaigns found for the specified fundraiser",
+      });
+    }
+    const campaignIds = campaigns.map((c) => c._id);
+    const milestones = await Milestone.find({ campaign: { $in: campaignIds } }).lean();
+    const milestoneMap = {};
+    milestones.forEach((m) => {
+      milestoneMap[m.campaign] = milestoneMap[m.campaign] || [];
+      milestoneMap[m.campaign].push(m);
+    });
+    const campaignsWithMilestones = campaigns.map((c) => ({
+      ...c,
+      milestones: milestoneMap[c._id] || [],
+    }));
+    return res.json({
+      statusCode: true,
+      statusText: "OK",
+      data: campaignsWithMilestones,
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({
+      statusCode: false,
+      statusText: "Internal Server Error",
+      message: error.message,
+    });
+  }
+};
