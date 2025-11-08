@@ -443,9 +443,8 @@ exports.resetPassword = async (req, res) => {
     const saltPassword = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, saltPassword);
 
-    const userId = req.params.id;
+  
     const user = await donorModel.findOne({
-      _id: userId,
       token: req.params.token,
     });
 
