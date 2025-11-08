@@ -2,6 +2,12 @@ const FundraiserWallet = require("../model/fundraiserWallet");
 const Payout = require("../model/payoutModel");
 const Campaign = require("../model/campaignModel");
 const { v4: uuidv4 } = require("uuid");
+const Milestone = require("../model/milestoneModel");
+const Bank = require("../model/bankModel");
+const axios = require("axios");
+
+const KORA_API_BASE = "https://api.korapay.com/merchant/api/v1";
+const KORA_SECRET_KEY = process.env.KORA_SECRET_KEY;
 
 // Compute per-campaign balances from wallet.transactions
 async function computeWalletSummary(wallet) {
@@ -34,15 +40,20 @@ async function computeWalletSummary(wallet) {
 exports.getWalletSummaryByAdmin = async (req, res) => {
   try {
     const fundraiserId = req.params.fundraiserId;
-    if (!fundraiserId) {
-      return res.status(400).json({ statusCode: false, statusText: "Bad Request", message: "fundraiserId is required" });
-    }
+    if (!fundraiserId)
+      return res.status(400).json({
+        statusCode: false,
+        statusText: "Bad Request",
+        message: "fundraiserId is required",
+      });
+
     let wallet = await FundraiserWallet.findOne({ fundraiser: fundraiserId }).populate("transactions.campaign", "campaignTitle");
     if (!wallet) {
       wallet = new FundraiserWallet({ fundraiser: fundraiserId, availableBalance: 0, totalWithdrawn: 0, transactions: [] });
       await wallet.save();
     }
     const computed = await computeWalletSummary(wallet);
+
     return res.status(200).json({
       statusCode: true,
       statusText: "OK",
@@ -52,12 +63,16 @@ exports.getWalletSummaryByAdmin = async (req, res) => {
         totalWithdrawn: wallet.totalWithdrawn,
         perCampaign: computed.perCampaign,
         totals: computed.totals,
-        transactions: wallet.transactions.slice(-50).reverse(), // last 50
+        transactions: wallet.transactions.slice(-50).reverse(),
       },
     });
   } catch (err) {
     console.error("getWalletSummaryByAdmin error:", err);
-    return res.status(500).json({ statusCode: false, statusText: "Internal Server Error", message: err.message });
+    return res.status(500).json({
+      statusCode: false,
+      statusText: "Internal Server Error",
+      message: err.message,
+    });
   }
 };
 
@@ -66,23 +81,46 @@ exports.createPayoutByAdmin = async (req, res) => {
     const { fundraiserId, campaignId, amount, note } = req.body;
     const amountNum = Number(amount);
     if (!fundraiserId || !campaignId || !amountNum || amountNum <= 0) {
-      return res
-        .status(400)
-        .json({ statusCode: false, statusText: "Bad Request", message: "fundraiserId, campaignId and positive amount are required" });
+      return res.status(400).json({
+        statusCode: false,
+        statusText: "Bad Request",
+        message: "fundraiserId, campaignId and positive amount are required",
+      });
     }
+
     const wallet = await FundraiserWallet.findOne({ fundraiser: fundraiserId });
-    if (!wallet) {
-      return res.status(404).json({ statusCode: false, statusText: "Not Found", message: "Wallet not found for fundraiser" });
-    }
+    if (!wallet)
+      return res.status(404).json({
+        statusCode: false,
+        statusText: "Not Found",
+        message: "Wallet not found for fundraiser",
+      });
 
     // compute per-campaign balance
     const computed = await computeWalletSummary(wallet);
     const perCampaign = computed.perCampaign.find((c) => String(c.campaign._id || c.campaign) === String(campaignId));
     const campaignBalance = perCampaign ? perCampaign.balance : 0;
     if (campaignBalance < amountNum) {
-      return res
-        .status(400)
-        .json({ statusCode: false, statusText: "Bad Request", message: `Insufficient campaign balance. Available: ${campaignBalance}` });
+      return res.status(400).json({
+        statusCode: false,
+        statusText: "Bad Request",
+        message: `Insufficient campaign balance. Available: ${campaignBalance}`,
+      });
+    }
+
+    // Find verified bank linked to this campaign or fundraiser
+    const bank = await Bank.findOne({
+      fundraiser: fundraiserId,
+      $or: [{ campaign: campaignId }, { campaign: null }],
+      status: "verified",
+    });
+
+    if (!bank || !bank.koraRecipientCode) {
+      return res.status(400).json({
+        statusCode: false,
+        statusText: "Bad Request",
+        message: "No verified bank with Kora recipient found for this campaign",
+      });
     }
 
     // Create payout record
@@ -93,37 +131,60 @@ exports.createPayoutByAdmin = async (req, res) => {
       status: "processing",
       referenceID: "PAYOUT_" + uuidv4(),
       requestedAt: new Date(),
+      note: note || "Admin payout via Kora",
     });
     await payout.save();
 
-    // Debit wallet and add ledger entry
-    wallet.availableBalance = (wallet.availableBalance || 0) - amountNum;
-    wallet.totalWithdrawn = (wallet.totalWithdrawn || 0) + amountNum;
+    // --- Debit wallet ---
+    wallet.availableBalance -= amountNum;
+    wallet.totalWithdrawn += amountNum;
     wallet.transactions.push({
       type: "debit",
       campaign: campaignId,
       amount: amountNum,
       source: "payout",
       reference: payout.referenceID,
-      note: note || "Admin payout",
+      note: "Kora payout initiated",
       createdAt: new Date(),
     });
     await wallet.save();
 
-    // In a real integration, trigger external transfer then update payout.status accordingly
-    payout.status = "completed";
-    payout.completedAt = new Date();
+    // --- Trigger Kora Transfer ---
+    const transferRes = await axios.post(
+      `${KORA_API_BASE}/transfers`,
+      {
+        reference: payout.referenceID,
+        destination: bank.koraRecipientCode,
+        amount: amountNum,
+        currency: "NGN",
+        narration: note || "Fundraiser payout",
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${KORA_SECRET_KEY}`,
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    const transferData = transferRes.data.data;
+    payout.status = "paid";
+    payout.processedAt = new Date();
     await payout.save();
 
     return res.status(201).json({
       statusCode: true,
       statusText: "Created",
-      message: "Payout completed",
-      data: { payout, walletAvailableBalance: wallet.availableBalance },
+      message: "Payout processed successfully via Kora",
+      data: { payout, transferData },
     });
   } catch (err) {
-    console.error("createPayoutByAdmin error:", err);
-    return res.status(500).json({ statusCode: false, statusText: "Internal Server Error", message: err.message });
+    console.error("createPayoutByAdmin error:", err.response?.data || err.message);
+    return res.status(500).json({
+      statusCode: false,
+      statusText: "Internal Server Error",
+      message: err.response?.data?.message || err.message,
+    });
   }
 };
 
@@ -190,62 +251,119 @@ exports.getFundraiserWallet = async (req, res) => {
   }
 };
 
-// POST /fundraiser-wallet/request-payout
-exports.requestPayout = async (req, res) => {
+exports.requestPayoutByCampaignAndTheirMilestone = async (req, res) => {
   try {
-    const fundraiserId = req.user && req.user.id ? req.user.id : req.user?._id;
-    const { campaignId, amount, note } = req.body;
-    const amountNum = Number(amount);
+    const fundraiserId = req.user?.id || req.user?._id;
+    const { campaignId, milestoneId } = req.body;
 
     if (!fundraiserId) {
-      return res.status(401).json({ statusCode: false, statusText: "Unauthorized", message: "Missing authenticated user" });
+      return res.status(401).json({
+        statusCode: false,
+        statusText: "Unauthorized",
+        message: "Missing authenticated user",
+      });
     }
-    if (!campaignId || !amountNum || amountNum <= 0) {
-      return res.status(400).json({ statusCode: false, statusText: "Bad Request", message: "campaignId and positive amount are required" });
+
+    if (!campaignId || !milestoneId) {
+      return res.status(400).json({
+        statusCode: false,
+        statusText: "Bad Request",
+        message: "Campaign ID and Milestone ID are required",
+      });
+    }
+
+    const campaign = await Campaign.findOne({ _id: campaignId, fundraiser: fundraiserId });
+    if (!campaign) {
+      return res.status(404).json({
+        statusCode: false,
+        statusText: "Not Found",
+        message: "Campaign not found for this fundraiser",
+      });
+    }
+
+    const campaignEndDate = new Date(campaign.createdAt);
+    campaignEndDate.setDate(campaignEndDate.getDate() + campaign.durationDays);
+
+    const isCampaignExpired = new Date() >= campaignEndDate;
+    const isCampaignFullyFunded = campaign.amountRaised >= campaign.totalCampaignGoalAmount;
+
+    if (!campaign.isActive && !isCampaignExpired && !isCampaignFullyFunded) {
+      return res.status(400).json({
+        statusCode: false,
+        statusText: "Not Eligible",
+        message: "This campaign is not yet eligible for withdrawal",
+      });
+    }
+
+    const milestones = await Milestone.find({ campaign: campaignId }).sort({ order: 1 });
+    if (!milestones.length) {
+      return res.status(404).json({
+        statusCode: false,
+        statusText: "Not Found",
+        message: "No milestones found for this campaign",
+      });
+    }
+
+    const milestone = milestones.find((m) => m._id.toString() === milestoneId);
+    if (!milestone) {
+      return res.status(404).json({
+        statusCode: false,
+        statusText: "Not Found",
+        message: "Milestone not found for this campaign",
+      });
+    }
+
+    const previousMilestone = milestones.find((m) => m.order === milestone.order - 1);
+    if (previousMilestone && previousMilestone.status !== "approved") {
+      return res.status(400).json({
+        statusCode: false,
+        statusText: "Not Eligible",
+        message: `You must complete and get approval for Milestone ${previousMilestone.order} before requesting Milestone ${milestone.order}`,
+      });
+    }
+
+    if (["on-going", "ready_for_release", "released", "completed"].includes(milestone.status)) {
+      return res.status(400).json({
+        statusCode: false,
+        statusText: "Not Eligible",
+        message: "This milestone has already been processed or withdrawn",
+      });
     }
 
     const wallet = await FundraiserWallet.findOne({ fundraiser: fundraiserId });
     if (!wallet) {
-      return res.status(404).json({ statusCode: false, statusText: "Not Found", message: "Wallet not found" });
+      return res.status(404).json({
+        statusCode: false,
+        statusText: "Not Found",
+        message: "Wallet not found for fundraiser",
+      });
     }
 
-    // compute per-campaign balance
-    const computed = await computeWalletSummary(wallet);
-    const perCampaign = computed.perCampaign.find((c) => String(c.campaign._id || c.campaign) === String(campaignId));
-    const campaignBalance = perCampaign ? perCampaign.balance : 0;
-
-    if (campaignBalance < amountNum) {
-      return res.status(400).json({ statusCode: false, statusText: "Bad Request", message: `Insufficient campaign balance. Available: ${campaignBalance}` });
-    }
-
-    // Create payout request (pending/processing)
-    const payout = new Payout({
+    const payout = await Payout.create({
       fundraiser: fundraiserId,
       campaign: campaignId,
-      amount: amountNum,
-      status: "processing", // adjust to your workflow: pending -> processing -> completed/rejected
-      referenceID: "PAYOUT_" + uuidv4(),
-      requestedAt: new Date(),
-      note: note || "Fundraiser-initiated payout",
+      milestone: milestoneId,
+      amount: milestone.targetAmount,
+      status: "processing",
+      referenceID: `PAYOUT-${Date.now()}`,
     });
-    await payout.save();
 
-    // Debit the wallet immediately or after admin approval depending on business rules.
-    // Here we hold funds until completion, so we DO NOT debit immediately. If you want to debit now, uncomment below.
-    // wallet.availableBalance = (wallet.availableBalance || 0) - amountNum;
-    // wallet.totalWithdrawn = (wallet.totalWithdrawn || 0) + amountNum;
-    // wallet.transactions.push({ type: "debit", campaign: campaignId, amount: amountNum, source: "payout", reference: payout.referenceID, note: note || "Payout request", createdAt: new Date() });
-    // await wallet.save();
+    milestone.status = "on-going";
+    await milestone.save();
 
     return res.status(201).json({
       statusCode: true,
       statusText: "Created",
-      message: "Payout request submitted",
+      message: `Payout request for Milestone ${milestone.order} submitted successfully`,
       data: { payout },
     });
   } catch (err) {
     console.error("requestPayout error:", err);
-    return res.status(500).json({ statusCode: false, statusText: "Internal Server Error", message: err.message });
+    return res.status(500).json({
+      statusCode: false,
+      statusText: "Internal Server Error",
+      message: err.message,
+    });
   }
 };
 
@@ -254,18 +372,19 @@ exports.getPayoutHistory = async (req, res) => {
   try {
     const fundraiserId = req.user && req.user.id ? req.user.id : req.user?._id;
     if (!fundraiserId) {
-      return res.status(401).json({ statusCode: false, statusText: "Unauthorized", message: "Missing authenticated user" });
+      return res.status(401).json({
+        statusCode: false,
+        statusText: "Unauthorized",
+        message: "Missing authenticated user",
+      });
     }
 
     const { campaignId, status } = req.query;
     const query = { fundraiser: fundraiserId };
     if (campaignId) query.campaign = campaignId;
-    if (status) query.status = status; 
+    if (status) query.status = status;
 
-    const payouts = await Payout.find(query)
-      .populate("campaign", "campaignTitle")
-      .sort({ requestedAt: -1 })
-      .limit(100);
+    const payouts = await Payout.find(query).populate("campaign", "campaignTitle").sort({ requestedAt: -1 }).limit(100);
 
     return res.status(200).json({
       statusCode: true,
@@ -275,6 +394,33 @@ exports.getPayoutHistory = async (req, res) => {
     });
   } catch (err) {
     console.error("getPayoutHistory error:", err);
-    return res.status(500).json({ statusCode: false, statusText: "Internal Server Error", message: err.message });
+    return res.status(500).json({
+      statusCode: false,
+      statusText: "Internal Server Error",
+      message: err.message,
+    });
+  }
+};
+
+exports.getAllPayouts = async (req, res) => {
+  try {
+    const payouts = await Payout.find()
+      .populate("fundraiser", "name email")
+      .populate("campaign", "title")
+      .sort({ createdAt: -1 });
+
+    return res.status(200).json({
+      statusCode: true,
+      statusText: "OK",
+      message: "All payouts retrieved successfully",
+      data: payouts,
+    });
+  } catch (error) {
+    console.error("Error fetching payouts:", error.message);
+    return res.status(500).json({
+      statusCode: false,
+      statusText: "Internal Server Error",
+      message: error.message,
+    });
   }
 };

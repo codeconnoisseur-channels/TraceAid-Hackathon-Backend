@@ -99,3 +99,5 @@ const fundraiserWalletSchema = new mongoose.Schema(
 
 const FundraiserWallet = mongoose.model("FundraiserWallet", fundraiserWalletSchema);
 module.exports = FundraiserWallet;
+
+  

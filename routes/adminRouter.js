@@ -20,9 +20,11 @@ const {
   getAllCampaigns,
   getCampaignWithMilestonesAndEvidence,
   getAllCampaignByFundraiser,
+  getAllCampaignAndItsMilestone,
+  getAllCampaignAndMilestoneOfAFundraiser,
 } = require("../controller/adminController");
 const { protectAdmin, restrictAdmin } = require("../middleware/adminAuth");
-const { getWalletSummaryByAdmin, createPayoutByAdmin, listTransactions } = require("../controller/fundraiserWalletController");
+const { getWalletSummaryByAdmin, createPayoutByAdmin, listTransactions, getAllPayouts } = require("../controller/fundraiserWalletController");
 
 /**
  * @swagger
@@ -1826,14 +1828,13 @@ router.patch("/payout/:payoutId/approve", protectAdmin, restrictAdmin, approvePa
  */
 router.patch("/payout/:payoutId/reject", protectAdmin, restrictAdmin, rejectPayoutRequest);
 
-
 /**
  * @swagger
  * /admin/api/v1/milestone-evidence/pending:
  *   get:
  *     summary: Retrieve all pending milestone evidence submissions
  *     description: |
- *       This endpoint allows **admins** to view all milestone evidences currently marked as `"pending"`.  
+ *       This endpoint allows **admins** to view all milestone evidences currently marked as `"pending"`.
  *       Each evidence entry includes information about its related milestone, campaign, and fundraiser.
  *     tags:
  *       - Admin - Milestone Evidence
@@ -1901,14 +1902,13 @@ router.patch("/payout/:payoutId/reject", protectAdmin, restrictAdmin, rejectPayo
  */
 router.get("/milestone-evidence/pending", protectAdmin, restrictAdmin, getPendingMilestoneEvidence);
 
-
 /**
  * @swagger
  * /admin/api/v1/milestone-evidence/approve/{evidenceId}:
  *   patch:
  *     summary: Approve a milestone evidence submission
  *     description: |
- *       This endpoint allows **admins** to approve a milestone evidence that has been reviewed and verified.  
+ *       This endpoint allows **admins** to approve a milestone evidence that has been reviewed and verified.
  *       Once approved, the milestone's status is updated to reflect progress, and the campaign owner may become eligible for the next milestone release.
  *     tags:
  *       - Admin - Milestone Evidence
@@ -1998,7 +1998,7 @@ router.patch("/milestone-evidence/approve/:evidenceId", protectAdmin, restrictAd
  *   patch:
  *     summary: Reject a milestone evidence submission
  *     description: |
- *       This endpoint allows **admins** to reject a submitted milestone evidence that does not meet verification standards.  
+ *       This endpoint allows **admins** to reject a submitted milestone evidence that does not meet verification standards.
  *       The rejection is recorded, and the fundraiser will be notified to review and re-upload valid evidence.
  *     tags:
  *       - Admin - Milestone Evidence
@@ -2091,7 +2091,7 @@ router.patch("/milestone-evidence/reject/:evidenceId", protectAdmin, restrictAdm
  *   get:
  *     summary: Retrieve all campaigns on the platform
  *     description: |
- *       This endpoint allows **admins** to retrieve all campaigns created by fundraisers.  
+ *       This endpoint allows **admins** to retrieve all campaigns created by fundraisers.
  *       It returns detailed information about each campaign, including title, description, status, category, target amount, and fundraiser details.
  *     tags:
  *       - Admin - Campaign Management
@@ -2154,7 +2154,6 @@ router.patch("/milestone-evidence/reject/:evidenceId", protectAdmin, restrictAdm
  *               message: "Error retrieving campaigns from database."
  */
 router.get("/get-campaigns", protectAdmin, restrictAdmin, getAllCampaigns);
-
 
 /**
  * @swagger
@@ -2335,6 +2334,11 @@ router.get("/campaigns-with-milestones-and-evidence", protectAdmin, restrictAdmi
  *               message: "Error retrieving campaigns for fundraiser."
  */
 router.get("/fundraiser-campaigns/:id", protectAdmin, restrictAdmin, getAllCampaignByFundraiser);
+
+
+router.get("/get-all-campaign-and-milestones", protectAdmin, restrictAdmin, getAllCampaignAndItsMilestone);
+
+router.get("/get-all-campaign-and-milestone-of-fundraiser/:id", protectAdmin, restrictAdmin, getAllCampaignAndMilestoneOfAFundraiser);
 
 // Admin wallet routes
 
@@ -2566,6 +2570,6 @@ router.post("/wallet/payout", protectAdmin, restrictAdmin, createPayoutByAdmin);
  */
 router.get("/wallet/:fundraiserId/transactions", protectAdmin, restrictAdmin, listTransactions);
 
-module.exports = router;
+router.get("/get-all-payout", protectAdmin, restrictAdmin, getAllPayouts)
 
 module.exports = router;
