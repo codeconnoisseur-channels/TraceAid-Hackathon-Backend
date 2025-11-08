@@ -279,7 +279,7 @@ router.get("/campaign/get-all-campaigns", authenticate, isFundraiser, getAllCamp
 
 /**
  * @swagger
- * /campaign/api/v1/get-all-active-campaign:
+ * /campaign/api/v1/campaign/get-all-active-campaign:
  *   get:
  *     summary: Retrieve all active campaigns
  *     description: Fetches all campaigns that are currently active. This endpoint is accessible to all users.
