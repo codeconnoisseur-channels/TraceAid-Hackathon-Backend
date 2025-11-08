@@ -6,7 +6,7 @@ const {
   getDonationsByUser,
   makeDonation,
   getAllDonationsForCampaign,
-  getTopDonorsForCampaign,
+  getTopDonorsByCampaign,
 } = require("../controller/donationController");
 
 /**
@@ -164,7 +164,7 @@ router.get("/campaign/:id/donations/all", authenticate, getAllDonationsForCampai
 
 /**
  * @swagger
- * /donation/api/v1/campaign/{id}/donors/top:
+ * /donation/api/v1/campaign/donors/top/{id}:
  *   get:
  *     summary: Get top donors for a campaign
  *     tags: [Donation]
@@ -190,7 +190,7 @@ router.get("/campaign/:id/donations/all", authenticate, getAllDonationsForCampai
  *       500:
  *         description: Internal Server Error
  */
-router.get("/campaign/:id/donors/top", getTopDonorsForCampaign);
+router.get("/campaign/donors/top/:id", getTopDonorsByCampaign);
 
 /**
  * @swagger

@@ -2,8 +2,8 @@ const router = require("express").Router();
 const { authenticate } = require("../middleware/auth");
 const {
   getFundraiserWallet,
-  requestPayout,
   getPayoutHistory,
+  requestPayoutByCampaignAndTheirMilestone,
 } = require("../controller/fundraiserWalletController");
 
 /**
@@ -117,7 +117,7 @@ router.get("/summary", authenticate, getFundraiserWallet);
  *             type: object
  *             required:
  *               - campaignId
- *               - amount
+ *               
  *             properties:
  *               campaignId:
  *                 type: string
@@ -170,7 +170,7 @@ router.get("/summary", authenticate, getFundraiserWallet);
  *       500:
  *         description: Internal Server Error.
  */
-router.post("/request-payout", authenticate, requestPayout);
+router.post("/request-payout", authenticate, requestPayoutByCampaignAndTheirMilestone);
 
 /**
  * @swagger
@@ -234,5 +234,6 @@ router.post("/request-payout", authenticate, requestPayout);
  *         description: Internal Server Error.
  */
 router.get("/payout-history", authenticate, getPayoutHistory);
+
 
 module.exports = router;
