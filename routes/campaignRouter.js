@@ -8,6 +8,7 @@ const {
   getAllCampaign,
   getACampaignAndMilestone,
   getAllActiveCampaigns,
+  getAllCampaignsByFundraiser,
 } = require("../controller/campaignController");
 
 const router = require("express").Router();
@@ -274,9 +275,7 @@ router.post("/create-campaign", authenticate, isFundraiser, uploads.single("camp
  *               statusText: Internal Server Error
  *               message: Error retrieving campaigns
  */
-router.get("/campaign/get-all-campaigns", authenticate, isFundraiser, getAllCampaigns);
-
-router.get("/campaign/get-all-campaign", getAllCampaign);
+router.get("/campaign/get-all-campaigns", authenticate, isFundraiser, getAllCampaignsByFundraiser);
 
 /**
  * @swagger

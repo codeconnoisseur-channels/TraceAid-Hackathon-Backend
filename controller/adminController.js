@@ -4,8 +4,6 @@ const fundraiserModel = require("../model/fundraiserModel");
 const adminActivityModel = require("../model/adminModel");
 const { sendEmail } = require("../utils/brevo");
 const {
-  kycStatusEmail,
-  campaignStatusEmail,
   kycApproved,
   kycRejected,
   campaignApproved,
@@ -853,6 +851,56 @@ exports.rejectMilestoneEvidence = async (req, res) => {
   }
 };
 
+exports.getAllCampaigns = async (req, res) => {
+  try {
+    const allCampaigns = await campaignModel.find();
+
+    if (allCampaigns.length === 0) {
+      return res.status(404).json({
+        statusCode: false,
+        statusText: "Not Found",
+        message: "No campaigns found for this fundraiser.",
+      });
+    }
+
+    // Status tracking updated to include 'ended'
+    const activeCampaigns = allCampaigns.filter((c) => c.status === "active");
+    const pendingCampaigns = allCampaigns.filter((c) => c.status === "pending");
+    const approvedCampaigns = allCampaigns.filter((c) => c.status === "approved");
+    const completedCampaigns = allCampaigns.filter((c) => c.status === "completed" || c.status === "ended");
+    const rejectedCampaigns = allCampaigns.filter((c) => c.status === "rejected");
+
+    res.status(200).json({
+      statusCode: true,
+      statusText: "OK",
+      message: "Campaigns retrieved successfully",
+      data: {
+        all: allCampaigns,
+        active: activeCampaigns,
+        pending: pendingCampaigns,
+        approved: approvedCampaigns,
+        completed: completedCampaigns,
+        rejected: rejectedCampaigns,
+
+        counts: {
+          active: activeCampaigns.length,
+          pending: pendingCampaigns.length,
+          approved: approvedCampaigns.length,
+          rejected: rejectedCampaigns.length,
+          completed: completedCampaigns.length,
+        },
+      },
+    });
+  } catch (error) {
+    console.error("Error retrieving campaigns:", error);
+    res.status(500).json({
+      statusCode: false,
+      statusText: "Internal Server Error",
+      message: error.message,
+    });
+  }
+};
+
 exports.getAllDonations = async function (req, res) {
   try {
     const statusFilter = req.query.status || null;
@@ -1023,49 +1071,6 @@ exports.getCampaignWithMilestonesAndEvidence = async (req, res) => {
   }
 };
 
-exports.getAllCampaigns = async (req, res) => {
-  try {
-    const allCampaigns = await campaignModel.find({ fundraiser: userId });
-
-    if (allCampaigns.length === 0) {
-      return res.status(404).json({
-        statusCode: false,
-        statusText: "Not Found",
-        message: "No campaigns found",
-      });
-    }
-
-    // Status tracking updated to include 'ended'
-    const activeCampaigns = allCampaigns.filter((c) => c.status === "active");
-    const pendingCampaigns = allCampaigns.filter((c) => c.status === "pending");
-    const completedCampaigns = allCampaigns.filter((c) => c.status === "completed" || c.status === "ended");
-
-    res.status(200).json({
-      statusCode: true,
-      statusText: "OK",
-      message: "Campaigns retrieved successfully",
-      data: {
-        all: allCampaigns,
-        active: activeCampaigns,
-        pending: pendingCampaigns,
-        completed: completedCampaigns,
-        counts: {
-          active: activeCampaigns.length,
-          pending: pendingCampaigns.length,
-          completed: completedCampaigns.length,
-        },
-      },
-    });
-  } catch (error) {
-    console.error("Error retrieving campaigns:", error);
-    res.status(500).json({
-      statusCode: false,
-      statusText: "Internal Server Error",
-      message: error.message,
-    });
-  }
-};
-
 exports.getAllCampaignByFundraiser = async (req, res) => {
   try {
     const { fundraiserId } = req.params;
@@ -1092,6 +1097,118 @@ exports.getAllCampaignByFundraiser = async (req, res) => {
       statusCode: false,
       statusText: "Internal Server Error",
       message: error.message,
+    });
+  }
+};
+
+exports.getAllCampaignAndItsMilestone = async (req, res) => {
+  try {
+    const campaigns = await campaignModel.find().lean();
+    if (campaigns.length === 0) {
+      return res.status(404).json({
+        statusCode: false,
+        statusText: "Not Found",
+        message: "No campaigns found",
+      });
+    }
+    const campaignIds = campaigns.map((c) => c._id);
+    const milestones = await Milestone.find({ campaign: { $in: campaignIds } }).lean();
+    const milestoneMap = {};
+    milestones.forEach((m) => {
+      milestoneMap[m.campaign] = milestoneMap[m.campaign] || [];
+      milestoneMap[m.campaign].push(m);
+    });
+    const campaignsWithMilestones = campaigns.map((c) => ({
+      ...c,
+      milestones: milestoneMap[c._id] || [],
+    }));
+    return res.json({
+      statusCode: true,
+      statusText: "OK",
+      data: campaignsWithMilestones,
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({
+      statusCode: false,
+      statusText: "Internal Server Error",
+      message: error.message,
+    });
+  }
+};
+
+exports.getAllCampaignAndMilestoneOfAFundraiser = async(req, res)=>{
+  try {
+    const fundraiserId  = req.params.id
+    const campaigns = await campaignModel.find({ fundraiser: fundraiserId }).lean();
+    if (campaigns.length === 0) {
+      return res.status(404).json({
+        statusCode: false,
+        statusText: "Not Found",
+        message: "No campaigns found for the specified fundraiser",
+      });
+    }
+    const campaignIds = campaigns.map((c) => c._id);
+    const milestones = await Milestone.find({ campaign: { $in: campaignIds } }).lean();
+    const milestoneMap = {};
+    milestones.forEach((m) => {
+      milestoneMap[m.campaign] = milestoneMap[m.campaign] || [];
+      milestoneMap[m.campaign].push(m);
+    });
+    const campaignsWithMilestones = campaigns.map((c) => ({
+      ...c,
+      milestones: milestoneMap[c._id] || [],
+    }));
+    return res.json({
+      statusCode: true,
+      statusText: "OK",
+      data: campaignsWithMilestones,
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({
+      statusCode: false,
+      statusText: "Internal Server Error",
+      message: error.message,
+    });
+  }
+};
+
+exports.processPayout = async (req, res) => {
+  try {
+    const { payoutId, action } = req.body;
+    const adminId = req.user._id;
+
+    const payout = await Payout.findById(payoutId);
+    if (!payout) {
+      return res.status(404).json({
+        statusCode: false,
+        message: "Payout not found",
+      });
+    }
+
+    if (action === "approve") {
+      payout.status = "paid";
+      payout.processedBy = adminId;
+      payout.processedAt = new Date();
+    } else if (action === "reject") {
+      payout.status = "reversed";
+      payout.processedBy = adminId;
+      payout.processedAt = new Date();
+    }
+
+    await payout.save();
+
+    return res.status(200).json({
+      statusCode: true,
+      message: `Payout ${action} successfully`,
+      data: payout,
+    });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({
+      statusCode: false,
+      message: err.message,
     });
   }
 };

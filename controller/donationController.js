@@ -9,6 +9,7 @@ const axios = require("axios");
 const { parse } = require("path");
 const KORA_SECRET_KEY = process.env.KORA_SECRET_KEY;
 const KORA_API_BASE = "https://api.korapay.com/merchant/api/v1/";
+const mongoose = require("mongoose");
 
 exports.makeDonation = async function (req, res) {
   try {
@@ -63,9 +64,6 @@ exports.makeDonation = async function (req, res) {
 
     const fundraiser = campaign.fundraiser;
 
-    // ----------------------------------------------------------------------
-    // 🔥 CRITICAL UPDATE 1: Campaign Status and Duration Check
-    // ----------------------------------------------------------------------
     const today = new Date();
     // Check if campaign is active AND if end date has not passed
     if (campaign.status !== "active" || (campaign.endDate && campaign.endDate < today)) {
@@ -82,9 +80,6 @@ exports.makeDonation = async function (req, res) {
       });
     }
 
-    // ----------------------------------------------------------------------
-    // 🔥 CRITICAL UPDATE 2: Over-Donation Check
-    // ----------------------------------------------------------------------
     const remainingGoal = campaign.totalCampaignGoalAmount - campaign.amountRaised;
 
     // Check if the donation amount is greater than the remaining required amount
@@ -103,7 +98,6 @@ exports.makeDonation = async function (req, res) {
       donor: donorId,
       campaign: campaignId,
       fundraiser: fundraiser,
-      // user field removed: not part of Donation schema
       amount: amount,
       currency: "NGN",
       paymentReference: paymentReference,
@@ -207,7 +201,6 @@ exports.verifyPaymentWebhook = async function (req, res) {
       });
     }
 
-    // Signature is computed over the data object per Kora docs
     const expectedSignature = crypto.createHmac("sha256", KORA_SECRET_KEY).update(JSON.stringify(payload)).digest("hex");
 
     if (expectedSignature !== signature) {
@@ -218,7 +211,6 @@ exports.verifyPaymentWebhook = async function (req, res) {
       });
     }
 
-    // --- 2. Extract Payment Info ---
     const paymentReference = payload.paymentReference || payload.payment_reference || payload.reference;
     const transactionId = payload.transactionId || payload.transaction_id || null;
     const status = payload.status || payload.payment_status || null;
@@ -250,10 +242,8 @@ exports.verifyPaymentWebhook = async function (req, res) {
       });
     }
 
-    // --- 3. Normalize Status ---
     const normalizedStatus = ["successful", "success", "paid"].includes(String(status).toLowerCase()) ? "successful" : "failed";
 
-    // --- 4. Update Donation ---
     donation.transactionId = transactionId || donation.transactionId;
     donation.paymentStatus = normalizedStatus;
     if (normalizedStatus === "successful") {
@@ -261,7 +251,6 @@ exports.verifyPaymentWebhook = async function (req, res) {
     }
     await donation.save();
 
-    // --- 5. Update Campaign & Wallet on success ---
     if (normalizedStatus === "successful") {
       const campaign = await Campaign.findById(donation.campaign);
       if (campaign) {
@@ -280,7 +269,6 @@ exports.verifyPaymentWebhook = async function (req, res) {
           if (!wallet) {
             wallet = new FundraiserWallet({ fundraiser: campaign.fundraiser, availableBalance: 0, totalWithdrawn: 0, transactions: [] });
           }
-          // Credit wallet and record ledger entry tied to the campaign and donation reference
           wallet.availableBalance = (wallet.availableBalance || 0) + donation.amount;
           wallet.transactions.push({
             type: "credit",
@@ -332,41 +320,102 @@ exports.getAllDonationsForCampaign = async function (req, res) {
   }
 };
 
-// Public: get top donors for a campaign (by total contributed amount)
-exports.getTopDonorsForCampaign = async function (req, res) {
+exports.getTopDonorsByCampaign = async (req, res) => {
   try {
     const campaignId = req.params.id;
-    const limit = Math.max(1, Math.min(100, Number(req.query.limit) || 10));
-    if (!campaignId) {
-      return res.status(400).json({ statusCode: false, statusText: "Bad Request", message: "campaign id is required" });
+
+    const campaign = await Campaign.findById(campaignId);
+    if (!campaign || !campaign.isActive) {
+      return res.status(400).json({
+        statusCode: false,
+        statusText: "Bad Request",
+        message: "This campaign is not active or does not exist",
+      });
     }
 
-    // Aggregate successful, non-anonymous donations by donor
-    const pipeline = [
-      { $match: { campaign: require("mongoose").Types.ObjectId(campaignId), paymentStatus: "successful", isAnonymous: false } },
-      { $group: { _id: "$donor", totalAmount: { $sum: "$amount" }, donationCount: { $sum: 1 } } },
-      { $sort: { totalAmount: -1 } },
-      { $limit: limit },
-      { $lookup: { from: "donors", localField: "_id", foreignField: "_id", as: "donor" } },
-      { $unwind: "$donor" },
+    const donations = await Donation.find({
+      campaign: campaignId,
+      paymentStatus: "successful",
+      // isAnonymous: true,
+    })
+      .populate("donor", "name")
+      .sort({ createdAt: -1 })
+      .select("amount message isAnonymous donor createdAt");
+
+    console.log(" The Donations:", donations);
+
+    if (!mongoose.Types.ObjectId.isValid(campaignId)) {
+      return res.status(400).json({
+        statusCode: false,
+        statusText: "Bad Request",
+        message: "Invalid campaign id",
+      });
+    }
+
+    const topDonors = await Donation.aggregate([
+      {
+        $match: {
+          campaign: new mongoose.Types.ObjectId(campaignId),
+          paymentStatus: "successful",
+          isAnonymous: false,
+        },
+      },
+      {
+        $group: {
+          _id: "$donor",
+          totalDonated: { $sum: "$amount" },
+          donationCount: { $sum: 1 },
+        },
+      },
+      {
+        $sort: { totalDonated: -1 },
+      },
+      {
+        $limit: 10,
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "_id",
+          foreignField: "_id",
+          as: "donorDetails",
+        },
+      },
+      {
+        $unwind: {
+          path: "$donorDetails",
+          preserveNullAndEmptyArrays: true,
+        },
+      },
       {
         $project: {
           _id: 0,
-          donorId: "$donor._id",
-          firstName: "$donor.firstName",
-          lastName: "$donor.lastName",
-          email: "$donor.email",
-          totalAmount: 1,
+          donorId: "$_id",
+          firstName: "$donorDetails.firstName",
+          lastName: "$donorDetails.lastName",
+          donorEmail: "$donorDetails.email",
+          totalDonated: 1,
           donationCount: 1,
+          donorName: {
+            $concat: [{ $ifNull: ["$donorDetails.firstName", ""] }, " ", { $ifNull: ["$donorDetails.lastName", ""] }],
+          },
         },
       },
-    ];
+    ]);
 
-    const result = await Donation.aggregate(pipeline);
-    return res.status(200).json({ statusCode: true, statusText: "OK", message: "Top donors retrieved", data: result });
-  } catch (error) {
-    console.error("Error getting top donors for campaign:", error);
-    return res.status(500).json({ statusCode: false, statusText: "Internal Server Error", message: error.message });
+    return res.status(200).json({
+      statusCode: true,
+      statusText: "OK",
+      message: "Top donors fetched successfully",
+      data: topDonors,
+    });
+  } catch (err) {
+    console.error("getTopDonorsByCampaign error:", err);
+    return res.status(500).json({
+      statusCode: false,
+      statusText: "Internal Server Error",
+      message: err.message,
+    });
   }
 };
 

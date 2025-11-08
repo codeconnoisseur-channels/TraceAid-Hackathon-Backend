@@ -33,7 +33,7 @@ const milestoneSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["pending", "ready_for_release", "released", "completed"],
+      enum: ["pending", "on-going", "ready_for_release", "released", "completed"],
       default: "pending",
     },
     evidenceApprovalStatus: {

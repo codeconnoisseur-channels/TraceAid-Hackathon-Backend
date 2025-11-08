@@ -276,7 +276,6 @@ exports.createACampaign = async (req, res) => {
 
 exports.getAllActiveCampaigns = async (req, res) => {
   try {
-
     const allCampaigns = await campaignModel.find();
 
     if (allCampaigns.length === 0) {
@@ -311,7 +310,8 @@ exports.getAllActiveCampaigns = async (req, res) => {
   }
 };
 
-exports.getAllCampaigns = async (req, res) => {
+
+exports.getAllCampaignsByFundraiser = async (req, res) => {
   try {
     const userId = req.user.id;
 
@@ -334,49 +334,6 @@ exports.getAllCampaigns = async (req, res) => {
       statusCode: true,
       statusText: "OK",
       message: "Campaigns retrieved successfully",
-      data: {
-        all: allCampaigns,
-        active: activeCampaigns,
-        pending: pendingCampaigns,
-        completed: completedCampaigns,
-        counts: {
-          active: activeCampaigns.length,
-          pending: pendingCampaigns.length,
-          completed: completedCampaigns.length,
-        },
-      },
-    });
-  } catch (error) {
-    console.error("Error retrieving campaigns:", error);
-    res.status(500).json({
-      statusCode: false,
-      statusText: "Internal Server Error",
-      message: error.message,
-    });
-  }
-};
-
-exports.getAllCampaign = async (req, res) => {
-  try {
-    const allCampaigns = await campaignModel.find();
-
-    if (allCampaigns.length === 0) {
-      return res.status(404).json({
-        statusCode: false,
-        statusText: "Not Found",
-        message: "No campaigns in the database.",
-      });
-    }
-
-    const activeCampaigns = allCampaigns.filter((c) => c.status === "active");
-    const pendingCampaigns = allCampaigns.filter((c) => c.status === "pending");
-    const completedCampaigns = allCampaigns.filter((c) => c.status === "completed" || c.status === "ended");
-
-    res.status(200).json({
-      statusCode: true,
-      statusText: "OK",
-      message: "Campaigns retrieved successfully",
-      numberOfCampaigns: allCampaigns.length,
       data: {
         all: allCampaigns,
         active: activeCampaigns,

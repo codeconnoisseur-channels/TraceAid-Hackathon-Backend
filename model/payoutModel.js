@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const { v4: uuidv4 } = require("uuid");
 
 const payoutSchema = new mongoose.Schema(
   {
@@ -10,11 +11,16 @@ const payoutSchema = new mongoose.Schema(
     referenceID: {
       type: String,
       required: true,
-      // unique: true,
+      unique: true,
+      default: () => uuidv4(),
     },
     campaign: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Campaign",
+    },
+    milestone: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Milestone",
     },
     amount: {
       type: Number,
@@ -23,8 +29,8 @@ const payoutSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["processing", "paid", "failed", "reversed"],
-      default: "processing",
+      enum: ["pending", "processing", "paid", "failed", "reversed"],
+      default: "pending",
     },
     processedBy: {
       type: mongoose.Schema.Types.ObjectId,
