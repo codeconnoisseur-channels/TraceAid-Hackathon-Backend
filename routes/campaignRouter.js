@@ -2,10 +2,8 @@ const { isFundraiser, authenticate } = require("../middleware/auth");
 const uploads = require("../utils/multer");
 const {
   createACampaign,
-  getAllCampaigns,
   getOneCampaign,
   getCampaignWithMilestonesAndEvidence,
-  getAllCampaign,
   getACampaignAndMilestone,
   getAllActiveCampaigns,
   getAllCampaignsByFundraiser,
@@ -320,7 +318,7 @@ router.get("/campaign/get-all-campaigns", authenticate, isFundraiser, getAllCamp
  *               statusText: Internal Server Error
  *               message: Error retrieving active campaigns
  */
-router.get("/get-all-active-campaign", getAllActiveCampaigns);
+router.get("/campaign/get-all-active-campaign", getAllActiveCampaigns);
 
 /**
  * @swagger
