@@ -554,26 +554,19 @@ router.post("/forgot-password", forgotPasswordValidator, forgotPassword);
 
 /**
  * @swagger
- * /donor/api/v1/reset-password/{token}/{id}:
+ * /donor/api/v1/reset-password/{token}:
  *   put:
- *     summary: Reset user password
+ *     summary: Reset donor password
  *     tags: [Donor Authentication]
- *     description: Allows a user to reset their password using a valid reset token sent via email.
+ *     description: Allows a donor to reset their password using the reset token sent via email.
  *     parameters:
  *       - in: path
  *         name: token
  *         required: true
- *         description: JWT reset token sent to user's email
+ *         description: JWT reset token sent to donor's email
  *         schema:
  *           type: string
  *           example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
- *       - in: path
- *         name: id
- *         required: true
- *         description: User ID
- *         schema:
- *           type: string
- *           example: 673fbb63e2e8d2d6a93f4c5a
  *     requestBody:
  *       required: true
  *       content:
@@ -656,7 +649,7 @@ router.post("/forgot-password", forgotPasswordValidator, forgotPassword);
  *                   type: string
  *                   example: Unexpected error occurred while resetting password
  */
-router.put("/reset-password/:token/:id", resetPasswordValidator, resetPassword);
+router.put("/reset-password/:token", resetPasswordValidator, resetPassword);
 
 /**
  * @swagger
