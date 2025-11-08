@@ -392,7 +392,7 @@ exports.forgotPassword = async (req, res) => {
 
     await donorModel.findByIdAndUpdate(user._id, { token }, { new: true });
 
-    const link = `https://trace-aid.vercel.app/#/reset-password/${token}/${user._id}`;
+    const link = `https://trace-aid.vercel.app/#/reset-password/${token}`;
 
     const displayName = user.firstName;
 
