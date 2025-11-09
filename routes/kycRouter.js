@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 const { authenticate, isFundraiser } = require("../middleware/auth");
 const { kycValidator } = require("../validators/kycValidator");
-const { addKyc } = require("../controller/kycController");
+const { addKyc, getKycByFundraiser } = require("../controller/kycController");
 const uploads = require("../utils/multer");
 
 /**
@@ -214,7 +214,81 @@ router.post(
   addKyc
 );
 
-
+/**
+ * @swagger
+ * /kyc/api/v1/get-kyc-by-fundraiser:
+ *   get:
+ *     summary: Get KYC details for authenticated fundraiser
+ *     description: Returns the KYC information submitted by the currently authenticated fundraiser. Requires JWT authentication and fundraiser role.
+ *     tags:
+ *       - KYC
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: KYC data retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 statusCode:
+ *                   type: boolean
+ *                   example: true
+ *                 statusText:
+ *                   type: string
+ *                   example: OK
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     _id:
+ *                       type: string
+ *                       example: 64f8c1e2a1b2c3d4e5f6a7b8
+ *                     user:
+ *                       type: object
+ *                       properties:
+ *                         _id:
+ *                           type: string
+ *                           example: 64f8c1e2a1b2c3d4e5f6a7b8
+ *                         organizationName:
+ *                           type: string
+ *                           example: Trace Aid Foundation
+ *                     status:
+ *                       type: string
+ *                       example: pending
+ *       404:
+ *         description: KYC not found for fundraiser
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 statusCode:
+ *                   type: boolean
+ *                   example: false
+ *                 statusText:
+ *                   type: string
+ *                   example: Not Found
+ *                 message:
+ *                   type: string
+ *                   example: Fundraiser has not submitted KYC
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 statusCode:
+ *                   type: boolean
+ *                   example: false
+ *                 statusText:
+ *                   type: string
+ *                   example: Internal Server Error
+ *                 message:
+ *                   type: string
+ *                   example: An error occurred while retrieving KYC
+ */
+router.get("/get-kyc-by-fundraiser", authenticate, isFundraiser, getKycByFundraiser);
 
 module.exports = router;
- 

@@ -180,3 +180,28 @@ exports.addKyc = async (req, res) => {
     });
   }
 };
+
+exports.getKycByFundraiser = async (req, res)=>{
+try {
+  const userId = req.user._id;
+  const kyc = await kycModel.findOne({user: userId}).populate("user", "organizationName");
+  if(!kyc){
+    return res.status(404).json({
+      statusCode: false,
+      statusText: "Not Found",
+      message: "Fundraiser has not submitted KYC",
+    });
+  }
+  res.status(200).json({
+    statusCode: true,
+    statusText: "OK",
+    data: kyc,
+  }); 
+} catch (error) {
+  res.status(500).json({
+    statusCode: false,
+    statusText: "Internal Server Error",
+    message: error.message,
+  });
+}
+}
