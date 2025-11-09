@@ -465,8 +465,163 @@ router.post("/campaign/get-one", authenticate, isFundraiser, getOneCampaign);
  */
 router.get("/campaign/get-campaigns-milestones", authenticate, isFundraiser, getCampaignWithMilestonesAndEvidence);
 
+/**
+ * @swagger
+ * /campaign/api/v1/campaign/get-campaign-and-milestones/{id}:
+ *   get:
+ *     summary: Retrieve a specific campaign and its milestones
+ *     description: |
+ *       Fetches detailed information about a single campaign and all milestones associated with it.
+ *       This endpoint is useful for viewing the progress, goals, and updates within a campaign.
+ *     tags:
+ *       - Campaign - Public Access
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         description: Unique ID of the campaign to retrieve
+ *         schema:
+ *           type: string
+ *           example: "671fc90fa2b1a4c9e84b91d2"
+ *     responses:
+ *       200:
+ *         description: Successfully retrieved campaign and its milestones
+ *         content:
+ *           application/json:
+ *             example:
+ *               statusCode: true
+ *               statusText: "OK"
+ *               message: "Campaign and its milestones retrieved successfully"
+ *               data:
+ *                 campaign:
+ *                   _id: "671fc90fa2b1a4c9e84b91d2"
+ *                   title: "Help Build a Tech Hub for Underprivileged Youths"
+ *                   description: "A campaign to establish a learning space for young coders."
+ *                   targetAmount: 5000000
+ *                   amountRaised: 1200000
+ *                   fundraiser: "671fae58e4b73c74b49f8a5a"
+ *                   startDate: "2025-10-01T00:00:00.000Z"
+ *                   endDate: "2025-12-01T00:00:00.000Z"
+ *                   status: "active"
+ *                   createdAt: "2025-10-01T10:00:00.000Z"
+ *                   updatedAt: "2025-10-25T10:00:00.000Z"
+ *                 milestones:
+ *                   - _id: "67225b2cf7a5d3efb908c1e4"
+ *                     campaign: "671fc90fa2b1a4c9e84b91d2"
+ *                     title: "Purchase Laptops"
+ *                     description: "Buy 20 laptops for the coding program"
+ *                     amount: 2000000
+ *                     status: "in progress"
+ *                     createdAt: "2025-10-05T08:12:00.000Z"
+ *                   - _id: "67225b4ef7a5d3efb908c1e5"
+ *                     campaign: "671fc90fa2b1a4c9e84b91d2"
+ *                     title: "Set Up Learning Center"
+ *                     description: "Prepare and equip the physical space"
+ *                     amount: 1500000
+ *                     status: "pending"
+ *                     createdAt: "2025-10-10T08:12:00.000Z"
+ *       404:
+ *         description: Campaign not found
+ *         content:
+ *           application/json:
+ *             example:
+ *               statusCode: false
+ *               statusText: "Not Found"
+ *               message: "Campaign not found."
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             example:
+ *               statusCode: false
+ *               statusText: "Internal Server Error"
+ *               message: "Error retrieving campaign data"
+ */
 router.get("/campaign/get-campaign-and-milestones/:id", getACampaignAndMilestone);
 
+/**
+ * @swagger
+ * /campaign/api/v1/get-all-campaign-and-milestone-of-fundraiser:
+ *   get:
+ *     summary: Retrieve all campaigns and milestones of the authenticated fundraiser
+ *     description: |
+ *       Returns all campaigns created by the logged-in fundraiser, along with their associated milestones.
+ *       This endpoint requires fundraiser authentication.
+ *     tags:
+ *       - Campaign - Fundraiser Access
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Successfully retrieved all campaigns and their milestones
+ *         content:
+ *           application/json:
+ *             example:
+ *               statusCode: true
+ *               statusText: "OK"
+ *               message: "Campaigns and milestones retrieved successfully"
+ *               data:
+ *                 - _id: "671fc90fa2b1a4c9e84b91d2"
+ *                   title: "Build a Coding Hub for Youths"
+ *                   description: "Setting up a hub for young developers."
+ *                   targetAmount: 5000000
+ *                   amountRaised: 1800000
+ *                   status: "active"
+ *                   milestones:
+ *                     - _id: "67225b2cf7a5d3efb908c1e4"
+ *                       campaign: "671fc90fa2b1a4c9e84b91d2"
+ *                       title: "Purchase Equipment"
+ *                       description: "Buy laptops and routers"
+ *                       amount: 2000000
+ *                       status: "completed"
+ *                       createdAt: "2025-10-05T08:12:00.000Z"
+ *                     - _id: "67225b4ef7a5d3efb908c1e5"
+ *                       campaign: "671fc90fa2b1a4c9e84b91d2"
+ *                       title: "Set Up Hub"
+ *                       description: "Prepare workspace for coding sessions"
+ *                       amount: 1500000
+ *                       status: "pending"
+ *                       createdAt: "2025-10-10T08:12:00.000Z"
+ *                 - _id: "671fd021e4b73c74b49f8b91"
+ *                   title: "Empower Rural Girls with Tech Skills"
+ *                   description: "A campaign to train 100 girls in basic programming."
+ *                   targetAmount: 3000000
+ *                   amountRaised: 1200000
+ *                   status: "active"
+ *                   milestones:
+ *                     - _id: "67227110a7a5d3efb908c2f9"
+ *                       title: "Recruit Participants"
+ *                       amount: 500000
+ *                       status: "completed"
+ *                     - _id: "6722712fa7a5d3efb908c2fa"
+ *                       title: "Purchase Learning Materials"
+ *                       amount: 700000
+ *                       status: "in progress"
+ *       404:
+ *         description: No campaigns found for the fundraiser
+ *         content:
+ *           application/json:
+ *             example:
+ *               statusCode: false
+ *               statusText: "Not Found"
+ *               message: "No campaigns found for the specified fundraiser"
+ *       401:
+ *         description: Unauthorized — Fundraiser not authenticated
+ *         content:
+ *           application/json:
+ *             example:
+ *               statusCode: false
+ *               statusText: "Unauthorized"
+ *               message: "Authentication required"
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             example:
+ *               statusCode: false
+ *               statusText: "Internal Server Error"
+ *               message: "Error retrieving campaign and milestone data"
+ */
 router.get("/get-all-campaign-and-milestone-of-fundraiser", authenticate, isFundraiser, getCampaignAndMilestoneOfAFundraiser);
 
 module.exports = router;
