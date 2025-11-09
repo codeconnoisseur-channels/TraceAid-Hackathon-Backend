@@ -2335,9 +2335,180 @@ router.get("/campaigns-with-milestones-and-evidence", protectAdmin, restrictAdmi
  */
 router.get("/fundraiser-campaigns/:id", protectAdmin, restrictAdmin, getAllCampaignByFundraiser);
 
-
+/**
+ * @swagger
+ * /admin/api/v1/get-all-campaign-and-milestones:
+ *   get:
+ *     summary: Retrieve all campaigns and their associated milestones
+ *     description: |
+ *       This endpoint allows **admins** to fetch all campaigns along with their milestones.
+ *       Each campaign record includes its milestone details in an embedded array.
+ *       It is useful for administrative overview, analytics, and campaign progress tracking.
+ *     tags:
+ *       - Admin - Campaign Management
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Campaigns with their milestones retrieved successfully
+ *         content:
+ *           application/json:
+ *             example:
+ *               statusCode: true
+ *               statusText: "OK"
+ *               data:
+ *                 - _id: "6720d6b8ab4d5c4fddaf91b1"
+ *                   campaignTitle: "Support Free Medical Outreach in Lagos"
+ *                   targetAmount: 3000000
+ *                   amountRaised: 1800000
+ *                   category: "Health"
+ *                   status: "active"
+ *                   fundraiser:
+ *                     _id: "671fae58e4b73c74b49f8a5a"
+ *                     firstName: "Amaka"
+ *                     lastName: "Okoro"
+ *                     email: "amaka.okoro@example.com"
+ *                   createdAt: "2025-09-15T08:40:00.000Z"
+ *                   milestones:
+ *                     - _id: "6720d8b2ab4d5c4fddaf91c1"
+ *                       title: "Purchase medical supplies"
+ *                       amount: 1000000
+ *                       status: "completed"
+ *                       evidence: ["https://cloudinary.com/evidence/123"]
+ *                     - _id: "6720d8b2ab4d5c4fddaf91c2"
+ *                       title: "Hire medical professionals"
+ *                       amount: 2000000
+ *                       status: "pending"
+ *                       evidence: []
+ *       404:
+ *         description: No campaigns found
+ *         content:
+ *           application/json:
+ *             example:
+ *               statusCode: false
+ *               statusText: "Not Found"
+ *               message: "No campaigns found"
+ *       401:
+ *         description: Unauthorized — Missing or invalid admin token
+ *         content:
+ *           application/json:
+ *             example:
+ *               statusCode: false
+ *               statusText: "Unauthorized"
+ *               message: "Access denied. Please provide a valid token."
+ *       403:
+ *         description: Forbidden — Admin privileges required
+ *         content:
+ *           application/json:
+ *             example:
+ *               statusCode: false
+ *               statusText: "Forbidden"
+ *               message: "Access denied. Admin privileges required."
+ *       500:
+ *         description: Internal server error while fetching campaigns and milestones
+ *         content:
+ *           application/json:
+ *             example:
+ *               statusCode: false
+ *               statusText: "Internal Server Error"
+ *               message: "An unexpected error occurred while fetching campaigns."
+ */
 router.get("/get-all-campaign-and-milestones", protectAdmin, restrictAdmin, getAllCampaignAndItsMilestone);
 
+/**
+ * @swagger
+ * /admin/api/v1/get-all-campaign-and-milestone-of-fundraiser/{id}:
+ *   get:
+ *     summary: Retrieve all campaigns and milestones for a specific fundraiser
+ *     description: |
+ *       This endpoint allows **admins** to fetch all campaigns created by a specific fundraiser, 
+ *       along with each campaign's milestones.  
+ *       Useful for monitoring fundraiser performance and verifying milestone progress.
+ *     tags:
+ *       - Admin - Campaign Management
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         description: The unique ID of the fundraiser
+ *         schema:
+ *           type: string
+ *           example: "671fae58e4b73c74b49f8a5a"
+ *     responses:
+ *       200:
+ *         description: Campaigns and milestones for the specified fundraiser retrieved successfully
+ *         content:
+ *           application/json:
+ *             example:
+ *               statusCode: true
+ *               statusText: "OK"
+ *               data:
+ *                 - _id: "6720d6b8ab4d5c4fddaf91b1"
+ *                   campaignTitle: "Help Rural Women Access Clean Water"
+ *                   targetAmount: 2500000
+ *                   amountRaised: 1900000
+ *                   category: "Community"
+ *                   status: "active"
+ *                   fundraiser:
+ *                     _id: "671fae58e4b73c74b49f8a5a"
+ *                     firstName: "Ngozi"
+ *                     lastName: "Uche"
+ *                     email: "ngozi.uche@example.com"
+ *                   createdAt: "2025-09-12T10:00:00.000Z"
+ *                   milestones:
+ *                     - _id: "6720d8b2ab4d5c4fddaf91c9"
+ *                       title: "Purchase water tanks"
+ *                       amount: 1000000
+ *                       status: "completed"
+ *                       evidence: ["https://cloudinary.com/evidence/xyz"]
+ *                     - _id: "6720d8b2ab4d5c4fddaf91ca"
+ *                       title: "Install borehole systems"
+ *                       amount: 1500000
+ *                       status: "in-progress"
+ *                       evidence: []
+ *       404:
+ *         description: No campaigns found for the specified fundraiser
+ *         content:
+ *           application/json:
+ *             example:
+ *               statusCode: false
+ *               statusText: "Not Found"
+ *               message: "No campaigns found for the specified fundraiser"
+ *       400:
+ *         description: Invalid or malformed fundraiser ID
+ *         content:
+ *           application/json:
+ *             example:
+ *               statusCode: false
+ *               statusText: "Bad Request"
+ *               message: "Invalid fundraiser ID format"
+ *       401:
+ *         description: Unauthorized — Missing or invalid admin token
+ *         content:
+ *           application/json:
+ *             example:
+ *               statusCode: false
+ *               statusText: "Unauthorized"
+ *               message: "Access denied. Please provide a valid token."
+ *       403:
+ *         description: Forbidden — Admin privileges required
+ *         content:
+ *           application/json:
+ *             example:
+ *               statusCode: false
+ *               statusText: "Forbidden"
+ *               message: "Access denied. Admin privileges required."
+ *       500:
+ *         description: Internal server error while fetching campaigns and milestones
+ *         content:
+ *           application/json:
+ *             example:
+ *               statusCode: false
+ *               statusText: "Internal Server Error"
+ *               message: "An unexpected error occurred while fetching fundraiser campaigns."
+ */
 router.get("/get-all-campaign-and-milestone-of-fundraiser/:id", protectAdmin, restrictAdmin, getAllCampaignAndMilestoneOfAFundraiser);
 
 // Admin wallet routes
@@ -2570,6 +2741,67 @@ router.post("/wallet/payout", protectAdmin, restrictAdmin, createPayoutByAdmin);
  */
 router.get("/wallet/:fundraiserId/transactions", protectAdmin, restrictAdmin, listTransactions);
 
+/**
+ * @swagger
+ * /admin/api/v1/get-all-payout:
+ *   get:
+ *     summary: Retrieve all payout requests
+ *     description: |
+ *       This endpoint allows **admins** to fetch all payout requests made by fundraisers.  
+ *       Each payout record includes the fundraiser details, related campaign, payout amount, and status.
+ *     tags:
+ *       - Admin - Payout Management
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: All payout requests retrieved successfully
+ *         content:
+ *           application/json:
+ *             example:
+ *               statusCode: true
+ *               statusText: "OK"
+ *               message: "All payouts retrieved successfully"
+ *               data:
+ *                 - _id: "6721a4db82b4e8b239b93b1f"
+ *                   fundraiser:
+ *                     _id: "671fae58e4b73c74b49f8a5a"
+ *                     name: "Tunde Bello"
+ *                     email: "tunde.bello@example.com"
+ *                   campaign:
+ *                     _id: "6721a3e782b4e8b239b93a7d"
+ *                     title: "Support Education for Disadvantaged Children"
+ *                   amountRequested: 500000
+ *                   amountApproved: 500000
+ *                   status: "approved"
+ *                   transactionReference: "TXN12345XYZ"
+ *                   createdAt: "2025-10-15T09:12:00.000Z"
+ *                   updatedAt: "2025-10-15T12:25:00.000Z"
+ *       401:
+ *         description: Unauthorized — Missing or invalid admin token
+ *         content:
+ *           application/json:
+ *             example:
+ *               statusCode: false
+ *               statusText: "Unauthorized"
+ *               message: "Access denied. Please provide a valid token."
+ *       403:
+ *         description: Forbidden — Admin privileges required
+ *         content:
+ *           application/json:
+ *             example:
+ *               statusCode: false
+ *               statusText: "Forbidden"
+ *               message: "Access denied. Admin privileges required."
+ *       500:
+ *         description: Internal Server Error while fetching payouts
+ *         content:
+ *           application/json:
+ *             example:
+ *               statusCode: false
+ *               statusText: "Internal Server Error"
+ *               message: "Error fetching payouts: Cannot read properties of undefined"
+ */
 router.get("/get-all-payout", protectAdmin, restrictAdmin, getAllPayouts)
 
 module.exports = router;

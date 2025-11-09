@@ -968,9 +968,131 @@ router.put(
   updateProfile
 );
 
-
+/**
+ * @swagger
+ * /fundraiser/api/v1/campaigns/activate/{campaignId}:
+ *   patch:
+ *     summary: Activate an approved campaign
+ *     description: |
+ *       Allows an authenticated fundraiser to activate one of their approved campaigns, making it live and visible to donors.
+ *       The campaign must already have a status of **"approved"** before it can be activated.
+ *     tags:
+ *       - Campaign - Fundraiser Access
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: campaignId
+ *         in: path
+ *         required: true
+ *         description: The unique ID of the campaign to activate.
+ *         schema:
+ *           type: string
+ *           example: "672cbbdfed7e7e18d92e3a25"
+ *     responses:
+ *       200:
+ *         description: Campaign successfully activated
+ *         content:
+ *           application/json:
+ *             example:
+ *               status: true
+ *               message: "Your campaign is now live!"
+ *               data:
+ *                 _id: "672cbbdfed7e7e18d92e3a25"
+ *                 title: "Build a Tech Hub for Youths"
+ *                 description: "Empowering underprivileged youths with coding resources."
+ *                 targetAmount: 5000000
+ *                 amountRaised: 1800000
+ *                 status: "active"
+ *                 fundraiser: "671f9b90d9b8e124c7c52f9a"
+ *                 createdAt: "2025-10-15T09:31:22.000Z"
+ *                 updatedAt: "2025-10-29T12:45:00.000Z"
+ *       400:
+ *         description: Campaign not eligible for activation
+ *         content:
+ *           application/json:
+ *             example:
+ *               status: false
+ *               message: "Only approved campaigns can be activated"
+ *       404:
+ *         description: Fundraiser or campaign not found
+ *         content:
+ *           application/json:
+ *             examples:
+ *               fundraiserNotFound:
+ *                 summary: Fundraiser not found
+ *                 value:
+ *                   status: false
+ *                   message: "Fundraiser account not found"
+ *               campaignNotFound:
+ *                 summary: Campaign not found
+ *                 value:
+ *                   status: false
+ *                   message: "Campaign not found"
+ *       401:
+ *         description: Unauthorized — fundraiser not logged in
+ *         content:
+ *           application/json:
+ *             example:
+ *               status: false
+ *               message: "Authentication required"
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             example:
+ *               status: false
+ *               message: "Error activating campaign"
+ */
 router.patch("/campaigns/activate/:campaignId", authenticate, isFundraiser, fundraiserActivateCampaign)
 
+/**
+ * @swagger
+ * /fundraiser/api/v1/user/{id}:
+ *   get:
+ *     summary: Get a fundraiser’s public profile
+ *     description: |
+ *       Retrieves basic information about a specific fundraiser by their unique ID.
+ *       The response excludes sensitive fields such as password, OTP, token, and account status.
+ *     tags:
+ *       - Fundraiser - Profile
+ *     parameters:
+ *       - name: id
+ *         in: path
+ *         required: true
+ *         description: The unique ID of the fundraiser to retrieve.
+ *         schema:
+ *           type: string
+ *           example: "671f9b90d9b8e124c7c52f9a"
+ *     responses:
+ *       200:
+ *         description: Fundraiser details retrieved successfully
+ *         content:
+ *           application/json:
+ *             example:
+ *               statusCode: true
+ *               statusText: "OK"
+ *               data:
+ *                 _id: "671f9b90d9b8e124c7c52f9a"
+ *                 email: "hopefoundation@gmail.com"
+ *                 role: "fundraiser"
+ *                 organizationName: "Hope Foundation"
+ *       404:
+ *         description: Fundraiser not found
+ *         content:
+ *           application/json:
+ *             example:
+ *               statusCode: false
+ *               statusText: "Not Found"
+ *               message: "Fundraiser not found"
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             example:
+ *               statusCode: false
+ *               statusText: "Internal Server Error"
+ *               message: "Error fetching fundraiser details"
+ */
 router.get("/user/:id", getOne)
 
 /**
