@@ -8,6 +8,7 @@ const {
   getAllActiveCampaigns,
   getAllCampaignsByFundraiser,
   getCampaignAndMilestoneOfAFundraiser,
+  getAllCampaignsByAFundraiser,
 } = require("../controller/campaignController");
 
 const router = require("express").Router();
@@ -623,5 +624,141 @@ router.get("/campaign/get-campaign-and-milestones/:id", getACampaignAndMilestone
  *               message: "Error retrieving campaign and milestone data"
  */
 router.get("/get-all-campaign-and-milestone-of-fundraiser", authenticate, isFundraiser, getCampaignAndMilestoneOfAFundraiser);
+
+
+/**
+ * @swagger
+ * /fundraiser/api/v1/get-all-campaign-and-milestones-of-a-fundraiser:
+ *   get:
+ *     summary: Get all campaigns and milestones of a fundraiser
+ *     description: Returns all campaigns created by the authenticated fundraiser, along with milestone details and status flags.
+ *     tags:
+ *       - Campaign - Fundraiser Access
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Campaigns and milestones retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 statusCode:
+ *                   type: boolean
+ *                   example: true
+ *                 statusText:
+ *                   type: string
+ *                   example: OK
+ *                 message:
+ *                   type: string
+ *                   example: Campaigns retrieved successfully
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     all:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           _id:
+ *                             type: string
+ *                           campaignTitle:
+ *                             type: string
+ *                           raisedAmount:
+ *                             type: number
+ *                           targetAmount:
+ *                             type: number
+ *                           status:
+ *                             type: string
+ *                           summary:
+ *                             type: object
+ *                             properties:
+ *                               totalMilestones:
+ *                                 type: integer
+ *                               completedMilestones:
+ *                                 type: integer
+ *                               remainingMilestones:
+ *                                 type: integer
+ *                               allMilestonesApproved:
+ *                                 type: boolean
+ *                           milestones:
+ *                             type: array
+ *                             items:
+ *                               type: object
+ *                               properties:
+ *                                 _id:
+ *                                   type: string
+ *                                 title:
+ *                                   type: string
+ *                                 targetAmount:
+ *                                   type: number
+ *                                 sequence:
+ *                                   type: integer
+ *                                 payoutStatus:
+ *                                   type: string
+ *                                 evidenceStatus:
+ *                                   type: string
+ *                                 canRequestWithdrawal:
+ *                                   type: boolean
+ *                                 canUploadEvidence:
+ *                                   type: boolean
+ *                                 milestoneStatus:
+ *                                   type: string
+ *                     active:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                     pending:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                     completed:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                     counts:
+ *                       type: object
+ *                       properties:
+ *                         active:
+ *                           type: integer
+ *                         pending:
+ *                           type: integer
+ *                         completed:
+ *                           type: integer
+ *       404:
+ *         description: No campaigns found for this fundraiser
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 statusCode:
+ *                   type: boolean
+ *                   example: false
+ *                 statusText:
+ *                   type: string
+ *                   example: Not Found
+ *                 message:
+ *                   type: string
+ *                   example: No campaigns found for this fundraiser.
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 statusCode:
+ *                   type: boolean
+ *                   example: false
+ *                 statusText:
+ *                   type: string
+ *                   example: Internal Server Error
+ *                 message:
+ *                   type: string
+ *                   example: An error occurred while retrieving campaigns
+ */
+router.get("/get-all-campaign-and milestones-of-a-fundraiser", authenticate, isFundraiser, getAllCampaignsByAFundraiser)
 
 module.exports = router;
