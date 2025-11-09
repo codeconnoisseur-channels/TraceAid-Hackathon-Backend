@@ -192,7 +192,7 @@ exports.changePasswordValidator = (req, res, next) => {
     }),
     newPassword: joi
       .string()
-      .pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%_*#?&-])[A-Za-z\d@$!%_*#?&]{8, }$/)
+      .pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%_*#?&-])[A-Za-z\d@$!%_*#?&-]{8,}$/)
       .required()
       .messages({
         "string.empty": "New password is required",
