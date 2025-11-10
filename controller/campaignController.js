@@ -10,6 +10,7 @@ const path = require("path");
 const { campaignAndMilestonesUnderReview } = require("../emailTemplate/emailVerification");
 const { sendEmail } = require("../utils/brevo");
 const payoutModel = require("../model/payoutModel");
+const mongoose = require("mongoose");
 
 exports.createACampaign = async (req, res) => {
   const fundraiserId = req.user.id || req.user._id;
@@ -360,7 +361,6 @@ exports.getAllCampaignsByAFundraiser = async (req, res) => {
   try {
     const userId = req.user.id;
 
-    // 1️⃣ Get all campaigns belonging to this fundraiser
     const allCampaigns = await campaignModel.find({ fundraiser: userId }).sort({ createdAt: -1 });
 
     if (allCampaigns.length === 0) {
@@ -371,120 +371,97 @@ exports.getAllCampaignsByAFundraiser = async (req, res) => {
       });
     }
 
-    // 2️⃣ Prepare final campaign list
     const processedCampaigns = [];
 
     for (const campaign of allCampaigns) {
       const now = new Date();
-      // Calculate endDate using createdAt and durationDays
-      const createdAt = campaign.createdAt ? new Date(campaign.createdAt) : new Date();
-      // 3️⃣ Check if campaign should be completed automatically
-      const hasReachedTarget = campaign.raisedAmount >= campaign.totalCampaignGoalAmount;
+      const endDate = new Date(campaign.createdAt);
+      endDate.setDate(endDate.getDate() + (campaign.durationDays || 30));
+
+      const hasReachedTarget = campaign.amountRaised >= campaign.totalCampaignGoalAmount;
       const hasExpired = now >= endDate;
-      const shouldBeCompleted = hasReachedTarget || hasExpired;
 
-      // Collect campaigns that need status update for bulk operation
-      if (shouldBeCompleted && campaign.status !== "completed") {
+      if ((hasReachedTarget || hasExpired) && campaign.status === "active") {
         campaign.status = "completed";
-        if (!global.campaignsToUpdate) global.campaignsToUpdate = [];
-        global.campaignsToUpdate.push(campaign._id);
+        await campaign.save();
       }
-      await campaign.save();
-    }
 
-    // 4️⃣ Fetch milestones for this campaign
-    const milestones = await milestoneModel.find({ campaign: campaign._id }).sort({ sequence: 1 });
+      const milestones = await milestoneModel.find({ campaign: campaign._id }).sort({ sequence: 1 });
+      const milestoneDetails = [];
 
-    const milestoneDetails = [];
-    // Helper function to determine milestone status and flags
-    async function getMilestoneStatus(campaign, milestones, i, payout, evidence) {
-      let canRequestWithdrawal = false;
-      let canUploadEvidence = false;
-      let milestoneStatus = "pending";
+      for (let i = 0; i < milestones.length; i++) {
+        const milestone = milestones[i];
+        const payout = await payoutModel.findOne({ milestone: milestone._id });
+        const evidence = await milestoneEvidenceModel.findOne({ milestone: milestone._id });
 
-      if (campaign.status === "completed") {
-        const isFirstMilestone = i === 0;
-        const prevMilestone = milestones[i - 1];
+        let canRequestWithdrawal = false;
+        let canUploadEvidence = false;
+        let milestoneStatus = "pending";
 
-        const prevApproved =
-          isFirstMilestone ||
-          (await milestoneEvidenceModel.findOne({
-            milestone: prevMilestone?._id,
-            status: "approved",
-          }));
+        if (campaign.status === "completed") {
+          const isFirstMilestone = i === 0;
+          const prevMilestone = milestones[i - 1];
+          const prevApproved = isFirstMilestone || (await milestoneEvidenceModel.findOne({ milestone: prevMilestone?._id, status: "approved" }));
 
-        if (prevApproved) {
-          if (!payout) {
-            canRequestWithdrawal = true;
-            milestoneStatus = "ready_for_request";
-          } else if (payout.status === "processing") {
-            milestoneStatus = "awaiting_disbursement";
-          } else if (payout.status === "paid" && !evidence) {
-            canUploadEvidence = true;
-            milestoneStatus = "awaiting_evidence";
-          } else if (payout.status === "paid" && evidence && evidence.status === "pending") {
-            milestoneStatus = "evidence_under_review";
-          } else if (payout.status === "paid" && evidence && evidence.status === "approved") {
-            milestoneStatus = "completed";
+          if (prevApproved) {
+            if (!payout) {
+              canRequestWithdrawal = true;
+              milestoneStatus = "ready_for_request";
+            } else if (payout.status === "processing") {
+              milestoneStatus = "awaiting_disbursement";
+            } else if (payout.status === "paid" && !evidence) {
+              canUploadEvidence = true;
+              milestoneStatus = "awaiting_evidence";
+            } else if (payout.status === "paid" && evidence?.status === "pending") {
+              milestoneStatus = "evidence_under_review";
+            } else if (payout.status === "paid" && evidence?.status === "approved") {
+              milestoneStatus = "completed";
+            }
           }
         }
+
+        milestoneDetails.push({
+          _id: milestone._id,
+          title: milestone.milestoneTitle,
+          targetAmount: milestone.targetAmount,
+          sequence: milestone.sequence,
+          payoutStatus: payout?.status || "none",
+          evidenceStatus: evidence?.status || "none",
+          canRequestWithdrawal,
+          canUploadEvidence,
+          milestoneStatus,
+        });
       }
 
-      return { canRequestWithdrawal, canUploadEvidence, milestoneStatus };
-    }
+      const summary = {
+        totalMilestones: milestones.length,
+        completedMilestones: milestoneDetails.filter((m) => m.milestoneStatus === "completed").length,
+        remainingMilestones: milestones.length - milestoneDetails.filter((m) => m.milestoneStatus === "completed").length,
+        allMilestonesApproved: milestoneDetails.every((m) => m.milestoneStatus === "completed"),
+      };
 
-    for (let i = 0; i < milestones.length; i++) {
-      const milestone = milestones[i];
-
-      // Check payout and evidence records
-      const payout = await payoutModel.findOne({ milestone: milestone._id });
-      const evidence = await milestoneEvidenceModel.findOne({ milestone: milestone._id });
-
-      // Use helper function for milestone status
-      const { canRequestWithdrawal, canUploadEvidence, milestoneStatus } = await getMilestoneStatus(campaign, milestones, i, payout, evidence);
-
-      // Add milestone info to the list
-      milestoneDetails.push({
-        _id: milestone._id,
-        title: milestone.milestoneTitle,
-        targetAmount: milestone.targetAmount,
-        sequence: milestone.sequence,
-        payoutStatus: payout ? payout.status : "none",
-        evidenceStatus: evidence ? evidence.status : "none",
-        canRequestWithdrawal,
-        canUploadEvidence,
-        milestoneStatus,
+      processedCampaigns.push({
+        _id: campaign._id,
+        campaignTitle: campaign.campaignTitle,
+        amountRaised: campaign.amountRaised,
+        totalCampaignGoalAmount: campaign.totalCampaignGoalAmount,
+        status: campaign.status,
+        createdAt: campaign.createdAt,
+        endDate: endDate,
+        durationDays: campaign.durationDays,
+        campaignCategory: campaign.campaignCategory,
+        campaignDescription: campaign.campaignDescription,
+        campaignCoverImageOrVideo: campaign.campaignCoverImageOrVideo,
+        donorCount: campaign.donorCount || 0,
+        summary,
+        milestones: milestoneDetails,
       });
     }
 
-    // 6️⃣ Build campaign summary info for frontend
-    const summary = {
-      totalMilestones: milestones.length,
-      completedMilestones: milestoneDetails.filter((m) => m.milestoneStatus === "completed").length,
-      remainingMilestones: milestoneDetails.filter((m) => m.milestoneStatus !== "completed").length,
-      allMilestonesApproved: milestoneDetails.every((m) => m.milestoneStatus === "completed"),
-    };
-
-    processedCampaigns.push({
-      _id: campaign._id,
-      campaignTitle: campaign.campaignTitle,
-      raisedAmount: campaign.raisedAmount,
-      targetAmount: campaign.targetAmount,
-      status: campaign.status,
-      summary,
-      milestones: milestoneDetails,
-    });
-
-    // 7️⃣ Separate campaigns by status for dashboard sections
     const activeCampaigns = processedCampaigns.filter((c) => c.status === "active");
     const pendingCampaigns = processedCampaigns.filter((c) => c.status === "pending");
-    // 8️⃣ Bulk update campaigns that need status change
-    if (global.campaignsToUpdate && global.campaignsToUpdate.length > 0) {
-      await campaignModel.updateMany({ _id: { $in: global.campaignsToUpdate } }, { $set: { status: "completed" } });
-      global.campaignsToUpdate = [];
-    }
+    const completedCampaigns = processedCampaigns.filter((c) => c.status === "completed");
 
-    // 9️⃣ Send final response
     return res.status(200).json({
       statusCode: true,
       statusText: "OK",
@@ -495,6 +472,7 @@ exports.getAllCampaignsByAFundraiser = async (req, res) => {
         pending: pendingCampaigns,
         completed: completedCampaigns,
         counts: {
+          total: processedCampaigns.length,
           active: activeCampaigns.length,
           pending: pendingCampaigns.length,
           completed: completedCampaigns.length,
@@ -640,6 +618,95 @@ exports.getCampaignAndMilestoneOfAFundraiser = async (req, res) => {
     });
   } catch (error) {
     console.error(error);
+    return res.status(500).json({
+      statusCode: false,
+      statusText: "Internal Server Error",
+      message: error.message,
+    });
+  }
+};
+
+
+exports.checkCampaignCompletion = async (req, res) => {
+  try {
+    const campaignId = req.params.id;
+
+    if (!mongoose.Types.ObjectId.isValid(campaignId)) {
+      return res.status(400).json({
+        statusCode: false,
+        statusText: "Bad Request",
+        message: "Invalid campaign ID",
+      });
+    }
+
+    const campaign = await campaignModel.findById(campaignId).lean();
+    if (!campaign) {
+      return res.status(404).json({
+        statusCode: false,
+        statusText: "Not Found",
+        message: "Campaign not found",
+      });
+    }
+
+    if (campaign.status === "pending") {
+      return res.status(400).json({
+        statusCode: false,
+        statusText: "Bad Request",
+        message:
+          "Campaign is still under review by admin. It must be active and completed before you can upload Milestone Evidence.",
+      });
+    }
+
+    if (campaign.status === "active") {
+      return res.status(400).json({
+        statusCode: false,
+        statusText: "Bad Request",
+        message:
+          "Campaign is not completed yet. Complete your campaign before uploading Milestone Evidence.",
+      });
+    }
+
+    if(campaign.status === "approved"){
+      return res.status(400).json({
+        statusCode: false,
+        statusText: "Bad Request",
+        message:
+          "Campaign is not active yet, it has to be active then completed before uploading Milestone Evidence.",
+      });
+    }
+
+    const now = new Date();
+    let endDate = campaign.endDate || null;
+
+    if (!endDate && campaign.createdAt && campaign.durationDays) {
+      endDate = new Date(campaign.createdAt);
+      endDate.setDate(endDate.getDate() + campaign.durationDays);
+    }
+
+    const reachedGoal =
+      (campaign.amountRaised || 0) >=
+      (campaign.totalCampaignGoalAmount || 0);
+
+    const expired = endDate ? now >= endDate : false;
+    const isCompleted =
+      campaign.status === "completed" || reachedGoal || expired;
+
+    return res.status(200).json({
+      statusCode: true,
+      statusText: "OK",
+      message: isCompleted
+        ? "Campaign is completed or expired."
+        : "Campaign is not yet completed.",
+      data: {
+        campaignId,
+        isCompleted,
+        reachedGoal,
+        expired,
+        campaignStatus: campaign.status,
+      },
+    });
+  } catch (error) {
+    console.error("checkCampaignCompletion error:", error);
     return res.status(500).json({
       statusCode: false,
       statusText: "Internal Server Error",

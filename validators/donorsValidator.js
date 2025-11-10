@@ -4,7 +4,7 @@ exports.registerValidator = (req, res, next) => {
   const schema = joi.object({
     firstName: joi
       .string()
-      .min(2)
+      .min(3)
       .trim()
       .required()
       .pattern(/^[A-Za-z\s]+$/)
@@ -17,7 +17,7 @@ exports.registerValidator = (req, res, next) => {
       }),
     lastName: joi
       .string()
-      .min(2)
+      .min(3)
       .trim()
       .required()
       .pattern(/^[A-Za-z\s]+$/)
@@ -192,7 +192,7 @@ exports.changePasswordValidator = (req, res, next) => {
     }),
     newPassword: joi
       .string()
-      .pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%_*#?&-])[A-Za-z\d@$!%_*#?&]{8, }$/)
+      .pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%_*#?&-])[A-Za-z\d@$!%_*#?&-]{8,}$/)
       .required()
       .messages({
         "string.empty": "New password is required",
@@ -219,7 +219,7 @@ exports.updateProfileValidator = (req, res, next) => {
   const schema = joi.object({
     firstName: joi
       .string()
-      .min(2)
+      .min(3)
       .trim()
       .required()
       .pattern(/^[A-Za-z\s]+$/)
@@ -231,7 +231,7 @@ exports.updateProfileValidator = (req, res, next) => {
       }),
     lastName: joi
       .string()
-      .min(2)
+      .min(3)
       .trim()
       .required()
       .pattern(/^[A-Za-z\s]+$/)

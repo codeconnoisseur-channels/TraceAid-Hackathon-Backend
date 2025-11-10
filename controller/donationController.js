@@ -14,14 +14,10 @@ const mongoose = require("mongoose");
 exports.makeDonation = async function (req, res) {
   try {
     // avoid destructuring to match your style
-    const donorId =
-      req.user && (req.user.id || req.user._id)
-        ? req.user._id || req.user.id
-        : null;
+    const donorId = req.user && (req.user.id || req.user._id) ? req.user._id || req.user.id : null;
     const campaignId = req.body.campaignId;
     const amountStr = req.body.amount;
-    const isAnonymous =
-      req.body.isAnonymous === "true" || req.body.isAnonymous === true;
+    const isAnonymous = req.body.isAnonymous === "true" || req.body.isAnonymous === true;
     const message = req.body.message || null;
 
     // if (!donorId) {
@@ -70,10 +66,7 @@ exports.makeDonation = async function (req, res) {
 
     const today = new Date();
     // Check if campaign is active AND if end date has not passed
-    if (
-      campaign.status !== "active" ||
-      (campaign.endDate && campaign.endDate < today)
-    ) {
+    if (campaign.status !== "active" || (campaign.endDate && campaign.endDate < today)) {
       const message =
         campaign.status !== "active"
           ? `Donations are not accepted. Campaign status is '${campaign.status}'.`
@@ -117,9 +110,7 @@ exports.makeDonation = async function (req, res) {
 
     await donation.save();
 
-    const donor = await Donor.findById(donorId).select(
-      "firstName lastName email"
-    );
+    const donor = await Donor.findById(donorId).select("firstName lastName email");
 
     // Use a frontend redirect URL, not the webhook URL
     const FRONTEND_REDIRECT_URL = process.env.PAYMENT_REDIRECT_URL;
@@ -132,11 +123,7 @@ exports.makeDonation = async function (req, res) {
         reference: donation.paymentReference,
         redirect_url: FRONTEND_REDIRECT_URL,
         customer: {
-          name: donor
-            ? `${donor.firstName || ""} ${donor.lastName || ""}`.trim()
-            : isAnonymous
-            ? "Anonymous Donor"
-            : "Unknown Donor",
+          name: donor ? `${donor.firstName || ""} ${donor.lastName || ""}`.trim() : isAnonymous ? "Anonymous Donor" : "Unknown Donor",
           email: donor?.email || "noemail@donor.com",
         },
         narration: `Donation for campaign: ${campaign.campaignTitle}`,
@@ -152,8 +139,7 @@ exports.makeDonation = async function (req, res) {
     return res.status(201).json({
       statusCode: true,
       statusText: "Created",
-      message:
-        "Donation initiated. Use the paymentReference or checkout_url to complete payment.",
+      message: "Donation initiated. Use the paymentReference or checkout_url to complete payment.",
       data: {
         donation: donation,
         paymentReference: paymentReference,
@@ -177,9 +163,7 @@ exports.verifyPaymentWebhook = async function (req, res) {
     console.log("Kora Webhook body (parsed):", req.body);
 
     // --- 1. Signature Verification ---
-    const signature =
-      req.headers["x-korapay-signature"] ||
-      req.headers["X-Korapay-Signature".toLowerCase()];
+    const signature = req.headers["x-korapay-signature"] || req.headers["X-Korapay-Signature".toLowerCase()];
 
     if (!signature || !KORA_SECRET_KEY) {
       return res.status(401).json({
@@ -275,10 +259,7 @@ exports.verifyPaymentWebhook = async function (req, res) {
         campaign.amountRaised = (campaign.amountRaised || 0) + donation.amount;
         campaign.donorCount = (campaign.donorCount || 0) + 1;
 
-        if (
-          campaign.amountRaised >= campaign.totalCampaignGoalAmount &&
-          campaign.status === "active"
-        ) {
+        if (campaign.amountRaised >= campaign.totalCampaignGoalAmount && campaign.status === "active") {
           campaign.status = "completed";
           campaign.isActive = false;
           campaign.endDate = new Date();
@@ -331,18 +312,15 @@ exports.verifyPaymentWebhook = async function (req, res) {
   }
 };
 
-// Admin/Fundraiser: get all donations for a campaign (successful only)
 exports.getAllDonationsForCampaign = async function (req, res) {
   try {
     const campaignId = req.params.id;
     if (!campaignId) {
-      return res
-        .status(400)
-        .json({
-          statusCode: false,
-          statusText: "Bad Request",
-          message: "campaign id is required",
-        });
+      return res.status(400).json({
+        statusCode: false,
+        statusText: "Bad Request",
+        message: "campaign id is required",
+      });
     }
     const donations = await Donation.find({
       campaign: campaignId,
@@ -350,49 +328,25 @@ exports.getAllDonationsForCampaign = async function (req, res) {
     })
       .populate("donor", "firstName lastName email")
       .sort({ createdAt: -1 });
-    return res
-      .status(200)
-      .json({
-        statusCode: true,
-        statusText: "OK",
-        message: "All donations retrieved",
-        data: donations,
-      });
+    return res.status(200).json({
+      statusCode: true,
+      statusText: "OK",
+      message: "All donations retrieved",
+      data: donations,
+    });
   } catch (error) {
     console.error("Error getting all donations for campaign:", error);
-    return res
-      .status(500)
-      .json({
-        statusCode: false,
-        statusText: "Internal Server Error",
-        message: error.message,
-      });
+    return res.status(500).json({
+      statusCode: false,
+      statusText: "Internal Server Error",
+      message: error.message,
+    });
   }
 };
 
 exports.getTopDonorsByCampaign = async (req, res) => {
   try {
     const campaignId = req.params.id;
-
-    const campaign = await Campaign.findById(campaignId);
-    if (!campaign || !campaign.isActive) {
-      return res.status(400).json({
-        statusCode: false,
-        statusText: "Bad Request",
-        message: "This campaign is not active or does not exist",
-      });
-    }
-
-    const donations = await Donation.find({
-      campaign: campaignId,
-      paymentStatus: "successful",
-      // isAnonymous: true,
-    })
-      .populate("donor", "name")
-      .sort({ createdAt: -1 })
-      .select("amount message isAnonymous donor createdAt");
-
-    console.log(" The Donations:", donations);
 
     if (!mongoose.Types.ObjectId.isValid(campaignId)) {
       return res.status(400).json({
@@ -402,7 +356,16 @@ exports.getTopDonorsByCampaign = async (req, res) => {
       });
     }
 
-    const topDonors = await Donation.aggregate([
+    const campaign = await Campaign.findById(campaignId);
+    if (!campaign || !campaign.isActive) {
+      return res.status(400).json({
+        statusCode: false,
+        statusText: "Bad Request",
+        message: "This campaign is not active or is completed",
+      });
+    }
+
+    let topDonors = await Donation.aggregate([
       {
         $match: {
           campaign: new mongoose.Types.ObjectId(campaignId),
@@ -423,35 +386,36 @@ exports.getTopDonorsByCampaign = async (req, res) => {
       {
         $limit: 10,
       },
-      {
-        $lookup: {
-          from: "users",
-          localField: "_id",
-          foreignField: "_id",
-          as: "donorDetails",
-        },
-      },
-      {
-        $unwind: {
-          path: "$donorDetails",
-          preserveNullAndEmptyArrays: true,
-        },
-      },
-      {
-        $project: {
-          _id: 0,
-          donorId: "$_id",
-          firstName: "$donorDetails.firstName",
-          lastName: "$donorDetails.lastName",
-          donorEmail: "$donorDetails.email",
-          totalDonated: 1,
-          donationCount: 1,
-          donorName: {
-            $concat: [{ $ifNull: ["$donorDetails.firstName", ""] }, " ", { $ifNull: ["$donorDetails.lastName", ""] }],
-          },
-        },
-      },
     ]);
+
+    const donorIds = topDonors.map((donor) => donor._id);
+
+    const DonorModel = mongoose.model("Donor");
+
+    const donorDetails = await DonorModel.find({
+      _id: { $in: donorIds },
+    }).select("firstName lastName");
+
+    const donorMap = donorDetails.reduce((map, donor) => {
+      map[donor._id.toString()] = donor;
+      return map;
+    }, {});
+
+    topDonors = topDonors.map((donor) => {
+      const details = donorMap[donor._id.toString()];
+
+      const firstName = details ? details.firstName : null;
+      const lastName = details ? details.lastName : null;
+
+      return {
+        donorId: donor._id,
+        totalDonated: donor.totalDonated,
+        donationCount: donor.donationCount,
+        firstName: firstName,
+        lastName: lastName,
+        donorName: details ? `${firstName || ""} ${lastName || ""}`.trim() : "Anonymous User",
+      };
+    });
 
     return res.status(200).json({
       statusCode: true,
@@ -480,15 +444,14 @@ exports.getDonationsByCampaign = async function (req, res) {
       });
     }
 
-    // Only return successful and non-anonymous donations for public viewing
     const donations = await Donation.find({
       campaign: campaignId,
       paymentStatus: "successful",
       isAnonymous: false,
     })
-      .populate("donor", "name") // Optionally populate donor name if needed
+      .populate("donor", "firstName lastName")
       .sort({ createdAt: -1 })
-      .select("amount message createdAt"); // Select minimal fields
+      .select("amount message createdAt");
 
     return res.status(200).json({
       statusCode: true,
@@ -517,9 +480,12 @@ exports.getDonationsByUser = async function (req, res) {
       });
     }
 
-    const donations = await Donation.find({ donor: donorId }).sort({
-      createdAt: -1,
-    });
+    const donations = await Donation.find({ donor: donorId })
+      .sort({
+        createdAt: -1,
+      })
+      .populate({ path: "campaign", select: "campaignTitle campaignDescription totalCampaignGoalAmount amountRaised" })
+      .populate("donor", "firstName lastName");
 
     return res.status(200).json({
       statusCode: true,
