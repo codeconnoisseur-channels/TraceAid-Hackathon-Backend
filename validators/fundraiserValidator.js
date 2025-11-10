@@ -232,7 +232,7 @@ exports.organizationUpdateProfileValidator = (req, res, next) => {
   const schema = joi.object({
     organizationName: joi
       .string()
-      .min(2)
+      .min(3)
       .trim()
       .required()
       .pattern(/^[A-Za-z\s]+$/)
