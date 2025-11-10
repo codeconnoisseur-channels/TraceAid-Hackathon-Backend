@@ -4,7 +4,7 @@ exports.registerValidator = (req, res, next) => {
   const schema = joi.object({
     firstName: joi
       .string()
-      .min(2)
+      .min(3)
       .trim()
       .required()
       .pattern(/^[A-Za-z\s]+$/)
@@ -17,7 +17,7 @@ exports.registerValidator = (req, res, next) => {
       }),
     lastName: joi
       .string()
-      .min(2)
+      .min(3)
       .trim()
       .required()
       .pattern(/^[A-Za-z\s]+$/)
@@ -219,7 +219,7 @@ exports.updateProfileValidator = (req, res, next) => {
   const schema = joi.object({
     firstName: joi
       .string()
-      .min(2)
+      .min(3)
       .trim()
       .required()
       .pattern(/^[A-Za-z\s]+$/)
@@ -231,7 +231,7 @@ exports.updateProfileValidator = (req, res, next) => {
       }),
     lastName: joi
       .string()
-      .min(2)
+      .min(3)
       .trim()
       .required()
       .pattern(/^[A-Za-z\s]+$/)

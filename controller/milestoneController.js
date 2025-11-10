@@ -5,6 +5,9 @@ const FundraiserWallet = require("../model/fundraiserWallet"); // New Import
 const cloudinary = require("../config/cloudinary");
 const fs = require("fs");
 const path = require("path");
+const Payout = require("../model/payoutModel");
+const { v4: uuidv4 } = require("uuid");
+const mongoose = require("mongoose");
 
 exports.addMilestone = (req, res) => {
   try {
@@ -88,24 +91,38 @@ exports.uploadMilestone = async (req, res) => {
   }
 };
 
-exports.uploadMilestoneEvidence = async (req, res) => {
-  const fundraiserId = req.user?.id || req.user?._id;
-  const milestoneId  = req.params.id
-  let { description, fileMetadata } = req.body;
-  const files = req.files || [];
+const cleanupFiles = (filesArr) =>
+  (filesArr || []).forEach((f) => {
+    try {
+      if (f && f.path) fs.unlinkSync(f.path);
+    } catch (e) {
+      console.warn(`File unlink error: ${e?.message}`);
+    }
+  });
 
-  // safe cleanup helper
-  const cleanupFiles = (filesArr) => {
-    (filesArr || []).forEach((f) => {
-      try {
-        if (f && f.path) fs.unlinkSync(f.path);
-      } catch (e) {
-        console.warn("Cleanup file error", e?.message);
-      }
-    });
-  };
+exports.uploadMilestoneEvidenceForMilestone = async (req, res) => {
+  const fundraiserId = req.user?.id || req.user?._id;
+  const milestoneId = req.params.id;
+  const files = req.files || [];
+  const { description } = req.body;
 
   try {
+    if (!fundraiserId) {
+      cleanupFiles(files);
+      return res.status(401).json({
+        statusCode: false,
+        statusText: "Unauthorized",
+        message: "Missing authenticated user",
+      });
+    }
+    if (!mongoose.Types.ObjectId.isValid(milestoneId)) {
+      cleanupFiles(files);
+      return res.status(400).json({
+        statusCode: false,
+        statusText: "Bad Request",
+        message: "Invalid milestone id",
+      });
+    }
     if (!description) {
       cleanupFiles(files);
       return res.status(400).json({
@@ -114,105 +131,100 @@ exports.uploadMilestoneEvidence = async (req, res) => {
         message: "Description is required.",
       });
     }
-
-    if (!milestoneId) {
-      cleanupFiles(files);
-      return res.status(400).json({
-        statusCode: false,
-        statusText: "Bad Request",
-        message: "Milestone id required",
-      });
-    }
-
     if (files.length < 5 || files.length > 10) {
       cleanupFiles(files);
       return res.status(400).json({
         statusCode: false,
         statusText: "Bad Request",
-        message: `Exactly 5 to 10 evidence files are required. Received ${files.length}.`,
+        message: `Exactly 5 to 10 evidence files required. Got ${files.length}.`,
       });
     }
 
-    // load milestone & campaign
     const milestone = await Milestone.findById(milestoneId);
     if (!milestone) {
       cleanupFiles(files);
       return res.status(404).json({
         statusCode: false,
         statusText: "Not Found",
-        message: "Milestone not found.",
+        message: "Milestone not found",
       });
     }
 
-    // Make sure the authenticated fundraiser owns the campaign for security
     const campaign = await Campaign.findById(milestone.campaign);
     if (!campaign || String(campaign.fundraiser) !== String(fundraiserId)) {
       cleanupFiles(files);
       return res.status(403).json({
         statusCode: false,
         statusText: "Forbidden",
-        message: "You are not allowed to upload evidence for this milestone.",
+        message: "You cannot upload evidence for a milestone of another fundraiser.",
       });
     }
 
-    // Allowed condition:
-    // Evidence should be submitted when milestone.evidenceApprovalStatus === 'required'
-    // OR milestone.status === 'ready_for_release' (depending on your flow)
-    if (!(milestone.evidenceApprovalStatus === "submitted" || milestone.status === "approved")) {
-      cleanupFiles(files);
-      return res.status(403).json({
-        statusCode: false,
-        statusText: "Forbidden",
-        message: `Evidence cannot be submitted for this milestone yet.
-         Either previous milestone not released or evidence already submitted/under review.`,
-      });
-    }
-
-    // parse fileMetadata (must be an array of objects with lat/lng). If absent fail.
-    let metadata;
-    try {
-      metadata = fileMetadata ? JSON.parse(fileMetadata) : null;
-    } catch (e) {
-      metadata = null;
-    }
-
-    if (!Array.isArray(metadata) || metadata.length !== files.length) {
+    const isCampaignCompleted = campaign.status === "completed" || campaign.amountRaised >= campaign.totalCampaignGoalAmount;
+    if (!isCampaignCompleted) {
       cleanupFiles(files);
       return res.status(400).json({
         statusCode: false,
         statusText: "Bad Request",
-        message: "Invalid or mismatched fileMetadata. Provide JSON array with same length as files.",
+        message: "You can only upload milestone evidence after the campaign has reached its funding goal or is marked as completed.",
       });
     }
 
-    const invalidGeo = metadata.some((m) => !m || isNaN(Number(m.latitude)) || isNaN(Number(m.longitude)));
-    if (invalidGeo) {
+    const payout = await Payout.findOne({
+      milestone: milestone._id,
+      campaign: campaign._id,
+    });
+
+    if (!payout) {
       cleanupFiles(files);
       return res.status(400).json({
         statusCode: false,
         statusText: "Bad Request",
-        message: "All files must include valid latitude and longitude data.",
+        message: "A withdrawal request for this milestone must be submitted first.",
       });
     }
 
-    // Upload to cloudinary (or your provider) and build uploads array
-    const uploads = [];
-    for (let i = 0; i < files.length; i++) {
-      const f = files[i];
-      const meta = metadata[i];
+    if (payout.status !== "paid") {
+      cleanupFiles(files);
+      return res.status(400).json({
+        statusCode: false,
+        statusText: "Not Eligible",
+        message: `Admin must approve and disburse funds for this milestone before uploading evidence. Current payout status: ${payout.status}.`,
+      });
+    }
 
-      // cloudinary upload; ensure cloudinary.uploader.upload exists and is configured
-      const up = await cloudinary.uploader.upload(f.path, { folder: "milestone_evidence", resource_type: "auto" });
+    const allowedStatuses = ["pending", "on-going"];
+    if (!allowedStatuses.includes(milestone.status)) {
+      cleanupFiles(files);
+      return res.status(400).json({
+        statusCode: false,
+        statusText: "Not Eligible",
+        message: `Evidence cannot be uploaded for a milestone in status: ${milestone.status}.`,
+      });
+    }
 
-      uploads.push({
+    if (milestone.evidenceApprovalStatus !== "required" && milestone.evidenceApprovalStatus !== "rejected") {
+      cleanupFiles(files);
+      return res.status(400).json({
+        statusCode: false,
+        statusText: "Not Eligible",
+        message: `Evidence submission not currently required or previous evidence is already submitted/approved.`,
+      });
+    }
+
+    const uploadedEvidence = [];
+    for (const f of files) {
+      const up = await cloudinary.uploader.upload(f.path, {
+        folder: "milestone_evidence",
+        resource_type: "auto",
+      });
+
+      uploadedEvidence.push({
         imageUrl: up.secure_url,
         publicId: up.public_id,
         uploadedAt: new Date(),
-        latitude: Number(meta.latitude),
-        longitude: Number(meta.longitude),
       });
 
-      // cleanup local file
       try {
         fs.unlinkSync(f.path);
       } catch (e) {
@@ -220,30 +232,29 @@ exports.uploadMilestoneEvidence = async (req, res) => {
       }
     }
 
-    // Create evidence doc
     const newEvidence = await MilestoneEvidence.create({
-      campaign: milestone.campaign,
+      campaign: campaign._id,
       milestone: milestone._id,
       fundraiser: fundraiserId,
       description,
-      uploads,
-      status: "in_review",
+      uploads: uploadedEvidence,
+      status: "pending",
     });
 
-    // Update milestone reference & evidence status
     milestone.evidenceApprovalStatus = "submitted";
+    milestone.status = "on-going";
     milestone.evidenceRef = newEvidence._id;
     await milestone.save();
 
     return res.status(201).json({
       statusCode: true,
       statusText: "Created",
-      message: "Evidence uploaded successfully. Pending admin review.",
+      message: "Evidence uploaded and pending admin review. Remember, images must be stamped with location/time.",
       data: newEvidence,
     });
   } catch (error) {
     cleanupFiles(req.files || []);
-    console.error("Error uploading milestone evidence:", error);
+    console.error("uploadMilestoneEvidenceForMilestone error:", error);
     return res.status(500).json({
       statusCode: false,
       statusText: "Internal Server Error",
@@ -279,15 +290,11 @@ exports.getMilestoneAchieved = async (req, res) => {
   }
 };
 
-
-
 exports.getCampaignMilestones = async (req, res) => {
   try {
-    const  campaignId  = req.params.id
+    const campaignId = req.params.id;
 
-    const milestones = await Milestone.find({ campaign: campaignId })
-      .populate("campaign", "title")
-      .sort({ sequence: 1 });
+    const milestones = await Milestone.find({ campaign: campaignId }).populate("campaign", "title").sort({ sequence: 1 });
 
     const results = [];
 

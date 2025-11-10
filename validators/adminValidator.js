@@ -4,7 +4,7 @@ exports.registerValidator = (req, res, next) => {
   const schema = joi.object({
     firstName: joi
       .string()
-      .min(2)
+      .min(3)
       .trim()
       .required()
       .pattern(/^[A-Za-z\s]+$/)
@@ -16,7 +16,7 @@ exports.registerValidator = (req, res, next) => {
       }),
     lastName: joi
       .string()
-      .min(2)
+      .min(3)
       .trim()
       .required()
       .pattern(/^[A-Za-z\s]+$/)
@@ -223,6 +223,30 @@ exports.changePasswordValidator = (req, res, next) => {
 
 exports.updateProfileValidator = (req, res, next) => {
   const schema = joi.object({
+    firstName: joi
+      .string()
+      .min(3)
+      .trim()
+      .required()
+      .pattern(/^[A-Za-z\s]+$/)
+      .messages({
+        "string.empty": "First name is required",
+        "string.min": "First name must be at least 3 characters long",
+        "string.pattern.base": "First name can only contain letters",
+        "any.required": "First name is required",
+      }),
+    lastName: joi
+      .string()
+      .min(3)
+      .trim()
+      .required()
+      .pattern(/^[A-Za-z\s]+$/)
+      .messages({
+        "string.empty": "last name is required",
+        "string.min": "last name must be at least 3 characters long",
+        "string.pattern.base": "last name can only contain letters",
+        "any.required": "last name is required",
+      }),
     phoneNumber: joi
       .string()
       .trim()
@@ -232,20 +256,6 @@ exports.updateProfileValidator = (req, res, next) => {
         "string.empty": "Phone number is required",
         "string.pattern.base": "Phone number must be 11 digits",
         "any.required": "Phone number is required",
-      }),
-    organizationName: joi
-      .string()
-      .min(2)
-      .trim()
-      .when("accountType", {
-        is: "organization",
-        then: joi.required(),
-        otherwise: joi.optional(),
-      })
-      .messages({
-        "string.empty": "Organization name is required",
-        "string.min": "Organization name must be at least 3 characters long",
-        "any.required": "Organization name is required",
       }),
   });
 

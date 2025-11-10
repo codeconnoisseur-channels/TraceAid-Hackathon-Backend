@@ -1,12 +1,12 @@
 const router = require("express").Router();
-const uploads = require("../utils/multer"); // use uploads.array("evidenceFiles", 6)
-const { authenticate, isFundraiser } = require("../middleware/auth"); // fundraiser must be logged in
+const uploads = require("../utils/multer"); 
+const { authenticate, isFundraiser } = require("../middleware/auth");
 const {
   uploadMilestone,
-  uploadMilestoneEvidence,
   addMilestone,
   getMilestoneAchieved,
   getCampaignMilestones,
+  uploadMilestoneEvidenceForMilestone,
 } = require("../controller/milestoneController");
 
 /**
@@ -271,7 +271,7 @@ router.post("/milestones/upload-milestone", uploadMilestone);
  *               statusText: "Internal Server Error"
  *               message: "Error uploading milestone evidence"
  */
-router.post("/milestones/evidence/:id", authenticate, uploads.array("evidenceFiles", 10), uploadMilestoneEvidence);
+router.post("/milestones/evidence/:id", authenticate, uploads.array("files", 10), uploadMilestoneEvidenceForMilestone);
 
 /**
  * @swagger

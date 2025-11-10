@@ -133,7 +133,7 @@ router.post("/webhook/verify-payment", verifyPaymentWebhook);
  *       500:
  *         description: Internal Server Error
  */
-router.get("/campaign/:id/donations", authenticate, getDonationsByCampaign);
+router.get("/campaign/:id/donations", getDonationsByCampaign);
 
 /**
  * @swagger

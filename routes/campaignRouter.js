@@ -9,6 +9,7 @@ const {
   getAllCampaignsByFundraiser,
   getCampaignAndMilestoneOfAFundraiser,
   getAllCampaignsByAFundraiser,
+  checkCampaignCompletion,
 } = require("../controller/campaignController");
 
 const router = require("express").Router();
@@ -759,6 +760,8 @@ router.get("/get-all-campaign-and-milestone-of-fundraiser", authenticate, isFund
  *                   type: string
  *                   example: An error occurred while retrieving campaigns
  */
-router.get("/get-all-campaign-and milestones-of-a-fundraiser", authenticate, isFundraiser, getAllCampaignsByAFundraiser)
+router.get("/all-campaign-and-milestones-fundraiser", authenticate, isFundraiser, getAllCampaignsByAFundraiser)
+
+router.get("/check-campaign-completion/:id", authenticate, isFundraiser, checkCampaignCompletion)
 
 module.exports = router;
