@@ -76,118 +76,6 @@ exports.getWalletSummaryByAdmin = async (req, res) => {
   }
 };
 
-exports.createPayoutByAdmin = async (req, res) => {
-  try {
-    const { fundraiserId, campaignId, amount, note } = req.body;
-    const amountNum = Number(amount);
-    if (!fundraiserId || !campaignId || !amountNum || amountNum <= 0) {
-      return res.status(400).json({
-        statusCode: false,
-        statusText: "Bad Request",
-        message: "fundraiserId, campaignId and positive amount are required",
-      });
-    }
-
-    const wallet = await FundraiserWallet.findOne({ fundraiser: fundraiserId });
-    if (!wallet)
-      return res.status(404).json({
-        statusCode: false,
-        statusText: "Not Found",
-        message: "Wallet not found for fundraiser",
-      });
-
-    // compute per-campaign balance
-    const computed = await computeWalletSummary(wallet);
-    const perCampaign = computed.perCampaign.find((c) => String(c.campaign._id || c.campaign) === String(campaignId));
-    const campaignBalance = perCampaign ? perCampaign.balance : 0;
-    if (campaignBalance < amountNum) {
-      return res.status(400).json({
-        statusCode: false,
-        statusText: "Bad Request",
-        message: `Insufficient campaign balance. Available: ${campaignBalance}`,
-      });
-    }
-
-    // Find verified bank linked to this campaign or fundraiser
-    const bank = await Bank.findOne({
-      fundraiser: fundraiserId,
-      $or: [{ campaign: campaignId }, { campaign: null }],
-      status: "verified",
-    });
-
-    if (!bank || !bank.koraRecipientCode) {
-      return res.status(400).json({
-        statusCode: false,
-        statusText: "Bad Request",
-        message: "No verified bank with Kora recipient found for this campaign",
-      });
-    }
-
-    // Create payout record
-    const payout = new Payout({
-      fundraiser: fundraiserId,
-      campaign: campaignId,
-      amount: amountNum,
-      status: "processing",
-      referenceID: "PAYOUT_" + uuidv4(),
-      requestedAt: new Date(),
-      note: note || "Admin payout via Kora",
-    });
-    await payout.save();
-
-    // --- Debit wallet ---
-    wallet.availableBalance -= amountNum;
-    wallet.totalWithdrawn += amountNum;
-    wallet.transactions.push({
-      type: "debit",
-      campaign: campaignId,
-      amount: amountNum,
-      source: "payout",
-      reference: payout.referenceID,
-      note: "Kora payout initiated",
-      createdAt: new Date(),
-    });
-    await wallet.save();
-
-    // --- Trigger Kora Transfer ---
-    const transferRes = await axios.post(
-      `${KORA_API_BASE}/transfers`,
-      {
-        reference: payout.referenceID,
-        destination: bank.koraRecipientCode,
-        amount: amountNum,
-        currency: "NGN",
-        narration: note || "Fundraiser payout",
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${KORA_SECRET_KEY}`,
-          "Content-Type": "application/json",
-        },
-      }
-    );
-
-    const transferData = transferRes.data.data;
-    payout.status = "paid";
-    payout.processedAt = new Date();
-    await payout.save();
-
-    return res.status(201).json({
-      statusCode: true,
-      statusText: "Created",
-      message: "Payout processed successfully via Kora",
-      data: { payout, transferData },
-    });
-  } catch (err) {
-    console.error("createPayoutByAdmin error:", err.response?.data || err.message);
-    return res.status(500).json({
-      statusCode: false,
-      statusText: "Internal Server Error",
-      message: err.response?.data?.message || err.message,
-    });
-  }
-};
-
 exports.listTransactions = async (req, res) => {
   try {
     const fundraiserId = req.params.fundraiserId;
@@ -217,8 +105,6 @@ exports.listTransactions = async (req, res) => {
   }
 };
 
-// Fundraiser self-service endpoints
-// GET /fundraiser-wallet/summary
 exports.getFundraiserWallet = async (req, res) => {
   try {
     const fundraiserId = req.user && req.user.id ? req.user.id : req.user?._id;
@@ -367,7 +253,6 @@ exports.requestPayoutByCampaignAndTheirMilestone = async (req, res) => {
   }
 };
 
-// GET /fundraiser-wallet/payout-history
 exports.getPayoutHistory = async (req, res) => {
   try {
     const fundraiserId = req.user && req.user.id ? req.user.id : req.user?._id;

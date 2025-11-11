@@ -271,7 +271,7 @@ router.post("/milestones/upload-milestone", uploadMilestone);
  *               statusText: "Internal Server Error"
  *               message: "Error uploading milestone evidence"
  */
-router.post("/milestones/evidence/:id", authenticate, uploads.array("files", 10), uploadMilestoneEvidenceForMilestone);
+router.post("/milestones/evidence/:id", uploads.array("files", 10), uploadMilestoneEvidenceForMilestone);
 
 /**
  * @swagger
