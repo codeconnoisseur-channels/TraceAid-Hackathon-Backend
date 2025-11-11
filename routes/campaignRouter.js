@@ -760,8 +760,77 @@ router.get("/get-all-campaign-and-milestone-of-fundraiser", authenticate, isFund
  *                   type: string
  *                   example: An error occurred while retrieving campaigns
  */
-router.get("/all-campaign-and-milestones-fundraiser", authenticate, isFundraiser, getAllCampaignsByAFundraiser)
+router.get("/all-campaign-and-milestones-fundraiser", authenticate, isFundraiser, getAllCampaignsByAFundraiser)                                                                                                                                                                                                                                                                                                                     
 
+/**,
+ * @swagger
+ * /campaign/api/v1/check-campaign-completion/{id}:
+ *   get:
+ *     summary: Check if a campaign is completed or eligible for milestone evidence upload
+ *     description: >
+ *       This endpoint allows an authenticated fundraiser to verify whether their campaign has been completed,
+ *       reached its funding goal, or expired based on the end date.  
+ *       Only completed or expired campaigns can proceed to milestone evidence uploads.
+ *     tags:
+ *       - Fundraiser Campaign
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: id
+ *         in: path
+ *         required: true
+ *         description: The unique ID of the campaign to check
+ *         schema:
+ *           type: string
+ *           example: "6730a91a6c5f8c001f34c123"
+ *     responses:
+ *       200:
+ *         description: Successfully checked campaign completion status
+ *         content:
+ *           application/json:
+ *             example:
+ *               statusCode: true
+ *               statusText: "OK"
+ *               message: "Campaign is completed or expired."
+ *               data:
+ *                 campaignId: "6730a91a6c5f8c001f34c123"
+ *                 isCompleted: true
+ *                 reachedGoal: true
+ *                 expired: false
+ *                 campaignStatus: "completed"
+ *       400:
+ *         description: Invalid campaign ID or campaign not yet completed
+ *         content:
+ *           application/json:
+ *             example:
+ *               statusCode: false
+ *               statusText: "Bad Request"
+ *               message: "Campaign is not completed yet. Complete your campaign before uploading Milestone Evidence."
+ *       404:
+ *         description: Campaign not found
+ *         content:
+ *           application/json:
+ *             example:
+ *               statusCode: false
+ *               statusText: "Not Found"
+ *               message: "Campaign not found"
+ *       401:
+ *         description: Unauthorized — fundraiser authentication required
+ *         content:
+ *           application/json:
+ *             example:
+ *               statusCode: false
+ *               statusText: "Unauthorized"
+ *               message: "Missing or invalid authentication token"
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             example:
+ *               statusCode: false
+ *               statusText: "Internal Server Error"
+ *               message: "An unexpected error occurred"
+ */
 router.get("/check-campaign-completion/:id", authenticate, isFundraiser, checkCampaignCompletion)
 
 module.exports = router;

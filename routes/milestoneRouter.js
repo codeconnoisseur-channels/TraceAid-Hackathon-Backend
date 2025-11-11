@@ -11,249 +11,89 @@ const {
 
 /**
  * @swagger
- * /milestone/api/v1/milestone/add-milestone:
+ * /milestone/api/v1/milestones/evidence/{id}:
  *   post:
- *     summary: Add a new milestone to a campaign
+ *     summary: Upload milestone evidence (Fundraiser only)
  *     description: |
- *       Allows an authenticated fundraiser to create a new milestone under a specific campaign.  
- *       All milestone fields (title, description, amount, and duration) must be provided.  
- *       Only authenticated fundraisers can access this endpoint.
+ *       Upload between **5 and 10 evidence files** (images or videos) to verify that a milestone has been achieved.
+ *       This endpoint can only be accessed by authenticated fundraisers **after payout for the milestone has been approved and disbursed**.
  *     tags:
  *       - Milestone - Fundraiser
  *     security:
  *       - bearerAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - campaignId
- *               - milestoneTitle
- *               - milestoneDescription
- *               - milestoneAmount
- *               - milestoneDuration
- *             properties:
- *               campaignId:
- *                 type: string
- *                 description: The ID of the campaign this milestone belongs to.
- *                 example: "6727f63aaf2c7b0012f98c32"
- *               milestoneTitle:
- *                 type: string
- *                 description: The title of the milestone.
- *                 example: "Phase 1: Build School Foundation"
- *               milestoneDescription:
- *                 type: string
- *                 description: A detailed description of what this milestone aims to achieve.
- *                 example: "This phase involves clearing the land, laying the foundation, and building basic classrooms."
- *               milestoneAmount:
- *                 type: number
- *                 description: The target amount (in NGN) for this milestone.
- *                 example: 2500000
- *               milestoneDuration:
- *                 type: string
- *                 description: The estimated duration to complete this milestone.
- *                 example: "3 months"
- *     responses:
- *       201:
- *         description: Milestone created successfully
- *         content:
- *           application/json:
- *             example:
- *               statusCode: true
- *               statusText: "Created"
- *               message: "Milestone added successfully"
- *               data:
- *                 milestone:
- *                   _id: "673b1823a12cd90293ad71f4"
- *                   campaign: "6727f63aaf2c7b0012f98c32"
- *                   milestoneTitle: "Phase 1: Build School Foundation"
- *                   milestoneDescription: "This phase involves clearing the land and laying the foundation."
- *                   milestoneAmount: 2500000
- *                   milestoneDuration: "3 months"
- *                   createdAt: "2025-10-29T10:45:00.000Z"
- *       400:
- *         description: Missing or invalid fields
- *         content:
- *           application/json:
- *             example:
- *               statusCode: false
- *               statusText: "Bad Request"
- *               message: "All fields are required (campaignId, milestoneTitle, milestoneDescription, milestoneAmount, milestoneDuration)."
- *       401:
- *         description: Unauthorized access
- *         content:
- *           application/json:
- *             example:
- *               statusCode: false
- *               statusText: "Unauthorized"
- *               message: "Authentication token missing or invalid"
- *       500:
- *         description: Internal Server Error
- *         content:
- *           application/json:
- *             example:
- *               statusCode: false
- *               statusText: "Internal Server Error"
- *               message: "Error saving milestone"
- */
-router.post("/milestone/add-milestone", authenticate, isFundraiser, addMilestone);
-
-/**
- * @swagger
- * /milestone/api/v1/milestones/upload-milestone:
- *   post:
- *     summary: Upload milestone cover image or video
- *     description: |
- *       Allows uploading a cover image or video for a specific milestone.  
- *       The file must be sent as `multipart/form-data` under the key `file`.  
- *       Only the milestone owner can upload the cover.
- *     tags:
- *       - Milestone - Fundraiser
- *     requestBody:
- *       required: true
- *       content:
- *         multipart/form-data:
- *           schema:
- *             type: object
- *             required:
- *               - milestoneId
- *               - file
- *             properties:
- *               milestoneId:
- *                 type: string
- *                 description: The ID of the milestone to upload the cover for.
- *                 example: "673b1823a12cd90293ad71f4"
- *               file:
- *                 type: string
- *                 format: binary
- *                 description: The cover image or video file.
- *     responses:
- *       200:
- *         description: Milestone cover uploaded successfully
- *         content:
- *           application/json:
- *             example:
- *               statusCode: true
- *               statusText: "OK"
- *               message: "Milestone cover image or video uploaded successfully"
- *               data:
- *                 milestone:
- *                   _id: "673b1823a12cd90293ad71f4"
- *                   milestoneTitle: "Phase 1: Build School Foundation"
- *                   milestoneCoverImageOrVideo: "https://res.cloudinary.com/.../milestone_covers/abc123.jpg"
- *                   milestoneAmount: 2500000
- *                   milestoneDuration: "3 months"
- *                   createdAt: "2025-10-29T10:45:00.000Z"
- *       400:
- *         description: Bad Request (missing file or milestoneId)
- *         content:
- *           application/json:
- *             example:
- *               statusCode: false
- *               statusText: "Bad Request"
- *               message: "Milestone cover image or video is required."
- *       404:
- *         description: Milestone not found
- *         content:
- *           application/json:
- *             example:
- *               statusCode: false
- *               statusText: "Not Found"
- *               message: "Milestone not found."
- *       500:
- *         description: Internal Server Error
- *         content:
- *           application/json:
- *             example:
- *               statusCode: false
- *               statusText: "Internal Server Error"
- *               message: "Error uploading milestone cover"
- */
-router.post("/milestones/upload-milestone", uploadMilestone);
-
-/**
- * @swagger
- * /milestone/api/v1/milestones/evidence/{id}:
- *   post:
- *     summary: Upload evidence for a milestone
- *     description: |
- *       Allows a fundraiser to upload 5 to 10 evidence files (images or videos) for a specific milestone.  
- *       Each file must include metadata with latitude and longitude coordinates.  
- *       Only the owner of the milestone's campaign can upload evidence. Evidence will be pending admin review.
- *     tags:
- *       - Milestone - Fundraiser
  *     parameters:
  *       - in: path
  *         name: id
  *         required: true
- *         description: The ID of the milestone for which evidence is being uploaded.
+ *         description: The unique ID of the milestone
  *         schema:
  *           type: string
- *           example: "673b1823a12cd90293ad71f4"
+ *           example: "6743b6de95bc13a32ff1a9c7"
  *     requestBody:
  *       required: true
  *       content:
  *         multipart/form-data:
  *           schema:
  *             type: object
- *             required:
- *               - description
- *               - evidenceFiles
- *               - fileMetadata
  *             properties:
  *               description:
  *                 type: string
- *                 description: A short description of the milestone evidence.
- *                 example: "Completed foundation work and initial framing"
- *               evidenceFiles:
+ *                 description: A short description of the milestone evidence being uploaded
+ *                 example: "Completed the school roof installation and classroom painting."
+ *               files:
  *                 type: array
  *                 items:
  *                   type: string
  *                   format: binary
- *                 description: 5 to 10 evidence files (images/videos)
- *               fileMetadata:
- *                 type: string
- *                 description: JSON string array containing latitude and longitude for each file
- *                 example: '[{"latitude": "6.5244","longitude": "3.3792"}, {"latitude": "6.5245","longitude": "3.3795"}]'
+ *                 description: 5–10 image or video files showing milestone evidence
  *     responses:
  *       201:
- *         description: Evidence uploaded successfully and pending admin review
+ *         description: Evidence uploaded successfully
  *         content:
  *           application/json:
  *             example:
  *               statusCode: true
  *               statusText: "Created"
- *               message: "Evidence uploaded successfully. Pending admin review."
+ *               message: "Evidence uploaded and pending admin review. Remember, images must be stamped with location/time."
  *               data:
- *                 _id: "673b1823a12cd90293ad71f4"
- *                 milestone: "673b1823a12cd90293ad71f4"
- *                 fundraiser: "63ab1823a12cd90293ad71f9"
- *                 description: "Completed foundation work and initial framing"
+ *                 _id: "6743b6de95bc13a32ff1a9e2"
+ *                 campaign: "673b1823a12cd90293ad71f4"
+ *                 milestone: "6743b6de95bc13a32ff1a9c7"
+ *                 fundraiser: "672c48bc18792d0f1f3b2ac1"
+ *                 description: "Completed the school roof installation and classroom painting."
  *                 uploads:
- *                   - imageUrl: "https://res.cloudinary.com/.../milestone_evidence/abc123.jpg"
+ *                   - imageUrl: "https://res.cloudinary.com/demo/image/upload/sample1.jpg"
  *                     publicId: "milestone_evidence/abc123"
- *                     latitude: 6.5244
- *                     longitude: 3.3792
- *                     uploadedAt: "2025-11-09T12:00:00.000Z"
- *                 status: "in_review"
+ *                     uploadedAt: "2025-11-11T08:45:00Z"
+ *                   - imageUrl: "https://res.cloudinary.com/demo/image/upload/sample2.jpg"
+ *                     publicId: "milestone_evidence/abc124"
+ *                     uploadedAt: "2025-11-11T08:46:00Z"
+ *                 status: "pending"
  *       400:
- *         description: Bad Request (missing description, files, or metadata issues)
+ *         description: Bad request (invalid inputs or upload conditions not met)
  *         content:
  *           application/json:
- *             example:
- *               statusCode: false
- *               statusText: "Bad Request"
- *               message: "Exactly 5 to 10 evidence files are required. Received 3."
+ *             examples:
+ *               missingDescription:
+ *                 summary: Missing description
+ *                 value:
+ *                   statusCode: false
+ *                   statusText: "Bad Request"
+ *                   message: "Description is required."
+ *               notEligible:
+ *                 summary: Not eligible to upload
+ *                 value:
+ *                   statusCode: false
+ *                   statusText: "Not Eligible"
+ *                   message: "Admin must approve and disburse funds for this milestone before uploading evidence."
  *       403:
- *         description: Forbidden (unauthorized user or milestone not ready)
+ *         description: Forbidden – fundraiser trying to upload evidence for someone else's milestone
  *         content:
  *           application/json:
  *             example:
  *               statusCode: false
  *               statusText: "Forbidden"
- *               message: "You are not allowed to upload evidence for this milestone."
+ *               message: "You cannot upload evidence for a milestone of another fundraiser."
  *       404:
  *         description: Milestone not found
  *         content:
@@ -261,15 +101,15 @@ router.post("/milestones/upload-milestone", uploadMilestone);
  *             example:
  *               statusCode: false
  *               statusText: "Not Found"
- *               message: "Milestone not found."
+ *               message: "Milestone not found"
  *       500:
- *         description: Internal Server Error
+ *         description: Internal server error
  *         content:
  *           application/json:
  *             example:
  *               statusCode: false
  *               statusText: "Internal Server Error"
- *               message: "Error uploading milestone evidence"
+ *               message: "Error uploading evidence to Cloudinary"
  */
 router.post("/milestones/evidence/:id", authenticate, uploads.array("files", 10), uploadMilestoneEvidenceForMilestone);
 
