@@ -837,7 +837,7 @@ exports.fundraiserDashboard = async (req, res) => {
               donorName = `Donor ${transaction.donor._id.toString().slice(-6)}`;
             }
           } else {
-            donorName = "Guest Donor";
+            donorName = "Anonymous Donor";
           }
 
           return {
