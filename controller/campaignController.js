@@ -11,6 +11,7 @@ const { campaignAndMilestonesUnderReview } = require("../emailTemplate/emailVeri
 const { sendEmail } = require("../utils/brevo");
 const payoutModel = require("../model/payoutModel");
 const mongoose = require("mongoose");
+const { CAMPAIGN_CATEGORY_VALUES } = require("../enum/campaignCategoriesEnum");
 
 exports.createACampaign = async (req, res) => {
   const fundraiserId = req.user.id || req.user._id;
@@ -146,10 +147,12 @@ exports.createACampaign = async (req, res) => {
 
     const titles = new Set();
     let totalTargetAmountCheck = 0;
+    const EXACT_FIRST_MILESTONE_PERCENTAGE = 0.3;
+    const requiredFirstMilestoneAmount = goalAmount * EXACT_FIRST_MILESTONE_PERCENTAGE;
+    const TOLERANCE = 1;
 
     for (let i = 0; i < milestones.length; i++) {
       const milestone = milestones[i];
-      // Use 1-based index for user messages
       const index = i + 1;
 
       if (!milestone.milestoneTitle || !milestone.milestoneDescription || !milestone.targetAmount) {
@@ -169,6 +172,18 @@ exports.createACampaign = async (req, res) => {
           statusText: "Bad Request",
           message: `Target amount for Milestone ${index} must be a positive number.`,
         });
+      }
+      if (i === 0) {
+        if (Math.abs(targetAmount - requiredFirstMilestoneAmount) > TOLERANCE) {
+          if (file && file.path && fs.existsSync(file.path)) fs.unlinkSync(file.path);
+          return res.status(400).json({
+            statusCode: false,
+            statusText: "Bad Request",
+            message: `The target amount for the first milestone (${targetAmount}) must be exactly ${
+              EXACT_FIRST_MILESTONE_PERCENTAGE * 100
+            }% of the total campaign goal amount (${goalAmount}), which is ${requiredFirstMilestoneAmount.toFixed(2)}.`,
+          });
+        }
       }
 
       const normalizedTitle = milestone.milestoneTitle.trim().toLowerCase();
@@ -216,9 +231,8 @@ exports.createACampaign = async (req, res) => {
     });
 
     await newCampaign.save();
-    const campaignId = newCampaign._id;
+    const campaignId = newCampaign._id; // --- 5. Milestone Insertion with Sequence ---
 
-    // --- 5. Milestone Insertion with Sequence ---
     const milestoneDocuments = milestones.map((m, index) => ({
       campaign: campaignId,
       milestoneTitle: m.milestoneTitle,
@@ -626,7 +640,6 @@ exports.getCampaignAndMilestoneOfAFundraiser = async (req, res) => {
   }
 };
 
-
 exports.checkCampaignCompletion = async (req, res) => {
   try {
     const campaignId = req.params.id;
@@ -652,8 +665,7 @@ exports.checkCampaignCompletion = async (req, res) => {
       return res.status(400).json({
         statusCode: false,
         statusText: "Bad Request",
-        message:
-          "Campaign is still under review by admin. It must be active and completed before you can upload Milestone Evidence.",
+        message: "Campaign is still under review by admin. It must be active and completed before you can upload Milestone Evidence.",
       });
     }
 
@@ -661,17 +673,15 @@ exports.checkCampaignCompletion = async (req, res) => {
       return res.status(400).json({
         statusCode: false,
         statusText: "Bad Request",
-        message:
-          "Campaign is not completed yet. Complete your campaign before uploading Milestone Evidence.",
+        message: "Campaign is not completed yet. Complete your campaign before uploading Milestone Evidence.",
       });
     }
 
-    if(campaign.status === "approved"){
+    if (campaign.status === "approved") {
       return res.status(400).json({
         statusCode: false,
         statusText: "Bad Request",
-        message:
-          "Campaign is not active yet, it has to be active then completed before uploading Milestone Evidence.",
+        message: "Campaign is not active yet, it has to be active then completed before uploading Milestone Evidence.",
       });
     }
 
@@ -683,20 +693,15 @@ exports.checkCampaignCompletion = async (req, res) => {
       endDate.setDate(endDate.getDate() + campaign.durationDays);
     }
 
-    const reachedGoal =
-      (campaign.amountRaised || 0) >=
-      (campaign.totalCampaignGoalAmount || 0);
+    const reachedGoal = (campaign.amountRaised || 0) >= (campaign.totalCampaignGoalAmount || 0);
 
     const expired = endDate ? now >= endDate : false;
-    const isCompleted =
-      campaign.status === "completed" || reachedGoal || expired;
+    const isCompleted = campaign.status === "completed" || reachedGoal || expired;
 
     return res.status(200).json({
       statusCode: true,
       statusText: "OK",
-      message: isCompleted
-        ? "Campaign is completed or expired."
-        : "Campaign is not yet completed.",
+      message: isCompleted ? "Campaign is completed or expired." : "Campaign is not yet completed.",
       data: {
         campaignId,
         isCompleted,
@@ -707,6 +712,49 @@ exports.checkCampaignCompletion = async (req, res) => {
     });
   } catch (error) {
     console.error("checkCampaignCompletion error:", error);
+    return res.status(500).json({
+      statusCode: false,
+      statusText: "Internal Server Error",
+      message: error.message,
+    });
+  }
+};
+
+exports.searchCampaignsByCategory = async (req, res) => {
+  try {
+    const { category } = req.params;
+
+    if (!CAMPAIGN_CATEGORY_VALUES.includes(category)) {
+      return res.status(400).json({
+        statusCode: false,
+        statusText: "Bad Request",
+        message: `Invalid campaign category provided: ${category}. Please use one of the predefined categories.`,
+        validCategories: CAMPAIGN_CATEGORY_VALUES,
+      });
+    }
+
+    const campaigns = await campaignModel.find({
+      campaignCategory: category,
+      status: "active",
+    });
+
+    if (campaigns.length === 0) {
+      return res.status(404).json({
+        statusCode: false,
+        statusText: "Not Found",
+        message: `No active campaigns found in the category: ${category}`,
+      });
+    }
+
+    // --- 3. Success Response ---
+    return res.status(200).json({
+      statusCode: true,
+      statusText: "OK",
+      message: "Campaigns retrieved successfully",
+      data: campaigns,
+    });
+  } catch (error) {
+    console.error("searchCampaignsByCategory error:", error);
     return res.status(500).json({
       statusCode: false,
       statusText: "Internal Server Error",
