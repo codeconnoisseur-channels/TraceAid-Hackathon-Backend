@@ -833,10 +833,11 @@ exports.fundraiserDashboard = async (req, res) => {
               donorName = transaction.donor.organizationName;
             } else if (transaction.donor.firstName && transaction.donor.lastName) {
               donorName = `${transaction.donor.firstName} ${transaction.donor.lastName}`;
-            } else if (transaction.donor.firstName) {
-              // Fallback: First Name only
-              donorName = transaction.donor.firstName;
+            } else {
+              donorName = `Donor ${transaction.donor._id.toString().slice(-6)}`;
             }
+          } else {
+            donorName = "Guest Donor";
           }
 
           return {
