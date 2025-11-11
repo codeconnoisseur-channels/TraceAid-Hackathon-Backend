@@ -101,7 +101,7 @@ const cleanupFiles = (filesArr) =>
   });
 
 exports.uploadMilestoneEvidenceForMilestone = async (req, res) => {
-  const fundraiserId = req.user?.id || req.user?._id;
+  // const fundraiserId = req.user?.id || req.user?._id;
   const milestoneId = req.params.id;
   const files = req.files || [];
   const { description } = req.body;

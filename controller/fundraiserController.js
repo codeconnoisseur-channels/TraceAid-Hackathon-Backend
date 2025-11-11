@@ -677,14 +677,96 @@ exports.getOne = async (req, res) => {
   }
 };
 
+// exports.fundraiserDashboard = async (req, res) => {
+//   console.log("I am from the anthentication", req.user)
+//   try {
+//     const fundraiserId = req.user._id
+
+//     console.log("user ID", fundraiserId)
+
+//     // 1. Basic User Check
+//     const user = await fundraiserModel.findById(fundraiserId).select("-password -otp -otpExpiredAt -token -status");
+//     if (!user) {
+//       return res.status(404).json({
+//         statusCode: false,
+//         statusText: "Not Found",
+//         message: "Fundraiser not found",
+//       });
+//     }
+
+//     // Query 1: Total Donations Amount (Uses Donation.fundraiser and amount field)
+//     const donationResults = await donationModel.aggregate([
+//       { $match: { fundraiser: fundraiserId, paymentStatus: "successful" } },
+//       { $group: { _id: null, totalDonationsAmount: { $sum: "$amount" } } },
+//     ]);
+//     const totalDonationsAmount = donationResults.length > 0 ? donationResults[0].totalDonationsAmount : 0;
+
+//     // Query 2: Milestones Achieved (Uses Milestone.fundraiser and status field)
+//     const milestoneAchievedCount = await milestoneModel.countDocuments({
+//       fundraiser: fundraiserId,
+//       status: "completed",
+//     });
+
+//     // Query 3 & 4: Active and Pending Campaigns (Uses Campaign.fundraiser and status field)
+//     const activeCampaignsCount = await campaignModel.countDocuments({ fundraiser: fundraiserId, status: "active" });
+//     const pendingVerificationsCount = await campaignModel.countDocuments({ fundraiser: fundraiserId, status: "pending" });
+
+//     const recentTransactions = await donationModel
+//       .find({
+//         fundraiser: fundraiserId,
+//         paymentStatus: "successful",
+//       })
+//       .sort({ createdAt: -1 })
+//       .limit(5)
+//       .populate({
+//         path: "donor",
+//         select: "firstName lastName",
+//       })
+//       .populate({
+//         path: "campaign",
+//         select: "campaignTitle",
+//       })
+//       .select("amount createdAt donor campaign isAnonymous");
+
+//     res.status(200).json({
+//       statusCode: true,
+//       statusText: "OK",
+//       data: {
+//         totalDonations: totalDonationsAmount,
+//         milestoneAchieved: milestoneAchievedCount,
+//         activeCampaigns: activeCampaignsCount,
+//         pendingVerifications: pendingVerificationsCount,
+
+//         recentTransactions: recentTransactions.map((transaction) => ({
+//           donorName: transaction.isAnonymous
+//             ? "Anonymous Donor"
+//             : transaction.donor && transaction.donor.organizationName
+//             ? transaction.donor.organizationName
+//             : "N/A",
+
+//           campaignTitle: transaction.campaign ? transaction.campaign.campaignTitle : "Campaign Deleted",
+//           date: transaction.createdAt,
+//           amount: transaction.amount,
+//         })),
+//       },
+//     });
+//   } catch (error) {
+//     console.error("Fundraiser dashboard error:", error);
+//     res.status(500).json({
+//       statusCode: false,
+//       statusText: "Internal Server Error",
+//       message: error.message,
+//     });
+//   }
+// };
+
 exports.fundraiserDashboard = async (req, res) => {
-  console.log("I am from the anthentication", req.user)
+  console.log("I am from the anthentication", req.user);
   try {
-    const fundraiserId = req.user._id
+    const fundraiserId = req.user._id;
 
-    console.log("user ID", fundraiserId)
+    console.log("user ID", fundraiserId);
 
-    // 1. Basic User Check
     const user = await fundraiserModel.findById(fundraiserId).select("-password -otp -otpExpiredAt -token -status");
     if (!user) {
       return res.status(404).json({
@@ -694,24 +776,19 @@ exports.fundraiserDashboard = async (req, res) => {
       });
     }
 
-
-    // Query 1: Total Donations Amount (Uses Donation.fundraiser and amount field)
     const donationResults = await donationModel.aggregate([
       { $match: { fundraiser: fundraiserId, paymentStatus: "successful" } },
       { $group: { _id: null, totalDonationsAmount: { $sum: "$amount" } } },
     ]);
     const totalDonationsAmount = donationResults.length > 0 ? donationResults[0].totalDonationsAmount : 0;
 
-    // Query 2: Milestones Achieved (Uses Milestone.fundraiser and status field)
     const milestoneAchievedCount = await milestoneModel.countDocuments({
       fundraiser: fundraiserId,
       status: "completed",
     });
 
-    // Query 3 & 4: Active and Pending Campaigns (Uses Campaign.fundraiser and status field)
     const activeCampaignsCount = await campaignModel.countDocuments({ fundraiser: fundraiserId, status: "active" });
     const pendingVerificationsCount = await campaignModel.countDocuments({ fundraiser: fundraiserId, status: "pending" });
-
 
     const recentTransactions = await donationModel
       .find({
@@ -722,7 +799,7 @@ exports.fundraiserDashboard = async (req, res) => {
       .limit(5)
       .populate({
         path: "donor",
-        select: "firstName lastName",
+        select: "firstName lastName organizationName",
       })
       .populate({
         path: "campaign",
@@ -739,17 +816,36 @@ exports.fundraiserDashboard = async (req, res) => {
         activeCampaigns: activeCampaignsCount,
         pendingVerifications: pendingVerificationsCount,
 
-        recentTransactions: recentTransactions.map((transaction) => ({
-          donorName: transaction.isAnonymous
-            ? "Anonymous Donor"
-            : transaction.donor && transaction.donor.organizationName
-            ? transaction.donor.organizationName
-            : "N/A",
+        recentTransactions: recentTransactions.map((transaction) => {
+          if (transaction.isAnonymous) {
+            return {
+              donorName: "Anonymous Donor",
+              campaignTitle: transaction.campaign ? transaction.campaign.campaignTitle : "Campaign Deleted",
+              date: transaction.createdAt,
+              amount: transaction.amount,
+            };
+          }
 
-          campaignTitle: transaction.campaign ? transaction.campaign.campaignTitle : "Campaign Deleted",
-          date: transaction.createdAt,
-          amount: transaction.amount,
-        })),
+          let donorName = "N/A";
+
+          if (transaction.donor) {
+            if (transaction.donor.organizationName) {
+              donorName = transaction.donor.organizationName;
+            } else if (transaction.donor.firstName && transaction.donor.lastName) {
+              donorName = `${transaction.donor.firstName} ${transaction.donor.lastName}`;
+            } else if (transaction.donor.firstName) {
+              // Fallback: First Name only
+              donorName = transaction.donor.firstName;
+            }
+          }
+
+          return {
+            donorName: donorName,
+            campaignTitle: transaction.campaign ? transaction.campaign.campaignTitle : "Campaign Deleted",
+            date: transaction.createdAt,
+            amount: transaction.amount,
+          };
+        }),
       },
     });
   } catch (error) {
@@ -761,4 +857,3 @@ exports.fundraiserDashboard = async (req, res) => {
     });
   }
 };
-
