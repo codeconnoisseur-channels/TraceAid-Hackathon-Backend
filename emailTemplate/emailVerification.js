@@ -246,8 +246,8 @@ exports.campaignApproved = (firstName, campaignName) => {
             Great news! Your campaign <strong>${campaignName}</strong> has been successfully reviewed and approved by our verification team.
         </p>
         <p style="font-size: 16px; margin-bottom: 20px; color: #333; font-weight: 600;">
-            <em><strong>NOTE :</strong> Your Campaign is not yet live to recevice donation and cannot receive donations until it is live.</em><br/>
-            <em><strong>Next Steps :</strong> Please proceed to set your campaign status to <strong>Active</strong> from your dashboard to start receiving donations.</em>
+            <em><strong>NOTE :</strong> Your Campaign is not yet live to receive donation</em><br/>
+            <em><strong>Next Steps :</strong> Upon verification that you have not exceeded the limit of 3 campaigns that can be created at a time, your campaign status will be moved to live.</em>
         </p>
         <p style="font-size: 18px; font-weight: 700; color: ${PRIMARY_BLUE}; margin-bottom: 10px;">Remember:</p>
         <ul style="list-style: none; padding: 0; margin: 0 0 30px 20px; color: #555;">
