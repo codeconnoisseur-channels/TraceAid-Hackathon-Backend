@@ -208,7 +208,16 @@ exports.requestPayoutByCampaignAndTheirMilestone = async (req, res) => {
       });
     }
 
-    if (["on-going", "ready_for_release", "released", "completed"].includes(milestone.status)) {
+    const existingPayout = await Payout.findOne({ milestone: milestoneId, status: { $in: ["pending", "processing"] } });
+    if (existingPayout) {
+      return res.status(400).json({
+        statusCode: false,
+        statusText: "Not Eligible",
+        message: "A payout request for this milestone is already pending or being processed.",
+      });
+    }
+
+    if (["ready_for_release", "released", "completed"].includes(milestone.status)) {
       return res.status(400).json({
         statusCode: false,
         statusText: "Not Eligible",
@@ -230,7 +239,7 @@ exports.requestPayoutByCampaignAndTheirMilestone = async (req, res) => {
       campaign: campaignId,
       milestone: milestoneId,
       amount: milestone.targetAmount,
-      status: "processing",
+      status: "pending",
       referenceID: `PAYOUT-${Date.now()}`,
     });
 
@@ -240,7 +249,7 @@ exports.requestPayoutByCampaignAndTheirMilestone = async (req, res) => {
     return res.status(201).json({
       statusCode: true,
       statusText: "Created",
-      message: `Payout request for Milestone ${milestone.order} submitted successfully`,
+      message: `Payout request for Milestone ${milestone.order} submitted successfully. It is now pending review.`,
       data: { payout },
     });
   } catch (err) {
@@ -289,10 +298,7 @@ exports.getPayoutHistory = async (req, res) => {
 
 exports.getAllPayouts = async (req, res) => {
   try {
-    const payouts = await Payout.find()
-      .populate("fundraiser", "name email")
-      .populate("campaign", "title")
-      .sort({ createdAt: -1 });
+    const payouts = await Payout.find().populate("fundraiser", "name email").populate("campaign", "title").sort({ createdAt: -1 });
 
     return res.status(200).json({
       statusCode: true,
