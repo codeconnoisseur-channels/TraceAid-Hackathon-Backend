@@ -67,7 +67,7 @@ exports.createPayoutByAdmin = async (req, res) => {
       });
 
     // mark a payout (either update existing or create)
-    let payout = payoutId ? await Payout.findById(payoutId) : null;
+    let payout = payoutId ? await payoutModel.findById(payoutId) : null;
     if (!payout) {
       payout = await Payout.create({
         fundraiser: fundraiserId,
@@ -150,8 +150,8 @@ exports.createPayoutByAdmin = async (req, res) => {
 
 exports.getPendingPayoutRequests = async function (req, res) {
   try {
-    const pendingRequests = await payoutModel
-      .find({ status: "requested" })
+    const allPayout = await payoutModel
+      .find()
       .populate("fundraiser", "firstName lastName email")
       .populate("campaign", "campaignTitle totalCampaignGoalAmount")
       .sort({ requestedAt: 1 });
@@ -159,8 +159,8 @@ exports.getPendingPayoutRequests = async function (req, res) {
     return res.status(200).json({
       statusCode: true,
       statusText: "OK",
-      message: "Pending payout requests retrieved successfully.",
-      data: pendingRequests,
+      message: "All payout requests successfully retrieved.",
+      data: allPayout,
     });
   } catch (error) {
     console.error("Error fetching pending payout requests:", error);
@@ -176,10 +176,10 @@ exports.getPendingPayoutRequests = async function (req, res) {
 exports.approvePayoutRequest = async function (req, res) {
     try {
         const { payoutId } = req.params;
-        const adminId = req.user._id; // Assuming admin ID is available on req.user
+        const adminId = req.user._id; 
 
         // 1. Find the payout and check its status
-        const payout = await Payout.findOne({ _id: payoutId, status: "pending" });
+        const payout = await payoutModel.findOne({ _id: payoutId, status: "processing" });
 
         if (!payout) {
             return res.status(404).json({
@@ -190,7 +190,7 @@ exports.approvePayoutRequest = async function (req, res) {
         }
 
         // 2. Update Payout Status to Processing
-        payout.status = "processing";
+        payout.status = "paid";
         payout.processedBy = adminId;
         payout.processedAt = new Date();
         await payout.save();
