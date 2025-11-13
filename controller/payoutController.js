@@ -171,3 +171,46 @@ exports.getPendingPayoutRequests = async function (req, res) {
     });
   }
 };
+
+
+exports.approvePayoutRequest = async function (req, res) {
+    try {
+        const { payoutId } = req.params;
+        const adminId = req.user._id; // Assuming admin ID is available on req.user
+
+        // 1. Find the payout and check its status
+        const payout = await Payout.findOne({ _id: payoutId, status: "pending" });
+
+        if (!payout) {
+            return res.status(404).json({
+                statusCode: false,
+                statusText: "Not Found",
+                message: "Pending payout request not found or already processed.",
+            });
+        }
+
+        // 2. Update Payout Status to Processing
+        payout.status = "processing";
+        payout.processedBy = adminId;
+        payout.processedAt = new Date();
+        await payout.save();
+
+        // 3. Optional: Update Milestone Status (This step is often kept minimal here)
+        // If you need to update the milestone status to reflect approval, you would do it here.
+
+        return res.status(200).json({
+            statusCode: true,
+            statusText: "OK",
+            message: `Payout request ${payout.referenceID} approved and moved to processing queue.`,
+            data: payout,
+        });
+
+    } catch (error) {
+        console.error("Error approving payout request:", error);
+        return res.status(500).json({
+            statusCode: false,
+            statusText: "Internal Server Error",
+            message: error.message,
+        });
+    }
+};
