@@ -330,7 +330,7 @@ exports.getAllCampaignsByFundraiser = async (req, res) => {
   try {
     const userId = req.user.id;
 
-    const allCampaigns = await campaignModel.find({ fundraiser: userId });
+    const allCampaigns = await campaignModel.find({ fundraiser: userId }).lean();
 
     if (allCampaigns.length === 0) {
       return res.status(404).json({
@@ -340,29 +340,52 @@ exports.getAllCampaignsByFundraiser = async (req, res) => {
       });
     }
 
-    // Status tracking updated to include 'ended'
-    const activeCampaigns = allCampaigns.filter((c) => c.status === "active");
-    const pendingCampaigns = allCampaigns.filter((c) => c.status === "pending");
-    const completedCampaigns = allCampaigns.filter((c) => c.status === "completed" || c.status === "ended");
+    const campaignIds = allCampaigns.map((c) => c._id);
+    const allMilestones = await milestoneModel
+      .find({ campaign: { $in: campaignIds } })
+      .select(
+        "campaign milestoneTitle milestoneDescription targetAmount releasedAmount status evidenceApprovalStatus fundsReleasedAt createdAt updatedAt"
+      )
+      .sort({ sequence: 1 })
+      .lean();
 
-    res.status(200).json({
+    const milestonesByCampaign = allMilestones.reduce((acc, m) => {
+      const key = m.campaign.toString();
+      if (!acc[key]) acc[key] = [];
+      acc[key].push(m);
+      return acc;
+    }, {});
+
+    const campaignsWithMilestones = allCampaigns.map((campaign) => ({
+      ...campaign,
+      milestones: milestonesByCampaign[campaign._id.toString()] || [],
+    }));
+
+    const activeCampaigns = campaignsWithMilestones.filter((c) => c.status === "active");
+    const approvedCampaigns = campaignsWithMilestones.filter((c) => c.status === "approved");
+    const pendingCampaigns = campaignsWithMilestones.filter((c) => c.status === "pending");
+    const completedCampaigns = campaignsWithMilestones.filter((c) => ["completed", "ended"].includes(c.status));
+
+    return res.status(200).json({
       statusCode: true,
       statusText: "OK",
-      message: "Campaigns retrieved successfully",
+      message: "Campaigns with milestones retrieved successfully",
       data: {
-        all: allCampaigns,
+        all: campaignsWithMilestones,
         active: activeCampaigns,
+        approved: approvedCampaigns,
         pending: pendingCampaigns,
         completed: completedCampaigns,
         counts: {
           active: activeCampaigns.length,
+          approved: approvedCampaigns.length,
           pending: pendingCampaigns.length,
           completed: completedCampaigns.length,
         },
       },
     });
   } catch (error) {
-    console.error("Error retrieving campaigns:", error);
+    console.error("Error retrieving campaigns with milestones:", error);
     res.status(500).json({
       statusCode: false,
       statusText: "Internal Server Error",
