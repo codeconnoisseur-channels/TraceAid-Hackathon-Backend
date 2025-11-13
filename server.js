@@ -19,6 +19,7 @@ const engagementRouter = require("./routes/engagementRouter");
 const fundraiserWalletRouter = require("./routes/fundraiserWalletRouter");
 const bodyParser = require("body-parser");
 const bankRouter = require("./routes/bankRouter");
+const payoutRouter = require("./routes/payoutRouter")
 
 const app = express();
 app.use(
@@ -110,6 +111,7 @@ app.use("/donation/api/v1", donationRouter);
 app.use("/engagement/api/v1", engagementRouter);
 app.use("/fundraiser/api/v1/wallet", fundraiserWalletRouter);
 app.use("/bank/api/v1", bankRouter);
+app.use("/payout/api/v1", payoutRouter)
 
 app.use((error, req, res, next) => {
   if (error) {
