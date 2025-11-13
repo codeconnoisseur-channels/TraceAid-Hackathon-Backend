@@ -111,7 +111,7 @@ const {
  *               statusText: "Internal Server Error"
  *               message: "Error uploading evidence to Cloudinary"
  */
-router.post("/milestones/evidence/:id", uploads.array("files", 10), uploadMilestoneEvidenceForMilestone);
+router.post("/milestones/evidence/:id", authenticate, isFundraiser, uploads.array("files", 10), uploadMilestoneEvidenceForMilestone);
 
 /**
  * @swagger
