@@ -315,3 +315,62 @@ exports.getAllPayouts = async (req, res) => {
     });
   }
 };
+
+
+exports.getFundraiserWithdrawals = async (req, res) => {
+  try {
+    const fundraiserId = req.user && req.user.id ? req.user.id : req.user?._id;
+    if (!fundraiserId) {
+      return res.status(401).json({
+        statusCode: false,
+        statusText: "Unauthorized",
+        message: "Missing authenticated user",
+      });
+    }
+
+
+    const wallet = await FundraiserWallet.findOne({ fundraiser: fundraiserId });
+    if (!wallet) {
+      return res.status(404).json({
+        statusCode: false,
+        statusText: "Not Found",
+        message: "Wallet not found for this fundraiser",
+      });
+    }
+
+    const payouts = await Payout.find({ fundraiser: fundraiserId })
+      .populate("campaign", "campaignTitle")
+      .populate("milestone", "milestoneTitle sequence")
+      .sort({ createdAt: -1 }); // latest first
+
+    const formattedWithdrawals = payouts.map(p => ({
+      referenceID: p.referenceID,
+      campaignName: p.campaign ? p.campaign.campaignTitle : "Unknown Campaign",
+      milestoneTitle: p.milestone ? p.milestone.milestoneTitle : "N/A",
+      sequence: p.milestone ? p.milestone.sequence : null,
+      amount: p.amount,
+      status: p.status, // e.g. "pending", "paid"
+      requestedAt: p.createdAt,
+      processedAt: p.processedAt || null,
+    }));
+
+    return res.status(200).json({
+      statusCode: true,
+      statusText: "OK",
+      message: "Fundraiser withdrawal requests fetched successfully",
+      data: {
+        availableBalance: wallet.availableBalance,
+        totalWithdrawn: wallet.totalWithdrawn,
+        withdrawals: formattedWithdrawals,
+      },
+    });
+
+  } catch (err) {
+    console.error("getFundraiserWithdrawals error:", err);
+    return res.status(500).json({
+      statusCode: false,
+      statusText: "Internal Server Error",
+      message: err.message,
+    });
+  }
+};

@@ -1,9 +1,10 @@
 const router = require("express").Router();
-const { authenticate } = require("../middleware/auth");
+const { authenticate, isFundraiser } = require("../middleware/auth");
 const {
   getFundraiserWallet,
   getPayoutHistory,
   requestPayoutByCampaignAndTheirMilestone,
+  getFundraiserWithdrawals,
 } = require("../controller/fundraiserWalletController");
 
 /**
@@ -235,5 +236,81 @@ router.post("/request-payout", authenticate, requestPayoutByCampaignAndTheirMile
  */
 router.get("/payout-history", authenticate, getPayoutHistory);
 
+/**
+ * @swagger
+ * /fundraiser/api/v1/wallet/fundraiser-withdrawals/{id}:
+ *   get:
+ *     summary: Retrieve all withdrawal requests made by a fundraiser
+ *     description: >
+ *       This endpoint allows an authenticated fundraiser to view all their withdrawal requests, 
+ *       including details like reference ID, campaign name, milestone, withdrawal status, 
+ *       and wallet balance summary (available balance and total withdrawn).
+ *     tags:
+ *       - Fundraiser Wallet
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: id
+ *         in: path
+ *         required: true
+ *         description: The unique ID of the fundraiser
+ *         schema:
+ *           type: string
+ *           example: "6730bfc8f0ad9b001fcaa128"
+ *     responses:
+ *       200:
+ *         description: Successfully retrieved fundraiser withdrawals
+ *         content:
+ *           application/json:
+ *             example:
+ *               statusCode: true
+ *               statusText: "OK"
+ *               message: "Fundraiser withdrawal requests fetched successfully"
+ *               data:
+ *                 availableBalance: 150000
+ *                 totalWithdrawn: 50000
+ *                 withdrawals:
+ *                   - referenceID: "PAYOUT-98765"
+ *                     campaignName: "Save a Child’s Education"
+ *                     milestoneTitle: "Milestone 1: School Supplies"
+ *                     sequence: 1
+ *                     amount: 25000
+ *                     status: "paid"
+ *                     requestedAt: "2025-11-05T10:00:00.000Z"
+ *                     processedAt: "2025-11-06T15:30:00.000Z"
+ *                   - referenceID: "PAYOUT-98766"
+ *                     campaignName: "Feed 100 Orphans"
+ *                     milestoneTitle: "Milestone 2: Food Distribution"
+ *                     sequence: 2
+ *                     amount: 50000
+ *                     status: "pending"
+ *                     requestedAt: "2025-11-10T08:45:00.000Z"
+ *                     processedAt: null
+ *       401:
+ *         description: Unauthorized — fundraiser authentication required
+ *         content:
+ *           application/json:
+ *             example:
+ *               statusCode: false
+ *               statusText: "Unauthorized"
+ *               message: "Missing authenticated user"
+ *       404:
+ *         description: Wallet not found for this fundraiser
+ *         content:
+ *           application/json:
+ *             example:
+ *               statusCode: false
+ *               statusText: "Not Found"
+ *               message: "Wallet not found for this fundraiser"
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             example:
+ *               statusCode: false
+ *               statusText: "Internal Server Error"
+ *               message: "An unexpected error occurred while fetching withdrawals"
+ */
+router.get("/fundraiser-withdrawals/:id", authenticate, isFundraiser, getFundraiserWithdrawals)
 
 module.exports = router;
