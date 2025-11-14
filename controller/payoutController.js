@@ -3,6 +3,10 @@ const FundraiserWallet = require("../model/fundraiserWallet");
 const KYC = require("../model/kycModel");
 const Milestone = require("../model/milestoneModel");
 const { v4: uuidv4 } = require("uuid");
+const Fundraiser = require("../model/fundraiserModel")
+const Campaign = require("../model/campaignModel");
+const { payoutApprovedTemplate } = require("../emailTemplate/emailVerification");
+const { sendEmail } = require("../utils/brevo");
 
 async function computeWalletSummary(wallet) {
   const perCampaign = {};
@@ -29,22 +33,53 @@ exports.createPayoutByAdmin = async (req, res) => {
   let wallet = null;
 
   try {
-    // 1. Retrieve all necessary IDs and the optional amount from the body
     const { fundraiserId, campaignId, payoutId, milestoneId, note, amount: bodyAmount } = req.body;
 
-    // 2. Fetch the existing Payout object (if payoutId is provided)
     let payout = payoutId ? await payoutModel.findById(payoutId) : null;
 
-    // 3. Determine the final amount to process:
-    //    Use payout.amount if it exists, otherwise use amount from the body.
+    if (payout && payout.status === "paid") {
+      return res.status(400).json({
+        statusCode: false,
+        statusText: "Already Paid",
+        message: `Payout ID ${payoutId} has already been marked as 'paid'. Cannot process twice.`,
+      });
+    }
+
     const amountToProcess = payout ? Number(payout.amount) : Number(bodyAmount);
 
-    // 4. Validation (using the determined amount)
     if (!fundraiserId || !campaignId || !amountToProcess || amountToProcess <= 0)
       return res.status(400).json({
         statusCode: false,
         statusText: "Bad Request",
         message: "fundraiserId, campaignId and positive amount are required.",
+      });
+
+    // 3. Fetch Fundraiser and KYC details for email and validation
+    const fundraiser = await Fundraiser.findById(fundraiserId).select("email organizationName");
+    if (!fundraiser) {
+      return res.status(404).json({
+        statusCode: false,
+        statusText: "Not Found",
+        message: "Fundraiser not found.",
+      });
+    }
+
+    const campaign = await Campaign.findById(campaignId).select("campaignTitle");
+    if (!campaign) {
+      return res.status(404).json({
+        statusCode: false,
+        statusText: "Not Found",
+        message: "Campaign not found.",
+      });
+    }
+
+    // Populate or find the KYC document to get bank details
+    const kyc = await KYC.findOne({ user: fundraiserId, verificationStatus: "verified" });
+    if (!kyc)
+      return res.status(400).json({
+        statusCode: false,
+        statusText: "Bad Request",
+        message: "Fundraiser KYC is not verified.",
       });
 
     // 5. Wallet Check (Balance verification)
@@ -67,23 +102,14 @@ exports.createPayoutByAdmin = async (req, res) => {
         message: `Insufficient campaign balance. Available: ${campaignBalance}. Requested: ${amountToProcess}`,
       });
 
-    // 6. KYC Check
-    const kyc = await KYC.findOne({ user: fundraiserId, verificationStatus: "verified" });
-    if (!kyc)
-      return res.status(400).json({
-        statusCode: false,
-        statusText: "Bad Request",
-        message: "Fundraiser KYC is not verified.",
-      });
-
-    // 7. Mark/Create Payout
+    // 6. Mark/Create Payout
     if (!payout) {
       // Create new payout
       payout = await payoutModel.create({
         fundraiser: fundraiserId,
         campaign: campaignId,
         milestone: milestoneId || null,
-        amount: amountToProcess, // Use resolved amount
+        amount: amountToProcess,
         status: "paid",
         referenceID: "PAYOUT_" + uuidv4(),
         requestedAt: new Date(),
@@ -92,20 +118,20 @@ exports.createPayoutByAdmin = async (req, res) => {
         processedBy: req.user?._id,
       });
     } else {
-      // Update existing payout (if found)
+      // Update existing payout (if found and status was NOT 'paid')
       payout.status = "paid";
-      payout.amount = amountToProcess; // Update amount to reflect the resolved value (should be the same)
+      payout.amount = amountToProcess;
       payout.note = note || payout.note;
       payout.processedAt = new Date();
       payout.processedBy = req.user?._id;
       await payout.save();
     }
 
-    // 8. Debit Wallet Ledger
+    // 7. Debit Wallet Ledger
     const debitTransaction = {
       type: "debit",
       campaign: campaignId,
-      amount: amountToProcess, // Use resolved amount
+      amount: amountToProcess,
       source: "payout",
       reference: payout.referenceID,
       note: "Manual payout recorded",
@@ -117,21 +143,41 @@ exports.createPayoutByAdmin = async (req, res) => {
     wallet.transactions.push(debitTransaction);
     await wallet.save();
 
-    // 9. Update Milestone Status
+    // 8. Update Milestone Status
     if (milestoneId) {
       const milestone = await Milestone.findById(milestoneId);
       if (milestone) {
-        milestone.releasedAmount = (milestone.releasedAmount || 0) + amountToProcess; // Use resolved amount
-        milestone.status = "released";
+        milestone.releasedAmount = (milestone.releasedAmount || 0) + amountToProcess;
+        milestone.status = "completed";
         milestone.fundsReleasedAt = new Date();
         await milestone.save();
       }
     }
 
+    try {
+      const emailHTML = payoutApprovedTemplate(
+        fundraiser.organizationName || "Fundraiser",
+        amountToProcess,
+        kyc.bankName,
+        kyc.bankAccountName,
+        kyc.bankAccountNumber
+      );
+
+      await sendEmail({
+        to: fundraiser.email,
+        subject: `Payout Processed for Campaign: ${campaign.campaignTitle}`,
+        html: emailHTML,
+      });
+      console.log(`Payout email sent to ${fundraiser.email} for ${amountToProcess}`);
+    } catch (emailError) {
+      console.error("Failed to send payout notification email:", emailError);
+    }
+
+    // 10. Return Final Response
     return res.status(200).json({
       statusCode: true,
       statusText: "OK",
-      message: "Manual payout processed and recorded successfully.",
+      message: "Manual payout processed and recorded successfully. Fundraiser notified.",
       data: { payout },
     });
   } catch (err) {
@@ -145,7 +191,6 @@ exports.createPayoutByAdmin = async (req, res) => {
   }
 };
 
-// Keeping other functions (like exports.approvePayoutRequest) as they were.
 exports.approvePayoutRequest = async function (req, res) {
   try {
     const { payoutId } = req.params;
