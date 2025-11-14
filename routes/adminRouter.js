@@ -25,6 +25,7 @@ const {
 } = require("../controller/adminController");
 const { protectAdmin, restrictAdmin } = require("../middleware/adminAuth");
 const { getWalletSummaryByAdmin, createPayoutByAdmin, listTransactions, getAllPayouts } = require("../controller/fundraiserWalletController");
+const { authenticate } = require("../middleware/auth");
 
 /**
  * @swagger
@@ -1904,189 +1905,6 @@ router.get("/milestone-evidence/pending", protectAdmin, restrictAdmin, getPendin
 
 /**
  * @swagger
- * /admin/api/v1/milestone-evidence/approve/{evidenceId}:
- *   patch:
- *     summary: Approve a milestone evidence submission
- *     description: |
- *       This endpoint allows **admins** to approve a milestone evidence that has been reviewed and verified.
- *       Once approved, the milestone's status is updated to reflect progress, and the campaign owner may become eligible for the next milestone release.
- *     tags:
- *       - Admin - Milestone Evidence
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - name: evidenceId
- *         in: path
- *         required: true
- *         description: The unique ID of the milestone evidence to approve
- *         schema:
- *           type: string
- *           example: 6720d6b8ab4d5c4fddaf91b1
- *     responses:
- *       200:
- *         description: Milestone evidence approved successfully
- *         content:
- *           application/json:
- *             example:
- *               statusCode: true
- *               statusText: "OK"
- *               message: "Milestone evidence approved successfully."
- *               data:
- *                 _id: "6720d6b8ab4d5c4fddaf91b1"
- *                 description: "Completed foundation work for the school building."
- *                 imageUrl: "https://res.cloudinary.com/traceaid/image/upload/v1728324912/evidence1.jpg"
- *                 videoUrl: "https://res.cloudinary.com/traceaid/video/upload/v1728324912/evidence1.mp4"
- *                 status: "approved"
- *                 milestone:
- *                   _id: "671fbb78d6b73c74b49f9d5b"
- *                   milestoneTitle: "Foundation Completion"
- *                   milestoneAmount: 150000
- *                 campaign:
- *                   _id: "671faa12c3f2c68b92f4b52c"
- *                   campaignTitle: "Community School Project"
- *                 approvedBy:
- *                   _id: "671fae58e4b73c74b49f8a5a"
- *                   role: "admin"
- *                   name: "Admin John"
- *                 approvedAt: "2025-10-29T12:43:00.000Z"
- *       400:
- *         description: Invalid or already approved evidence
- *         content:
- *           application/json:
- *             example:
- *               statusCode: false
- *               statusText: "Bad Request"
- *               message: "Evidence has already been approved or rejected."
- *       401:
- *         description: Unauthorized (Admin not authenticated)
- *         content:
- *           application/json:
- *             example:
- *               statusCode: false
- *               statusText: "Unauthorized"
- *               message: "Access denied. Please provide a valid token."
- *       403:
- *         description: Forbidden (User not an admin)
- *         content:
- *           application/json:
- *             example:
- *               statusCode: false
- *               statusText: "Forbidden"
- *               message: "Access denied. Admin privileges required."
- *       404:
- *         description: Milestone evidence not found
- *         content:
- *           application/json:
- *             example:
- *               statusCode: false
- *               statusText: "Not Found"
- *               message: "No milestone evidence found with the provided ID."
- *       500:
- *         description: Internal server error while approving milestone evidence
- *         content:
- *           application/json:
- *             example:
- *               statusCode: false
- *               statusText: "Internal Server Error"
- *               message: "Error approving milestone evidence: Database update failed."
- */
-router.patch("/milestone-evidence/approve/:evidenceId", protectAdmin, restrictAdmin, approveMilestoneEvidence);
-
-/**
- * @swagger
- * /admin/api/v1/milestone-evidence/reject/{evidenceId}:
- *   patch:
- *     summary: Reject a milestone evidence submission
- *     description: |
- *       This endpoint allows **admins** to reject a submitted milestone evidence that does not meet verification standards.
- *       The rejection is recorded, and the fundraiser will be notified to review and re-upload valid evidence.
- *     tags:
- *       - Admin - Milestone Evidence
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - name: evidenceId
- *         in: path
- *         required: true
- *         description: The unique ID of the milestone evidence to reject
- *         schema:
- *           type: string
- *           example: 6720d6b8ab4d5c4fddaf91b1
- *     requestBody:
- *       required: false
- *       description: Optional rejection reason from admin
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               rejectionReason:
- *                 type: string
- *                 example: "Insufficient proof of milestone completion."
- *     responses:
- *       200:
- *         description: Milestone evidence rejected successfully
- *         content:
- *           application/json:
- *             example:
- *               statusCode: true
- *               statusText: "OK"
- *               message: "Milestone evidence rejected successfully."
- *               data:
- *                 _id: "6720d6b8ab4d5c4fddaf91b1"
- *                 description: "Completed foundation work for the school building."
- *                 imageUrl: "https://res.cloudinary.com/traceaid/image/upload/v1728324912/evidence1.jpg"
- *                 status: "rejected"
- *                 rejectionReason: "Insufficient proof of milestone completion."
- *                 reviewedBy:
- *                   _id: "671fae58e4b73c74b49f8a5a"
- *                   name: "Admin John"
- *                 reviewedAt: "2025-10-29T14:10:00.000Z"
- *       400:
- *         description: Invalid request or evidence already rejected/approved
- *         content:
- *           application/json:
- *             example:
- *               statusCode: false
- *               statusText: "Bad Request"
- *               message: "Evidence has already been processed."
- *       401:
- *         description: Unauthorized (Admin not authenticated)
- *         content:
- *           application/json:
- *             example:
- *               statusCode: false
- *               statusText: "Unauthorized"
- *               message: "Access denied. Please provide a valid token."
- *       403:
- *         description: Forbidden (User not an admin)
- *         content:
- *           application/json:
- *             example:
- *               statusCode: false
- *               statusText: "Forbidden"
- *               message: "Access denied. Admin privileges required."
- *       404:
- *         description: Milestone evidence not found
- *         content:
- *           application/json:
- *             example:
- *               statusCode: false
- *               statusText: "Not Found"
- *               message: "No milestone evidence found with the provided ID."
- *       500:
- *         description: Internal server error while rejecting milestone evidence
- *         content:
- *           application/json:
- *             example:
- *               statusCode: false
- *               statusText: "Internal Server Error"
- *               message: "Error rejecting milestone evidence: Database update failed."
- */
-router.patch("/milestone-evidence/reject/:evidenceId", protectAdmin, restrictAdmin, rejectMilestoneEvidence);
-
-/**
- * @swagger
  * /admin/api/v1/get-campaigns:
  *   get:
  *     summary: Retrieve all campaigns on the platform
@@ -2244,7 +2062,7 @@ router.get("/get-campaigns", protectAdmin, restrictAdmin, getAllCampaigns);
  *               statusText: "Internal Server Error"
  *               message: "Error fetching campaign data."
  */
-router.get("/campaigns-with-milestones-and-evidence", protectAdmin, restrictAdmin, getCampaignWithMilestonesAndEvidence);
+router.get("/campaigns-with-milestones-and-evidence", authenticate, getCampaignWithMilestonesAndEvidence);
 
 /**
  * @swagger
@@ -2421,8 +2239,8 @@ router.get("/get-all-campaign-and-milestones", protectAdmin, restrictAdmin, getA
  *   get:
  *     summary: Retrieve all campaigns and milestones for a specific fundraiser
  *     description: |
- *       This endpoint allows **admins** to fetch all campaigns created by a specific fundraiser, 
- *       along with each campaign's milestones.  
+ *       This endpoint allows **admins** to fetch all campaigns created by a specific fundraiser,
+ *       along with each campaign's milestones.
  *       Useful for monitoring fundraiser performance and verifying milestone progress.
  *     tags:
  *       - Admin - Campaign Management
@@ -2671,7 +2489,7 @@ router.get("/wallet/:fundraiserId/transactions", protectAdmin, restrictAdmin, li
  *   get:
  *     summary: Retrieve all payout requests
  *     description: |
- *       This endpoint allows **admins** to fetch all payout requests made by fundraisers.  
+ *       This endpoint allows **admins** to fetch all payout requests made by fundraisers.
  *       Each payout record includes the fundraiser details, related campaign, payout amount, and status.
  *     tags:
  *       - Admin - Payout Management
@@ -2726,6 +2544,81 @@ router.get("/wallet/:fundraiserId/transactions", protectAdmin, restrictAdmin, li
  *               statusText: "Internal Server Error"
  *               message: "Error fetching payouts: Cannot read properties of undefined"
  */
-router.get("/get-all-payout", protectAdmin, restrictAdmin, getAllPayouts)
+router.get("/get-all-payout", protectAdmin, restrictAdmin, getAllPayouts);
+
+/**
+ * @swagger
+ * /admin/api/v1/review-milestone-evidence/:id:
+ *   post:
+ *     summary: Review milestone evidence
+ *     description: |
+ *       This endpoint allows **admins** to review and approve or reject evidence for a milestone of a fundraiser's campaign.
+ *       It updates the milestone's status to "completed" and adds the evidence URL to the milestone.
+ *     tags:
+ *       - Admin - Milestone Management
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               fundraiserId:
+ *                 type: string
+ *                 description: The ID of the fundraiser.
+ *               campaignId:
+ *                 type: string
+ *                 description: The ID of the campaign.
+ *               milestoneId:
+ *                 type: string
+ *                 description: The ID of the milestone.
+ *               evidenceUrl:
+ *                 type: string
+ *                 description: The URL of the evidence.
+ *     responses:
+ *       200:
+ *         description: Milestone evidence reviewed successfully
+ *         content:
+ *           application/json:
+ *             example:
+ *               statusCode: true
+ *               statusText: "OK"
+ *               message: "Milestone evidence reviewed successfully"
+ *       400:
+ *         description: Invalid or malformed request body
+ *         content:
+ *           application/json:
+ *             example:
+ *               statusCode: false
+ *               statusText: "Bad Request"
+ *               message: "Invalid request body"
+ *       401:
+ *         description: Unauthorized — Missing or invalid admin token
+ *         content:
+ *           application/json:
+ *             example:
+ *               statusCode: false
+ *               statusText: "Unauthorized"
+ *               message: "Access denied. Please provide a valid token."
+ *       403:
+ *         description: Forbidden — Admin privileges required
+ *         content:
+ *           application/json:
+ *             example:
+ *               statusCode: false
+ *               statusText: "Forbidden"
+ *               message: "Access denied. Admin privileges required."
+ *       500:
+ *         description: Internal Server Error while reviewing milestone evidence
+ *         content:
+ *           application/json:
+ *             example:
+ *               statusCode: false
+ *               statusText: "Internal Server Error"
+ *               message: "Error reviewing milestone evidence: Cannot read properties of undefined"
+ */
+router.post("/review-milestone-evidence/:id", protectAdmin, restrictAdmin, reviewMilestoneEvidence);
 
 module.exports = router;

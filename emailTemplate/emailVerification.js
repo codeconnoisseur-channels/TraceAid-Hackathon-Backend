@@ -289,32 +289,17 @@ exports.campaignNeedsMoreInfo = (firstName) => {
   return baseEmailTemplate("Additional Information Required for Your Campaign", mainContent, WARNING_ORANGE);
 };
 
-// 8. Milestone Verification Approval
-exports.milestoneApproved = (firstName, campaignName) => {
-  const mainContent = `
-        <h1 style="font-size: 24px; color: ${SUCCESS_GREEN}; margin-bottom: 20px;">Milestone Update Successfully Approved</h1>
-        <p style="font-size: 16px; margin-bottom: 15px; color: #333;">Hi ${firstName},</p>
-        <p style="font-size: 16px; margin-bottom: 25px; color: #333;">
-            Your milestone update for **"${campaignName}"** has been reviewed and approved.
-        </p>
-        <p style="font-size: 16px; font-weight: 600; color: ${PRIMARY_BLUE}; margin-bottom: 20px;">
-            This milestone will now be visible to your donors, helping them track your progress clearly.
-        </p>
-        <p style="font-size: 16px; margin-top: 25px; color: #333;">Keep up the great work,</p>
-        <p style="font-size: 16px; font-weight: 600; color: ${PRIMARY_BLUE}; margin: 0;">The TraceAid Team</p>
-    `;
-  return baseEmailTemplate("Milestone Update Successfully Approved", mainContent, SUCCESS_GREEN);
-};
-
 // 8. Campaign Active Email
 exports.campaignActive = (organizationName, campaignTitle, endDate) => {
-    const formattedEndDate = endDate ? new Date(endDate).toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-    }) : 'an indefinite date';
+  const formattedEndDate = endDate
+    ? new Date(endDate).toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      })
+    : "an indefinite date";
 
-  const mainContent = `
+  const mainContent = `
         <h1 style="font-size: 24px; color: ${SUCCESS_GREEN}; margin-bottom: 20px;">Campaign Is Now LIVE! 🚀</h1>
         <p style="font-size: 16px; margin-bottom: 15px; color: #333;">Hi ${organizationName},</p>
         <p style="font-size: 16px; margin-bottom: 25px; color: #333;">
@@ -341,7 +326,7 @@ exports.campaignActive = (organizationName, campaignTitle, endDate) => {
         <p style="font-size: 16px; margin-top: 25px; color: #333;">Let's create impact together,</p>
         <p style="font-size: 16px; font-weight: 600; color: ${PRIMARY_BLUE}; margin: 0;">The TraceAid Team</p>
     `;
-  return baseEmailTemplate("Campaign Is Now LIVE!", mainContent, SUCCESS_GREEN);
+  return baseEmailTemplate("Campaign Is Now LIVE!", mainContent, SUCCESS_GREEN);
 };
 
 exports.milestoneNeedsMoreInfo = (firstName) => {
@@ -408,21 +393,44 @@ exports.campaignDisapproved = (organizationName, campaignTitle, rejectionReason)
   return baseEmailTemplate("Your Campaign Could Not Be Approved", mainContent, ALERT_RED);
 };
 
-// 11. Milestone Disapproval Email
-exports.milestoneDisapproved = (firstName, campaignName) => {
+exports.milestoneApprovedTemplate = (fundraiserName, campaignTitle) => {
+  const mainContent = `
+        <h1 style="font-size: 24px; color: ${SUCCESS_GREEN}; margin-bottom: 20px;">Milestone Update Successfully Approved</h1>
+        <p style="font-size: 16px; margin-bottom: 15px; color: #333;">Hi ${fundraiserName},</p>
+        <p style="font-size: 16px; margin-bottom: 25px; color: #333;">
+            Your milestone update for "${campaignTitle}" has been reviewed and approved.
+        </p>
+        <p style="font-size: 16px; font-weight: 600; color: ${PRIMARY_BLUE}; margin-bottom: 20px;">
+            This milestone will now be visible to your donors, helping them track your progress clearly.
+        </p>
+        <p style="font-size: 16px; margin-top: 25px; color: #333;">Keep up the great work,</p>
+        <p style="font-size: 16px; font-weight: 600; color: ${PRIMARY_BLUE}; margin: 0;">The TraceAid Team</p>
+    `;
+  return baseEmailTemplate("Milestone Update Successfully Approved", mainContent, SUCCESS_GREEN);
+};
+
+exports.milestoneDisapprovedTemplate = (fundraiserName, campaignTitle, rejectionReason) => {
+  // Insert rejection reason if available
+  const rejectionDetail = rejectionReason
+    ? `<p style="font-size: 16px; margin-bottom: 20px; color: #333; padding: 10px; border-left: 3px solid ${ALERT_RED}; background-color: #fceceb;">
+            Admin Feedback: ${rejectionReason}
+        </p>`
+    : "";
+
   const mainContent = `
         <h1 style="font-size: 24px; color: ${ALERT_RED}; margin-bottom: 20px;">Your Milestone Evidence Could Not Be Approved</h1>
-        <p style="font-size: 16px; margin-bottom: 15px; color: #333;">Hi ${firstName},</p>
+        <p style="font-size: 16px; margin-bottom: 15px; color: #333;">Hi ${fundraiserName},</p>
         <p style="font-size: 16px; margin-bottom: 25px; color: #333;">
-            We’ve reviewed the milestone update you submitted for **"${campaignName}"**, and we’re unable to approve it at this time. This could be due to unclear, incomplete, or insufficient supporting evidence.
+            We’ve reviewed the milestone update you submitted for "${campaignTitle}", and we’re unable to approve it at this time. This could be due to unclear, incomplete, or insufficient supporting evidence.
         </p>
+        ${rejectionDetail}
         <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin: 20px 0;">
             <tr>
                 <td align="center">
                     <a href="[[dashboard_link]]" target="_blank"
-                       style="display: inline-block; background-color: ${ALERT_RED}; color: #ffffff; font-size: 16px; 
-                       font-weight: 600; text-decoration: none; padding: 12px 25px; border-radius: 5px; border: 1px solid ${ALERT_RED};">
-                        Check Specific Feedback
+                        style="display: inline-block; background-color: ${ALERT_RED}; color: #ffffff; font-size: 16px; 
+                        font-weight: 600; text-decoration: none; padding: 12px 25px; border-radius: 5px; border: 1px solid ${ALERT_RED};">
+                        Check Dashboard
                     </a>
                 </td>
             </tr>
@@ -557,13 +565,13 @@ exports.forgotPasswordLink = (resetUrl, firstname) => {
 };
 
 exports.payoutRequestSuccessEmail = (organizationName, campaignTitle, milestoneTitle, targetAmount, referenceID) => {
-    const formattedAmount = `₦${Number(targetAmount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const formattedAmount = `₦${Number(targetAmount).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
-    const mainContent = `
+  const mainContent = `
         <h1 style="font-size: 24px; color: ${SUCCESS_GREEN}; margin-bottom: 20px;">Withdrawal Request Submitted!</h1>
         <p style="font-size: 16px; margin-bottom: 15px; color: #333;">Hello ${organizationName},</p>
         <p style="font-size: 16px; margin-bottom: 25px; color: #333;">
-            Your request to withdraw funds for the following milestone has been successfully submitted and is now **pending administrative review**.
+            Your request to withdraw funds for the following milestone has been successfully submitted and is now <em>pending administrative review</em>.
         </p>
         <table width="100%" cellpadding="10" cellspacing="0" border="0" style="margin: 20px 0; border: 1px solid #eeeeee; border-radius: 8px; font-size: 14px;">
             <tr style="background-color: #f9f9f9;">
@@ -589,5 +597,42 @@ exports.payoutRequestSuccessEmail = (organizationName, campaignTitle, milestoneT
         <p style="font-size: 16px; margin-top: 25px; color: #333;">Thank you for your impactful work,</p>
         <p style="font-size: 16px; font-weight: 600; color: ${PRIMARY_BLUE}; margin: 0;">The TraceAid Team</p>
     `;
-    return baseEmailTemplate("Withdrawal Request Submitted - Pending Review", mainContent, PRIMARY_BLUE);
+  return baseEmailTemplate("Withdrawal Request Submitted - Pending Review", mainContent, PRIMARY_BLUE);
+};
+
+exports.payoutApprovedTemplate = (fundraiserName, amount, bankName, accountName, accountNumber) => {
+  // NOTE: This is a placeholder HTML structure, similar to the previous email templates.
+  const formatter = new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD", // Adjust currency code as needed
+    minimumFractionDigits: 2,
+  });
+  const formattedAmount = formatter.format(amount);
+
+  // For brevity, using a simplified template structure here.
+  // You should integrate this into your full baseEmailTemplate utility.
+  return `
+        <html>
+        <body style="font-family: Arial, sans-serif; line-height: 1.6;">
+            <p>Dear ${fundraiserName},</p>
+            <p>We are pleased to inform you that your payout request has been successfully processed by the admin team.</p>
+            
+            <h3 style="color: #264653;">Payout Details:</h3>
+            <ul style="list-style-type: none; padding: 0;">
+                <li><strong>Amount Paid:</strong> ${formattedAmount}</li>
+            </ul>
+            
+            <h3 style="color: #264653;">Transfer Details (KYC Bank Information):</h3>
+            <ul style="list-style-type: none; padding: 0;">
+                <li><strong>Bank Name:</strong> ${bankName}</li>
+                <li><strong>Account Name:</strong> ${accountName}</li>
+                <li><strong>Account Number:</strong> ${accountNumber}</li>
+            </ul>
+
+            <p>The funds should reflect in your account according to standard bank processing times.</p>
+            <p>Thank you.</p>
+            <p>The Admin Team</p>
+        </body>
+        </html>
+    `;
 };
