@@ -601,38 +601,36 @@ exports.payoutRequestSuccessEmail = (organizationName, campaignTitle, milestoneT
 };
 
 exports.payoutApprovedTemplate = (fundraiserName, amount, bankName, accountName, accountNumber) => {
-  // NOTE: This is a placeholder HTML structure, similar to the previous email templates.
   const formatter = new Intl.NumberFormat("en-US", {
     style: "currency",
-    currency: "USD", // Adjust currency code as needed
+    currency: "NGN", // Adjust currency code as needed
     minimumFractionDigits: 2,
   });
   const formattedAmount = formatter.format(amount);
 
-  // For brevity, using a simplified template structure here.
-  // You should integrate this into your full baseEmailTemplate utility.
-  return `
-        <html>
-        <body style="font-family: Arial, sans-serif; line-height: 1.6;">
-            <p>Dear ${fundraiserName},</p>
-            <p>We are pleased to inform you that your payout request has been successfully processed by the admin team.</p>
-            
-            <h3 style="color: #264653;">Payout Details:</h3>
-            <ul style="list-style-type: none; padding: 0;">
-                <li><strong>Amount Paid:</strong> ${formattedAmount}</li>
-            </ul>
-            
-            <h3 style="color: #264653;">Transfer Details (KYC Bank Information):</h3>
-            <ul style="list-style-type: none; padding: 0;">
-                <li><strong>Bank Name:</strong> ${bankName}</li>
-                <li><strong>Account Name:</strong> ${accountName}</li>
-                <li><strong>Account Number:</strong> ${accountNumber}</li>
-            </ul>
+  const mainContent = `
+        <h1 style="font-size: 24px; color: ${SUCCESS_GREEN}; margin-bottom: 20px;">Payout Request Approved!</h1>
+        <p style="font-size: 16px; margin-bottom: 15px; color: #333;">Dear ${fundraiserName},</p>
+        <p style="font-size: 16px; margin-bottom: 25px; color: #333;">
+            We are pleased to inform you that your payout request has been successfully processed by the admin team. The funds have been initiated for transfer.
+        </p>
+        
+        <h3 style="font-size: 20px; color: ${PRIMARY_BLUE}; margin-top: 20px; margin-bottom: 10px;">Payout Details</h3>
+        <ul style="list-style-type: none; padding: 0; margin: 0 0 25px 0; background-color: #f9f9f9; padding: 15px; border-radius: 6px;">
+            <li style="font-size: 16px; margin-bottom: 8px;"><strong>Amount Paid:</strong> <span style="color: ${SUCCESS_GREEN}; font-weight: 600;">${formattedAmount}</span></li>
+        </ul>
+        
+        <h3 style="font-size: 20px; color: ${PRIMARY_BLUE}; margin-top: 20px; margin-bottom: 10px;">Transfer Details (KYC Bank Information)</h3>
+        <ul style="list-style-type: none; padding: 0; margin: 0 0 25px 0; background-color: #f9f9f9; padding: 15px; border-radius: 6px;">
+            <li style="font-size: 16px; margin-bottom: 8px;"><strong>Bank Name:</strong> ${bankName}</li>
+            <li style="font-size: 16px; margin-bottom: 8px;"><strong>Account Name:</strong> ${accountName}</li>
+            <li style="font-size: 16px;"><strong>Account Number:</strong> ${accountNumber}</li>
+        </ul>
 
-            <p>The funds should reflect in your account according to standard bank processing times.</p>
-            <p>Thank you.</p>
-            <p>The Admin Team</p>
-        </body>
-        </html>
+        <p style="font-size: 16px; margin-top: 20px; color: #333;">The funds should reflect in your account according to standard bank processing times. Please check your bank statement within the next few business days.</p>
+        <p style="font-size: 16px; margin-top: 25px; color: #333;">Thank you for your patience and trust in TraceAid.</p>
+        <p style="font-size: 16px; font-weight: 600; color: ${PRIMARY_BLUE}; margin: 0;">The Admin Team</p>
     `;
+
+  return baseEmailTemplate("Payout Request Approved", mainContent, SUCCESS_GREEN);
 };

@@ -748,12 +748,12 @@ exports.getPendingMilestoneEvidence = async (req, res) => {
 };
 
 exports.reviewMilestoneEvidence = async (req, res) => {
-  const { evidenceId } = req.params.id;
+  const adminId = req.admin.id || req.admin._id;
+
+  const evidenceId = req.params.id;
   const { action, rejectionReason } = req.body;
-  const adminId = req.user._id || req.user.id;
 
   try {
-    // 0. Validation
     if (action !== "approve" && action !== "reject") {
       return res.status(400).json({
         statusCode: false,
@@ -767,11 +767,19 @@ exports.reviewMilestoneEvidence = async (req, res) => {
       .populate("campaign", "campaignTitle")
       .populate("fundraiser", "email organizationName");
 
-    if (!evidence || evidence.status !== "pending") {
+    if (!evidence) {
       return res.status(404).json({
         statusCode: false,
         statusText: "Not Found",
-        message: "Evidence not found or not currently pending review.",
+        message: "Milestone evidence not found.",
+      });
+    }
+
+    if (evidence.status === "approved" || evidence.status === "rejected") {
+      return res.status(403).json({
+        statusCode: false,
+        statusText: "Forbidden",
+        message: "Evidence has already been reviewed.",
       });
     }
 
