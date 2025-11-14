@@ -238,11 +238,10 @@ exports.uploadMilestoneEvidenceForMilestone = async (req, res) => {
       fundraiser: fundraiserId,
       description,
       uploads: uploadedEvidence,
-      status: "pending",
+      status: "in_review",
     });
 
     milestone.evidenceApprovalStatus = "submitted";
-    milestone.status = "on-going";
     milestone.evidenceRef = newEvidence._id;
     await milestone.save();
 
