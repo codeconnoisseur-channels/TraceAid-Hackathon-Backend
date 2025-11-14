@@ -91,21 +91,16 @@ exports.createACampaign = async (req, res) => {
       }
     }
 
-    if (!Array.isArray(milestones) || milestones.length < 2 || milestones.length > 3) {
+    if (!Array.isArray(milestones) || milestones.length !==3 ) {
       if (file && file.path && fs.existsSync(file.path)) fs.unlinkSync(file.path);
       return res.status(400).json({
         statusCode: false,
         statusText: "Bad Request",
-        message: "Milestones must be either 2 or 3 in number.",
+        message: "Milestones must be exactly 3 in number.",
       });
     }
 
-    let percentageDistribution = [];
-    if (milestones.length === 2) {
-      percentageDistribution = [30, 70];
-    } else if (milestones.length === 3) {
-      percentageDistribution = [30, 40, 30];
-    }
+    const percentageDistribution = [30, 50, 20];
 
     const milestoneDocuments = milestones.map((m, index) => {
       const targetAmount = (goalAmount * percentageDistribution[index]) / 100;
