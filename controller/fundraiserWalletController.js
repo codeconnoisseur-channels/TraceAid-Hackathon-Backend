@@ -5,6 +5,9 @@ const { v4: uuidv4 } = require("uuid");
 const Milestone = require("../model/milestoneModel");
 const Bank = require("../model/bankModel");
 const axios = require("axios");
+const Fundraiser = require("../model/fundraiserModel");
+const { payoutRequestSuccessEmail } = require("../emailTemplate/emailVerification");
+const { sendEmail } = require("../utils/brevo");
 
 const KORA_API_BASE = "https://api.korapay.com/merchant/api/v1";
 const KORA_SECRET_KEY = process.env.KORA_SECRET_KEY;
@@ -217,7 +220,7 @@ exports.requestPayoutByCampaignAndTheirMilestone = async (req, res) => {
       });
     }
 
-    if (["ready_for_release", "released", "completed"].includes(milestone.status)) {
+    if (["released", "completed"].includes(milestone.status)) {
       return res.status(400).json({
         statusCode: false,
         statusText: "Not Eligible",
@@ -245,6 +248,22 @@ exports.requestPayoutByCampaignAndTheirMilestone = async (req, res) => {
 
     milestone.status = "on-going";
     await milestone.save();
+
+      const fundraiser = await Fundraiser.findById(fundraiserId);
+      if (fundraiser && fundraiser.email) {
+        const emailContent = payoutRequestSuccessEmail(
+          fundraiser.organizationName,
+          campaign.campaignTitle,
+          milestone.milestoneTitle,
+          milestone.targetAmount,
+          payout.referenceID
+        );
+        await sendEmail({
+          email: fundraiser.email,
+          subject: "Withdrawal Request Submitted - Pending Approval",
+          html: emailContent,
+        });
+      }
 
     return res.status(201).json({
       statusCode: true,
@@ -316,7 +335,6 @@ exports.getAllPayouts = async (req, res) => {
   }
 };
 
-
 exports.getFundraiserWithdrawals = async (req, res) => {
   try {
     const fundraiserId = req.user && req.user.id ? req.user.id : req.user?._id;
@@ -327,7 +345,6 @@ exports.getFundraiserWithdrawals = async (req, res) => {
         message: "Missing authenticated user",
       });
     }
-
 
     const wallet = await FundraiserWallet.findOne({ fundraiser: fundraiserId });
     if (!wallet) {
@@ -343,7 +360,7 @@ exports.getFundraiserWithdrawals = async (req, res) => {
       .populate("milestone", "milestoneTitle sequence")
       .sort({ createdAt: -1 }); // latest first
 
-    const formattedWithdrawals = payouts.map(p => ({
+    const formattedWithdrawals = payouts.map((p) => ({
       referenceID: p.referenceID,
       campaignName: p.campaign ? p.campaign.campaignTitle : "Unknown Campaign",
       milestoneTitle: p.milestone ? p.milestone.milestoneTitle : "N/A",
@@ -364,7 +381,6 @@ exports.getFundraiserWithdrawals = async (req, res) => {
         withdrawals: formattedWithdrawals,
       },
     });
-
   } catch (err) {
     console.error("getFundraiserWithdrawals error:", err);
     return res.status(500).json({

@@ -555,3 +555,39 @@ exports.forgotPasswordLink = (resetUrl, firstname) => {
     `;
   return baseEmailTemplate("Password Reset Request", mainContent);
 };
+
+exports.payoutRequestSuccessEmail = (organizationName, campaignTitle, milestoneTitle, targetAmount, referenceID) => {
+    const formattedAmount = `₦${Number(targetAmount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+    const mainContent = `
+        <h1 style="font-size: 24px; color: ${SUCCESS_GREEN}; margin-bottom: 20px;">Withdrawal Request Submitted!</h1>
+        <p style="font-size: 16px; margin-bottom: 15px; color: #333;">Hello ${organizationName},</p>
+        <p style="font-size: 16px; margin-bottom: 25px; color: #333;">
+            Your request to withdraw funds for the following milestone has been successfully submitted and is now **pending administrative review**.
+        </p>
+        <table width="100%" cellpadding="10" cellspacing="0" border="0" style="margin: 20px 0; border: 1px solid #eeeeee; border-radius: 8px; font-size: 14px;">
+            <tr style="background-color: #f9f9f9;">
+                <td style="font-weight: 600; color: ${PRIMARY_BLUE}; width: 35%;">Campaign Title:</td>
+                <td style="color: #333;">${campaignTitle}</td>
+            </tr>
+            <tr>
+                <td style="font-weight: 600; color: ${PRIMARY_BLUE};">Milestone Title:</td>
+                <td style="color: #333;">${milestoneTitle}</td>
+            </tr>
+            <tr style="background-color: #f9f9f9;">
+                <td style="font-weight: 600; color: ${PRIMARY_BLUE};">Amount Requested:</td>
+                <td style="color: ${SUCCESS_GREEN}; font-weight: 700;">${formattedAmount}</td>
+            </tr>
+            <tr>
+                <td style="font-weight: 600; color: ${PRIMARY_BLUE};">Reference ID:</td>
+                <td style="color: #333;">${referenceID}</td>
+            </tr>
+        </table>
+        <p style="font-size: 16px; margin-top: 20px; color: #333;">
+            You will receive a notification as soon as the TraceAid administration reviews and processes the transfer.
+        </p>
+        <p style="font-size: 16px; margin-top: 25px; color: #333;">Thank you for your impactful work,</p>
+        <p style="font-size: 16px; font-weight: 600; color: ${PRIMARY_BLUE}; margin: 0;">The TraceAid Team</p>
+    `;
+    return baseEmailTemplate("Withdrawal Request Submitted - Pending Review", mainContent, PRIMARY_BLUE);
+};
