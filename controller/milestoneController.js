@@ -193,7 +193,7 @@ exports.uploadMilestoneEvidenceForMilestone = async (req, res) => {
       });
     }
 
-    const allowedStatuses = ["pending", "on-going"];
+    const allowedStatuses = ["released"];
     if (!allowedStatuses.includes(milestone.status)) {
       cleanupFiles(files);
       return res.status(400).json({

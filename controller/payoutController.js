@@ -1,6 +1,8 @@
 const payoutModel = require("../model/payoutModel");
 const FundraiserWallet = require("../model/fundraiserWallet");
-const Bank = require("../model/bankModel");
+const KYC = require("../model/kycModel");
+const Milestone = require("../model/milestoneModel");
+const { v4: uuidv4 } = require("uuid");
 
 async function computeWalletSummary(wallet) {
   const perCampaign = {};
@@ -12,34 +14,41 @@ async function computeWalletSummary(wallet) {
     if (tx.type === "credit") perCampaign[cid].credited += tx.amount;
     if (tx.type === "debit") perCampaign[cid].debited += tx.amount;
   }
+
   const summary = Object.values(perCampaign).map((c) => ({
     campaign: c.campaign,
     credited: c.credited,
     debited: c.debited,
     balance: c.credited - c.debited,
   }));
-  const totals = summary.reduce(
-    (acc, c) => {
-      acc.credited += c.credited;
-      acc.debited += c.debited;
-      return acc;
-    },
-    { credited: 0, debited: 0 }
-  );
-  return { perCampaign: summary, totals };
+
+  return { perCampaign: summary };
 }
 
 exports.createPayoutByAdmin = async (req, res) => {
+  let wallet = null;
+
   try {
-    const { fundraiserId, campaignId, payoutId, milestoneId, amount, note } = req.body;
-    if (!fundraiserId || !campaignId || !amount)
+    // 1. Retrieve all necessary IDs and the optional amount from the body
+    const { fundraiserId, campaignId, payoutId, milestoneId, note, amount: bodyAmount } = req.body;
+
+    // 2. Fetch the existing Payout object (if payoutId is provided)
+    let payout = payoutId ? await payoutModel.findById(payoutId) : null;
+
+    // 3. Determine the final amount to process:
+    //    Use payout.amount if it exists, otherwise use amount from the body.
+    const amountToProcess = payout ? Number(payout.amount) : Number(bodyAmount);
+
+    // 4. Validation (using the determined amount)
+    if (!fundraiserId || !campaignId || !amountToProcess || amountToProcess <= 0)
       return res.status(400).json({
         statusCode: false,
         statusText: "Bad Request",
-        message: "fundraiserId, campaignId and positive amount required",
+        message: "fundraiserId, campaignId and positive amount are required.",
       });
 
-    const wallet = await FundraiserWallet.findOne({ fundraiser: fundraiserId });
+    // 5. Wallet Check (Balance verification)
+    wallet = await FundraiserWallet.findOne({ fundraiser: fundraiserId });
     if (!wallet)
       return res.status(404).json({
         statusCode: false,
@@ -50,84 +59,71 @@ exports.createPayoutByAdmin = async (req, res) => {
     const computed = await computeWalletSummary(wallet);
     const perCampaign = computed.perCampaign.find((c) => String(c.campaign._id || c.campaign) === String(campaignId));
     const campaignBalance = perCampaign ? perCampaign.balance : 0;
-    if (campaignBalance < Number(amount))
+
+    if (campaignBalance < amountToProcess)
       return res.status(400).json({
         statusCode: false,
         statusText: "Bad Request",
-        message: `Insufficient campaign balance. Available: ${campaignBalance}`,
+        message: `Insufficient campaign balance. Available: ${campaignBalance}. Requested: ${amountToProcess}`,
       });
 
-    // find bank with Kora recipient
-    const bank = await Bank.findOne({ fundraiser: fundraiserId, $or: [{ campaign: campaignId }, { campaign: null }], status: "verified" });
-    if (!bank || !bank.koraRecipientCode)
+    // 6. KYC Check
+    const kyc = await KYC.findOne({ user: fundraiserId, verificationStatus: "verified" });
+    if (!kyc)
       return res.status(400).json({
         statusCode: false,
         statusText: "Bad Request",
-        message: "No verified bank with Kora recipient found",
+        message: "Fundraiser KYC is not verified.",
       });
 
-    // mark a payout (either update existing or create)
-    let payout = payoutId ? await payoutModel.findById(payoutId) : null;
+    // 7. Mark/Create Payout
     if (!payout) {
-      payout = await Payout.create({
+      // Create new payout
+      payout = await payoutModel.create({
         fundraiser: fundraiserId,
         campaign: campaignId,
         milestone: milestoneId || null,
-        amount: Number(amount),
-        status: "processing",
+        amount: amountToProcess, // Use resolved amount
+        status: "paid",
         referenceID: "PAYOUT_" + uuidv4(),
         requestedAt: new Date(),
-        note: note || "Admin payout via Kora",
+        note: note || "Admin manual payout (bankless)",
+        processedAt: new Date(),
+        processedBy: req.user?._id,
       });
     } else {
-      payout.status = "processing";
-      payout.amount = Number(amount);
+      // Update existing payout (if found)
+      payout.status = "paid";
+      payout.amount = amountToProcess; // Update amount to reflect the resolved value (should be the same)
       payout.note = note || payout.note;
+      payout.processedAt = new Date();
+      payout.processedBy = req.user?._id;
       await payout.save();
     }
 
-    // debit wallet ledger
-    wallet.availableBalance = (wallet.availableBalance || 0) - Number(amount);
-    wallet.totalWithdrawn = (wallet.totalWithdrawn || 0) + Number(amount);
-    wallet.transactions.push({
+    // 8. Debit Wallet Ledger
+    const debitTransaction = {
       type: "debit",
       campaign: campaignId,
-      amount: Number(amount),
+      amount: amountToProcess, // Use resolved amount
       source: "payout",
       reference: payout.referenceID,
-      note: "Kora payout initiated",
+      note: "Manual payout recorded",
       createdAt: new Date(),
-    });
+    };
+
+    wallet.availableBalance = (wallet.availableBalance || 0) - amountToProcess;
+    wallet.totalWithdrawn = (wallet.totalWithdrawn || 0) + amountToProcess;
+    wallet.transactions.push(debitTransaction);
     await wallet.save();
 
-    // call Kora API
-    const transferRes = await axios.post(
-      `${KORA_API_BASE}/transfers`,
-      {
-        reference: payout.referenceID,
-        destination: bank.koraRecipientCode,
-        amount: Number(amount),
-        currency: "NGN",
-        narration: note || "Fundraiser payout",
-      },
-      {
-        headers: { Authorization: `Bearer ${KORA_SECRET_KEY}`, "Content-Type": "application/json" },
-      }
-    );
-
-    // on success
-    payout.status = "paid";
-    payout.processedAt = new Date();
-    payout.processedBy = req.user?._id;
-    await payout.save();
-
-    // if a milestone exists, mark milestone.releasedAmount and fundsReleasedAt
+    // 9. Update Milestone Status
     if (milestoneId) {
       const milestone = await Milestone.findById(milestoneId);
       if (milestone) {
-        milestone.releasedAmount = (milestone.releasedAmount || 0) + Number(amount);
+        milestone.releasedAmount = (milestone.releasedAmount || 0) + amountToProcess; // Use resolved amount
+        milestone.status = "released";
         milestone.fundsReleasedAt = new Date();
-        milestone.status = "ready_for_release"; // or 'released' depending on your flow — choose one
         await milestone.save();
       }
     }
@@ -135,15 +131,62 @@ exports.createPayoutByAdmin = async (req, res) => {
     return res.status(200).json({
       statusCode: true,
       statusText: "OK",
-      message: "Payout processed successfully via Kora",
-      data: { payout, transferData: transferRes.data },
+      message: "Manual payout processed and recorded successfully.",
+      data: { payout },
     });
   } catch (err) {
-    console.error("createPayoutByAdmin error:", err.response?.data || err.message);
+    console.error("createPayoutByAdmin error:", err.message);
+
     return res.status(500).json({
       statusCode: false,
       statusText: "Internal Server Error",
-      message: err.response?.data?.message || err.message,
+      message: err.message || "Failed to process payout due to a server error.",
+    });
+  }
+};
+
+// Keeping other functions (like exports.approvePayoutRequest) as they were.
+exports.approvePayoutRequest = async function (req, res) {
+  try {
+    const { payoutId } = req.params;
+    const adminId = req.user._id;
+
+    // 1. Find the payout and check its status
+    // Since createPayoutByAdmin now marks it as 'paid' immediately, this function
+    // is likely only used for requested payouts (status: 'pending').
+    const payout = await payoutModel.findOne({ _id: payoutId, status: "pending" });
+
+    if (!payout) {
+      return res.status(404).json({
+        statusCode: false,
+        statusText: "Not Found",
+        message: "Pending payout request not found or already processed.",
+      });
+    }
+
+    // 2. Update Payout Status to Paid (or processing, depending on your final flow)
+    // For a bankless flow, this means the funds have been manually sent.
+    payout.status = "paid";
+    payout.processedBy = adminId;
+    payout.processedAt = new Date();
+    await payout.save();
+
+    // 3. Perform the wallet debit here IF it wasn't done on request (often safer to debit here)
+    // NOTE: Based on your createPayoutByAdmin, wallet debit happens on creation.
+    // This function should be aligned with the manual flow.
+
+    return res.status(200).json({
+      statusCode: true,
+      statusText: "OK",
+      message: `Payout request ${payout.referenceID} approved and marked as paid.`,
+      data: payout,
+    });
+  } catch (error) {
+    console.error("Error approving payout request:", error);
+    return res.status(500).json({
+      statusCode: false,
+      statusText: "Internal Server Error",
+      message: error.message,
     });
   }
 };
@@ -172,45 +215,43 @@ exports.getPendingPayoutRequests = async function (req, res) {
   }
 };
 
-
 exports.approvePayoutRequest = async function (req, res) {
-    try {
-        const { payoutId } = req.params;
-        const adminId = req.user._id; 
+  try {
+    const { payoutId } = req.params;
+    const adminId = req.user._id;
 
-        // 1. Find the payout and check its status
-        const payout = await payoutModel.findOne({ _id: payoutId, status: "processing" });
+    // 1. Find the payout and check its status
+    const payout = await payoutModel.findOne({ _id: payoutId, status: "processing" });
 
-        if (!payout) {
-            return res.status(404).json({
-                statusCode: false,
-                statusText: "Not Found",
-                message: "Pending payout request not found or already processed.",
-            });
-        }
-
-        // 2. Update Payout Status to Processing
-        payout.status = "paid";
-        payout.processedBy = adminId;
-        payout.processedAt = new Date();
-        await payout.save();
-
-        // 3. Optional: Update Milestone Status (This step is often kept minimal here)
-        // If you need to update the milestone status to reflect approval, you would do it here.
-
-        return res.status(200).json({
-            statusCode: true,
-            statusText: "OK",
-            message: `Payout request ${payout.referenceID} approved and moved to processing queue.`,
-            data: payout,
-        });
-
-    } catch (error) {
-        console.error("Error approving payout request:", error);
-        return res.status(500).json({
-            statusCode: false,
-            statusText: "Internal Server Error",
-            message: error.message,
-        });
+    if (!payout) {
+      return res.status(404).json({
+        statusCode: false,
+        statusText: "Not Found",
+        message: "Pending payout request not found or already processed.",
+      });
     }
+
+    // 2. Update Payout Status to Processing
+    payout.status = "paid";
+    payout.processedBy = adminId;
+    payout.processedAt = new Date();
+    await payout.save();
+
+    // 3. Optional: Update Milestone Status (This step is often kept minimal here)
+    // If you need to update the milestone status to reflect approval, you would do it here.
+
+    return res.status(200).json({
+      statusCode: true,
+      statusText: "OK",
+      message: `Payout request ${payout.referenceID} approved and moved to processing queue.`,
+      data: payout,
+    });
+  } catch (error) {
+    console.error("Error approving payout request:", error);
+    return res.status(500).json({
+      statusCode: false,
+      statusText: "Internal Server Error",
+      message: error.message,
+    });
+  }
 };
