@@ -714,7 +714,7 @@ exports.reviewMilestoneEvidence = async (req, res) => {
 
 exports.getPendingMilestoneEvidence = async (req, res) => {
   try {
-    const pendingEvidence = await MilestoneEvidenceModel.find({ status: "pending" })
+    const pendingEvidence = await MilestoneEvidenceModel.find()
       .populate({
         path: "milestone",
         select: "milestoneTitle milestoneAmount",
