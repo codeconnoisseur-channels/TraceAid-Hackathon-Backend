@@ -3,6 +3,12 @@ const fundraiserModel = require("../model/fundraiserModel");
 const donorModel = require("../model/donorModel");
 const adminModel = require("../model/adminModel");
 
+// Helper function to capitalize the first letter, matching the schema's enum ('Donor', 'Fundraiser')
+const capitalize = (s) => {
+  if (typeof s !== "string") return s;
+  return s.charAt(0).toUpperCase() + s.slice(1);
+};
+
 exports.authenticate = async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
@@ -42,7 +48,7 @@ exports.authenticate = async (req, res, next) => {
 
     user = await adminModel.findById(userId).select("role");
 
-    console.log("Admin User FOUND:", user)
+    console.log("Admin User FOUND:", user);
 
     if (!user) {
       user = await fundraiserModel.findById(userId).select("role isVerified kyc");
@@ -63,7 +69,8 @@ exports.authenticate = async (req, res, next) => {
     req.user = {
       id: user._id,
       _id: user._id,
-      role: user.role,
+      role: user.role, // Keeps the original role field
+      userType: capitalize(user.role), // <-- NEW: Mapped role to userType and capitalized it
       isVerified: user.isVerified || false,
       kyc: user.kyc || null,
     };
