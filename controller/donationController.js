@@ -312,9 +312,10 @@ exports.verifyPaymentWebhook = async function (req, res) {
   }
 };
 
-exports.getAllDonationsForCampaign = async function (req, res) {
+exports.getAllDonationsForCampaign = async (req, res) => {
   try {
     const campaignId = req.params.id;
+
     if (!campaignId) {
       return res.status(400).json({
         statusCode: false,
@@ -322,20 +323,71 @@ exports.getAllDonationsForCampaign = async function (req, res) {
         message: "campaign id is required",
       });
     }
-    const donations = await Donation.find({
-      campaign: campaignId,
-      paymentStatus: "successful",
-    })
-      .populate("donor", "firstName lastName email")
-      .sort({ createdAt: -1 });
+
+    const donations = await Donation.aggregate([
+      {
+        $match: {
+          campaign: new mongoose.Types.ObjectId(campaignId),
+          paymentStatus: "successful",
+        },
+      },
+      {
+        $lookup: {
+          from: "donors",
+          localField: "donor",
+          foreignField: "_id",
+          as: "donor",
+        },
+      },
+      { $unwind: "$donor" },
+
+      {
+        // anonymize donor if isAnonymous=true
+        $addFields: {
+          donor: {
+            $cond: [
+              { $eq: ["$isAnonymous", true] },
+              {
+                firstName: "Anonymous",
+                lastName: "",
+                email: null,
+                _id: "$donor._id",
+              },
+              {
+                _id: "$donor._id",
+                firstName: "$donor.firstName",
+                lastName: "$donor.lastName",
+                email: "$donor.email",
+              },
+            ],
+          },
+        },
+      },
+
+      { $sort: { createdAt: -1 } },
+
+      {
+        // keep only what frontend needs
+        $project: {
+          _id: 1,
+          donor: 1,
+          amount: 1,
+          message: 1,
+          createdAt: 1,
+          isAnonymous: 1,
+        },
+      },
+    ]);
+
     return res.status(200).json({
       statusCode: true,
       statusText: "OK",
-      message: "All donations retrieved",
+      message: "Donations retrieved",
       data: donations,
     });
   } catch (error) {
-    console.error("Error getting all donations for campaign:", error);
+    console.error("Error getting donations:", error);
+
     return res.status(500).json({
       statusCode: false,
       statusText: "Internal Server Error",
