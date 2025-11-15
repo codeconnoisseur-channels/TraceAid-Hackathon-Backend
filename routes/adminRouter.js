@@ -2062,7 +2062,7 @@ router.get("/get-campaigns", protectAdmin, restrictAdmin, getAllCampaigns);
  *               statusText: "Internal Server Error"
  *               message: "Error fetching campaign data."
  */
-router.get("/campaigns-with-milestones-and-evidence", authenticate, getCampaignWithMilestonesAndEvidence);
+router.get("/campaigns-with-milestones-and-evidence/:id", getCampaignWithMilestonesAndEvidence);
 
 /**
  * @swagger

@@ -1073,7 +1073,6 @@ exports.rejectPayoutRequest = async function (req, res) {
 
 exports.getCampaignWithMilestonesAndEvidence = async (req, res) => {
   try {
-    const userId = req.user.id || req.user._id;
 
     const id = req.params.id;
 
