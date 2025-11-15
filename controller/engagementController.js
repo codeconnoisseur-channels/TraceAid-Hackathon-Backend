@@ -95,8 +95,17 @@ exports.recordShare = async (req, res) => {
     const { campaignId } = req.params;
     const { channel, userCaption } = req.body;
 
-    const userId = req.user._id;
+    const userId = req.user._id; // Check if userType is present on the authenticated user object.
     const userType = req.user.userType;
+
+    if (!userType) {
+      console.error("Authentication Error: userType is missing from req.user object.");
+      return res.status(401).json({
+        statusCode: false,
+        statusText: "Unauthorized",
+        message: "User session incomplete. Missing user type for engagement tracking.",
+      });
+    }
 
     if (!["X", "Facebook", "Instagram", "CopyLink"].includes(channel)) {
       return res.status(400).json({
