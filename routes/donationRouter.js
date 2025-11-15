@@ -160,7 +160,7 @@ router.get("/campaign/:id/donations", getDonationsByCampaign);
  *       500:
  *         description: Internal Server Error
  */
-router.get("/campaign/:id/donations/all", authenticate, getAllDonationsForCampaign);
+router.get("/campaign/:id/donations/all", getAllDonationsForCampaign);
 
 /**
  * @swagger
