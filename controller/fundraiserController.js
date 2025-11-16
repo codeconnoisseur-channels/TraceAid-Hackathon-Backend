@@ -11,6 +11,7 @@ const { organizationNameToTitleCase } = require("../helper/nameConverter");
 const campaignModel = require("../model/campaignModel");
 const donationModel = require("../model/donationModel");
 const milestoneModel = require("../model/milestoneModel");
+const mongoose = require("mongoose");
 
 exports.registerOrganization = async (req, res) => {
   try {
@@ -677,96 +678,14 @@ exports.getOne = async (req, res) => {
   }
 };
 
-// exports.fundraiserDashboard = async (req, res) => {
-//   console.log("I am from the anthentication", req.user)
-//   try {
-//     const fundraiserId = req.user._id
-
-//     console.log("user ID", fundraiserId)
-
-//     // 1. Basic User Check
-//     const user = await fundraiserModel.findById(fundraiserId).select("-password -otp -otpExpiredAt -token -status");
-//     if (!user) {
-//       return res.status(404).json({
-//         statusCode: false,
-//         statusText: "Not Found",
-//         message: "Fundraiser not found",
-//       });
-//     }
-
-//     // Query 1: Total Donations Amount (Uses Donation.fundraiser and amount field)
-//     const donationResults = await donationModel.aggregate([
-//       { $match: { fundraiser: fundraiserId, paymentStatus: "successful" } },
-//       { $group: { _id: null, totalDonationsAmount: { $sum: "$amount" } } },
-//     ]);
-//     const totalDonationsAmount = donationResults.length > 0 ? donationResults[0].totalDonationsAmount : 0;
-
-//     // Query 2: Milestones Achieved (Uses Milestone.fundraiser and status field)
-//     const milestoneAchievedCount = await milestoneModel.countDocuments({
-//       fundraiser: fundraiserId,
-//       status: "completed",
-//     });
-
-//     // Query 3 & 4: Active and Pending Campaigns (Uses Campaign.fundraiser and status field)
-//     const activeCampaignsCount = await campaignModel.countDocuments({ fundraiser: fundraiserId, status: "active" });
-//     const pendingVerificationsCount = await campaignModel.countDocuments({ fundraiser: fundraiserId, status: "pending" });
-
-//     const recentTransactions = await donationModel
-//       .find({
-//         fundraiser: fundraiserId,
-//         paymentStatus: "successful",
-//       })
-//       .sort({ createdAt: -1 })
-//       .limit(5)
-//       .populate({
-//         path: "donor",
-//         select: "firstName lastName",
-//       })
-//       .populate({
-//         path: "campaign",
-//         select: "campaignTitle",
-//       })
-//       .select("amount createdAt donor campaign isAnonymous");
-
-//     res.status(200).json({
-//       statusCode: true,
-//       statusText: "OK",
-//       data: {
-//         totalDonations: totalDonationsAmount,
-//         milestoneAchieved: milestoneAchievedCount,
-//         activeCampaigns: activeCampaignsCount,
-//         pendingVerifications: pendingVerificationsCount,
-
-//         recentTransactions: recentTransactions.map((transaction) => ({
-//           donorName: transaction.isAnonymous
-//             ? "Anonymous Donor"
-//             : transaction.donor && transaction.donor.organizationName
-//             ? transaction.donor.organizationName
-//             : "N/A",
-
-//           campaignTitle: transaction.campaign ? transaction.campaign.campaignTitle : "Campaign Deleted",
-//           date: transaction.createdAt,
-//           amount: transaction.amount,
-//         })),
-//       },
-//     });
-//   } catch (error) {
-//     console.error("Fundraiser dashboard error:", error);
-//     res.status(500).json({
-//       statusCode: false,
-//       statusText: "Internal Server Error",
-//       message: error.message,
-//     });
-//   }
-// };
-
 exports.fundraiserDashboard = async (req, res) => {
-  console.log("I am from the anthentication", req.user);
+  // console.log("I am from the anthentication", req.user); // Kept for debugging
+
   try {
     const fundraiserId = req.user._id;
+    const fundraiserObjectId = new mongoose.Types.ObjectId(fundraiserId);
 
-    console.log("user ID", fundraiserId);
-
+    // 1. Fetch User
     const user = await fundraiserModel.findById(fundraiserId).select("-password -otp -otpExpiredAt -token -status");
     if (!user) {
       return res.status(404).json({
@@ -776,16 +695,43 @@ exports.fundraiserDashboard = async (req, res) => {
       });
     }
 
+    // 2. Calculate Total Donations (Kept the original aggregation, using $match on 'fundraiser')
     const donationResults = await donationModel.aggregate([
-      { $match: { fundraiser: fundraiserId, paymentStatus: "successful" } },
+      { $match: { fundraiser: fundraiserObjectId, paymentStatus: "successful" } },
       { $group: { _id: null, totalDonationsAmount: { $sum: "$amount" } } },
     ]);
     const totalDonationsAmount = donationResults.length > 0 ? donationResults[0].totalDonationsAmount : 0;
 
-    const milestoneAchievedCount = await milestoneModel.countDocuments({
-      fundraiser: fundraiserId,
-      status: "completed",
-    });
+    const milestoneAchievedResults = await milestoneModel.aggregate([
+      // Stage 1: Filter Milestones by required completion status
+      {
+        $match: {
+          status: "completed",
+          evidenceApprovalStatus: "approved",
+        },
+      },
+      // Stage 2: Join with Campaign collection using the 'campaign' ID
+      {
+        $lookup: {
+          from: "campaigns", // Assuming your Campaign collection is named 'campaigns'
+          localField: "campaign",
+          foreignField: "_id",
+          as: "campaignDetails",
+        },
+      },
+      // Stage 3: Deconstruct the array created by $lookup
+      { $unwind: "$campaignDetails" },
+      // Stage 4: Filter by the Fundraiser ID
+      {
+        $match: {
+          "campaignDetails.fundraiser": fundraiserObjectId,
+        },
+      },
+      // Stage 5: Count the final results
+      { $count: "milestoneAchievedCount" },
+    ]);
+
+    const milestoneAchievedCount = milestoneAchievedResults.length > 0 ? milestoneAchievedResults[0].milestoneAchievedCount : 0;
 
     const activeCampaignsCount = await campaignModel.countDocuments({ fundraiser: fundraiserId, status: "active" });
     const pendingVerificationsCount = await campaignModel.countDocuments({ fundraiser: fundraiserId, status: "pending" });
@@ -827,12 +773,11 @@ exports.fundraiserDashboard = async (req, res) => {
           }
 
           let donorName = "N/A";
-
           if (transaction.donor) {
             if (transaction.donor.organizationName) {
               donorName = transaction.donor.organizationName;
-            } else if (transaction.donor.firstName && transaction.donor.lastName) {
-              donorName = `${transaction.donor.firstName} ${transaction.donor.lastName}`;
+            } else if (transaction.donor.firstName || transaction.donor.lastName) {
+              donorName = `${transaction.donor.firstName || ""} ${transaction.donor.lastName || ""}`.trim();
             } else {
               donorName = `Donor ${transaction.donor._id.toString().slice(-6)}`;
             }

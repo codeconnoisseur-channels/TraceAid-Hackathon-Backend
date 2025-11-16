@@ -148,7 +148,7 @@ exports.createPayoutByAdmin = async (req, res) => {
       const milestone = await Milestone.findById(milestoneId);
       if (milestone) {
         milestone.releasedAmount = (milestone.releasedAmount || 0) + amountToProcess;
-        milestone.status = "completed";
+        milestone.status = "released";
         milestone.fundsReleasedAt = new Date();
         await milestone.save();
       }
