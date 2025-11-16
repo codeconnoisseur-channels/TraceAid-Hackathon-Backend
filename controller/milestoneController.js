@@ -100,6 +100,9 @@ const cleanupFiles = (filesArr) =>
     }
   });
 
+// Allowed milestone statuses for evidence upload. Add more statuses as needed (e.g., "active", "pending").
+const allowedStatuses = ["released"]; // Only "released" milestones can currently accept evidence uploads.
+
 exports.uploadMilestoneEvidenceForMilestone = async (req, res) => {
   const fundraiserId = req.user?.id || req.user?._id;
   const milestoneId = req.params.id;
@@ -193,6 +196,7 @@ exports.uploadMilestoneEvidenceForMilestone = async (req, res) => {
       });
     }
 
+    // Only milestones with status "released" can have evidence uploaded because funds must be disbursed before evidence submission.
     const allowedStatuses = ["released"];
     if (!allowedStatuses.includes(milestone.status)) {
       cleanupFiles(files);
