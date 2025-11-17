@@ -55,6 +55,14 @@ exports.makeDonation = async function (req, res) {
       });
     }
 
+    if (isNaN(amount)|| amount <= 99) {
+      return res.status(400).json({
+        statusCode: false,
+        statusText: "Bad Request",
+        message: "Minimum donation amount is 100 NGN",
+      });
+    }
+
     const campaign = await Campaign.findById(campaignId);
     if (!campaign) {
       return res.status(404).json({
@@ -153,7 +161,8 @@ exports.makeDonation = async function (req, res) {
         reference: donation.paymentReference,
         redirect_url: FRONTEND_REDIRECT_URL,
         customer: {
-          name: donorInfo ? `${donorInfo.firstName || ""} ${donorInfo.lastName || ""}`.trim() : isAnonymous ? "Anonymous Donor" : "Unknown Donor",
+          name: donorInfo ? `${donorInfo.firstName || ""} ${donorInfo.lastName 
+          || ""}`.trim() : isAnonymous ? "Anonymous Donor" : "Unknown Donor",
           email: donorInfo?.email || "noemail@donor.com",
         },
         narration: `Donation for campaign: ${campaign.campaignTitle}`,
@@ -270,7 +279,8 @@ exports.verifyPaymentWebhook = async function (req, res) {
       });
     }
 
-    const normalizedStatus = ["successful", "success", "paid"].includes(String(status).toLowerCase()) ? "successful" : "failed";
+    const normalizedStatus = ["successful", "success", "paid"]
+    .includes(String(status).toLowerCase()) ? "successful" : "failed";
 
     donation.transactionId = transactionId || donation.transactionId;
     donation.paymentStatus = normalizedStatus;
@@ -286,7 +296,8 @@ exports.verifyPaymentWebhook = async function (req, res) {
         campaign.amountRaised = (campaign.amountRaised || 0) + donation.amount;
         campaign.donorCount = (campaign.donorCount || 0) + 1;
 
-        if (campaign.amountRaised >= campaign.totalCampaignGoalAmount && campaign.status === "active") {
+        if (campaign.amountRaised >= campaign.totalCampaignGoalAmount
+           && campaign.status === "active") {
           campaign.status = "completed";
           campaign.isActive = false;
           campaign.endDate = new Date();

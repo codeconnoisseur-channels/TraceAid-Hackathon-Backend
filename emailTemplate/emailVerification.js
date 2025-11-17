@@ -303,10 +303,10 @@ exports.campaignActive = (organizationName, campaignTitle, endDate) => {
         <h1 style="font-size: 24px; color: ${SUCCESS_GREEN}; margin-bottom: 20px;">Campaign Is Now LIVE! 🚀</h1>
         <p style="font-size: 16px; margin-bottom: 15px; color: #333;">Hi ${organizationName},</p>
         <p style="font-size: 16px; margin-bottom: 25px; color: #333;">
-            Fantastic news! Your campaign, <strong>${campaignTitle}</strong>, has been officially set to **active** and is now live on the TraceAid platform!
+            Fantastic news! Your campaign, <strong>${campaignTitle}</strong>, has been officially set to <strong>active</strong> and is now live on the TraceAid platform!
         </p>
         <p style="font-size: 16px; font-weight: 600; color: #333; margin-bottom: 15px;">
-            It will run until **${formattedEndDate}**.
+            It will run until <em>${formattedEndDate}</em>.
         </p>
 
         <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin: 20px 0;">
