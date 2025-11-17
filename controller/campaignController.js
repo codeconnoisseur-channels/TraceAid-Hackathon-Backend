@@ -17,20 +17,85 @@ exports.createACampaign = async (req, res) => {
   const fundraiserId = req.user.id || req.user._id;
   const file = req.file;
 
+  // helper to parse days flexibly (e.g., "30", "30 days", "3,000days")
+  const parseDays = (input) => {
+    if (input === null || input === undefined) return NaN;
+    const str = String(input).trim().toLowerCase();
+    const match = str.match(/^\s*([0-9][0-9_,]*)\s*(days?)?\b/);
+    if (!match) return NaN;
+    const numeric = match[1].replace(/[,_]/g, "");
+    const value = Number(numeric);
+    if (!Number.isFinite(value) || value < 0) return NaN;
+    return value;
+  };
+
   try {
     let { campaignTitle, campaignDescription, totalCampaignGoalAmount, campaignCategory, durationDays, milestones } = req.body;
 
+    // Basic required checks
     if (!campaignTitle || !campaignDescription || !totalCampaignGoalAmount || !campaignCategory || !durationDays) {
       if (file && file.path && fs.existsSync(file.path)) fs.unlinkSync(file.path);
       return res.status(400).json({
         statusCode: false,
         statusText: "Bad Request",
-        message: "All campaign fields are required.",
+        message: "All campaign fields are required. Kindly provide all necessary information.",
       });
     }
 
-    const goalAmount = Number(totalCampaignGoalAmount);
-    const duration = Number(durationDays);
+    // Sanitize strings
+    campaignTitle = String(campaignTitle).trim();
+    campaignDescription = String(campaignDescription).trim();
+
+    if (campaignTitle.length < 5 || campaignTitle.length > 100) {
+      if (file && file.path && fs.existsSync(file.path)) fs.unlinkSync(file.path);
+      return res.status(400).json({
+        statusCode: false,
+        statusText: "Bad Request",
+        message: "Campaign title must be between 5 and 100 characters.",
+      });
+    }
+
+    // Ensure title uniqueness for this fundraiser only (await the async query)
+    const normalizedTitle = campaignNameToTitleCase(campaignTitle);
+    const titleExists = await campaignModel.exists({
+      campaignTitle: normalizedTitle,
+      fundraiser: fundraiserId,
+    });
+
+    if (titleExists) {
+      if (file && file.path && fs.existsSync(file.path)) fs.unlinkSync(file.path);
+      return res.status(400).json({
+      statusCode: false,
+      statusText: "Bad Request",
+      message: "You already have a campaign with this title. Kindly choose a different title.",
+      });
+    }
+
+    if (campaignDescription.length < 20) {
+      if (file && file.path && fs.existsSync(file.path)) fs.unlinkSync(file.path);
+      return res.status(400).json({
+        statusCode: false,
+        statusText: "Bad Request",
+        message: "Campaign description must be at least 20 characters.",
+      });
+    }
+
+    if (!CAMPAIGN_CATEGORY_VALUES.includes(campaignCategory)) {
+      if (file && file.path && fs.existsSync(file.path)) fs.unlinkSync(file.path);
+      return res.status(400).json({
+        statusCode: false,
+        statusText: "Bad Request",
+        message: "Invalid campaign category provided.",
+        validCategories: CAMPAIGN_CATEGORY_VALUES,
+      });
+    }
+
+    // Amount validations
+    const goalAmount = Number(
+      String(totalCampaignGoalAmount)
+        .toString()
+        .replace(/[,\s_]/g, "")
+    );
 
     if (isNaN(goalAmount) || goalAmount <= 0) {
       if (file && file.path && fs.existsSync(file.path)) fs.unlinkSync(file.path);
@@ -41,20 +106,42 @@ exports.createACampaign = async (req, res) => {
       });
     }
 
-    if (isNaN(duration) || duration < 30 || duration > 365) {
+    if (goalAmount < 1000) {
       if (file && file.path && fs.existsSync(file.path)) fs.unlinkSync(file.path);
       return res.status(400).json({
         statusCode: false,
         statusText: "Bad Request",
-        message: "Campaign duration must be between 30 and 365 days.",
+        message: "Minimum campaign campaign goal amount should not be less than NGN1,000",
       });
     }
 
+    // Duration validations (parse flexible input and bound)
+    const duration = parseDays(durationDays);
+
+    if (!Number.isFinite(duration) || duration < 30 || duration > 365) {
+      if (file && file.path && fs.existsSync(file.path)) fs.unlinkSync(file.path);
+      return res.status(400).json({
+        statusCode: false,
+        statusText: "Bad Request",
+        message: "Campaign duration must be a valid number of days between 30 and 365.",
+      });
+    }
+
+    // File validations
     if (!file || !file.path) {
       return res.status(400).json({
         statusCode: false,
         statusText: "Bad Request",
         message: "Campaign cover image or video is required.",
+      });
+    }
+    // Optional: basic mime/type validation using multer-provided mimetype
+    if (file.mimetype && !/^image\//.test(file.mimetype) && !/^video\//.test(file.mimetype)) {
+      if (file && file.path && fs.existsSync(file.path)) fs.unlinkSync(file.path);
+      return res.status(400).json({
+        statusCode: false,
+        statusText: "Bad Request",
+        message: "Only image or video files are allowed for the campaign cover.",
       });
     }
 
@@ -78,6 +165,7 @@ exports.createACampaign = async (req, res) => {
       });
     }
 
+    // Milestones parsing
     if (typeof milestones === "string") {
       try {
         milestones = JSON.parse(milestones);
@@ -91,7 +179,7 @@ exports.createACampaign = async (req, res) => {
       }
     }
 
-    if (!Array.isArray(milestones) || milestones.length !==3 ) {
+    if (!Array.isArray(milestones) || milestones.length !== 3) {
       if (file && file.path && fs.existsSync(file.path)) fs.unlinkSync(file.path);
       return res.status(400).json({
         statusCode: false,
@@ -100,15 +188,43 @@ exports.createACampaign = async (req, res) => {
       });
     }
 
+    // Validate each milestone structure
     const percentageDistribution = [30, 50, 20];
+    for (let i = 0; i < milestones.length; i++) {
+      const m = milestones[i];
+      if (!m || !m.milestoneTitle || !m.milestoneDescription) {
+        if (file && file.path && fs.existsSync(file.path)) fs.unlinkSync(file.path);
+        return res.status(400).json({
+          statusCode: false,
+          statusText: "Bad Request",
+          message: `Milestone ${i + 1} must include milestoneTitle and milestoneDescription.`,
+        });
+      }
+      if (String(m.milestoneTitle).trim().length < 3) {
+        if (file && file.path && fs.existsSync(file.path)) fs.unlinkSync(file.path);
+        return res.status(400).json({
+          statusCode: false,
+          statusText: "Bad Request",
+          message: `Milestone ${i + 1} title must be at least 3 characters.`,
+        });
+      }
+      if (String(m.milestoneDescription).trim().length < 10) {
+        if (file && file.path && fs.existsSync(file.path)) fs.unlinkSync(file.path);
+        return res.status(400).json({
+          statusCode: false,
+          statusText: "Bad Request",
+          message: `Milestone ${i + 1} description must be at least 10 characters.`,
+        });
+      }
+    }
 
     const milestoneDocuments = milestones.map((m, index) => {
       const targetAmount = (goalAmount * percentageDistribution[index]) / 100;
 
       return {
         campaign: null,
-        milestoneTitle: m.milestoneTitle,
-        milestoneDescription: m.milestoneDescription,
+        milestoneTitle: String(m.milestoneTitle).trim(),
+        milestoneDescription: String(m.milestoneDescription).trim(),
         targetAmount: Number(targetAmount.toFixed(2)),
         sequence: index + 1,
       };
