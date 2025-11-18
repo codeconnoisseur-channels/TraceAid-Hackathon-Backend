@@ -144,7 +144,7 @@ router.patch(
  *               statusText: "Internal Server Error"
  *               message: "Server error recording share action."
  */
-router.patch("/recordShare/:campaignId", authenticate, recordShare);
+router.patch("/recordShare/:campaignId", recordShare);
 
 /**
  * @swagger

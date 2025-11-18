@@ -21,6 +21,14 @@ exports.authenticate = async (req, res, next) => {
       });
     }
 
+    if (!token) {
+      return res.status(401).json({
+        statusCode: false,
+        statusText: "Authentication Failed",
+        message: "Please login again to continue.",
+      });
+    }
+
     const token = authHeader.split(" ")[1];
 
     let decoded;
