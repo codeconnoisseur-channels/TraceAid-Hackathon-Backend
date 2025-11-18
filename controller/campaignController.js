@@ -304,7 +304,12 @@ exports.getAllActiveCampaigns = async (req, res) => {
       statusCode: true,
       statusText: "OK",
       message: "Campaigns retrieved successfully",
-      data: shuffledCampaigns,
+      data: {
+        active: shuffledCampaigns,
+        counts: {
+          active: activeCampaigns.length,
+        },
+      },
     });
   } catch (error) {
     console.error("Error retrieving campaigns:", error);
