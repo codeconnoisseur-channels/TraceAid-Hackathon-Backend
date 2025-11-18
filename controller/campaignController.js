@@ -296,7 +296,8 @@ exports.getAllActiveCampaigns = async (req, res) => {
     }
 
     // Status tracking updated to include 'ended'
-    const activeCampaigns = allCampaigns.filter((c) => c.status === "active");
+    const activeCampaigns = allCampaigns.filter((c) => c.status === "active" || c.status === "completed");
+
 
     //shuffle the active campaigns based on how many times the api is called
     const shuffledCampaigns = activeCampaigns.sort(() => Math.random() - 0.5);
