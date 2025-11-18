@@ -14,7 +14,7 @@ const ALERT_RED = "#E76F51"; // For disapproval/rejection
 const baseEmailTemplate = (title, mainContent, accentColor = PRIMARY_BLUE) => {
   // Ensure all styles are inline for maximum email client compatibility.
   const containerStyle =
-    "max-width: 600px; margin: 0 auto; background-color: rgba(24, 24, 24, 0.4); font-family: 'Poppins', sans-serif; padding: 20px 0; border-bottom: 1px solid #e0e0e0; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); border: 1px solid #e0e0e0;us: 8px; overflow: hidden; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); border: 1px solid #e0e0e0;";
+    "max-width: 600px; margin: 0 auto; background-color: #ffffff; font-family: 'Poppins', sans-serif; padding: 0; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.06);";
   const footerBgStyle = `background: url(${WATERMARK_URL}) center / cover no-repeat; padding: 40px 0; text-align: center; color: #fff;`;
 
   return `
@@ -132,6 +132,41 @@ exports.emailVerificationOTP = (firstName, verificationCode) => {
             This code will expire in 10 minutes.
         </p>
         <p style="font-size: 14px; margin-top: 30px; color: #777;">
+            If you didn’t sign up for a TraceAid account, you can safely ignore this email.
+        </p>
+        <p style="font-size: 16px; margin-top: 25px; color: #333;">Thanks for joining the movement for transparent giving,</p>
+        <p style="font-size: 16px; font-weight: 600; color: ${PRIMARY_BLUE}; margin: 0;">The TraceAid Team</p>
+    `;
+  return baseEmailTemplate("Verify Your TraceAid Account", mainContent);
+};
+
+// Verification via secure link (CTA button + fallback URL)
+exports.emailVerificationLink = (firstName, verifyUrl, expiresInMinutes = 30) => {
+  const mainContent = `
+        <h1 style="font-size: 24px; color: ${PRIMARY_BLUE}; margin-bottom: 20px;">Verify Your TraceAid Account</h1>
+        <p style="font-size: 16px; margin-bottom: 15px; color: #333;">Hi ${firstName},</p>
+        <p style="font-size: 16px; margin-bottom: 25px; color: #333;">
+            Welcome to TraceAid! Please confirm your email address by clicking the button below.
+        </p>
+        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin: 20px 0;">
+            <tr>
+                <td align="center">
+                    <a href="${verifyUrl}" target="_blank"
+                       style="display: inline-block; background-color: ${PRIMARY_BLUE}; color: #ffffff; font-size: 16px; 
+                       font-weight: 600; text-decoration: none; padding: 12px 25px; border-radius: 5px; border: 1px solid ${PRIMARY_BLUE};">
+                        Verify email
+                    </a>
+                </td>
+            </tr>
+        </table>
+        <p style="font-size: 14px; color: ${ALERT_RED}; margin-top: 10px; font-weight: 600;">
+            This link expires in ${expiresInMinutes} minutes and can only be used once.
+        </p>
+        <p style="font-size: 14px; margin-top: 14px; color: #777;">
+            If the button doesn't work, copy and paste this link into your browser:
+        </p>
+        <p style="font-size: 14px; word-break: break-all; color: #555;">${verifyUrl}</p>
+        <p style="font-size: 14px; margin-top: 20px; color: #777;">
             If you didn’t sign up for a TraceAid account, you can safely ignore this email.
         </p>
         <p style="font-size: 16px; margin-top: 25px; color: #333;">Thanks for joining the movement for transparent giving,</p>
@@ -308,18 +343,6 @@ exports.campaignActive = (organizationName, campaignTitle, endDate) => {
         <p style="font-size: 16px; font-weight: 600; color: #333; margin-bottom: 15px;">
             It will run until <em>${formattedEndDate}</em>.
         </p>
-
-        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin: 20px 0;">
-            <tr>
-                <td align="center">
-                    <a href="[[campaign_link]]" target="_blank"
-                       style="display: inline-block; background-color: ${SUCCESS_GREEN}; color: #ffffff; font-size: 16px; 
-                       font-weight: 600; text-decoration: none; padding: 12px 25px; border-radius: 5px; border: 1px solid ${SUCCESS_GREEN};">
-                        View Your Live Campaign
-                    </a>
-                </td>
-            </tr>
-        </table>
         <p style="font-size: 16px; margin-top: 20px; color: #333;">
             Start sharing your campaign link with your network! We wish you the best in achieving your goals.
         </p>
@@ -552,6 +575,10 @@ exports.forgotPasswordLink = (resetUrl, firstname) => {
                 </td>
             </tr>
         </table>
+        <p style="font-size: 14px; margin-top: 12px; color: #777;">
+            If the button doesn't work, copy and paste this link into your browser:
+        </p>
+        <p style="font-size: 14px; word-break: break-all; color: #555;">${resetUrl}</p>
         <p style="font-size: 14px; color: ${ALERT_RED}; margin-top: 20px; font-weight: 600;">
             This link is valid for a limited time.
         </p>
