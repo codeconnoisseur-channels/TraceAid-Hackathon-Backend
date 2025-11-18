@@ -17,6 +17,14 @@ const donationSchema = new mongoose.Schema(
       ref: "Fundraiser",
       required: [true, "Donation must be linked to a fundraiser"],
     },
+    fullName: {
+      type: String,
+      trim: true,
+    },
+    email: {
+      type: String,
+      trim: true,
+    },
     amount: {
       type: Number,
       required: [true, "Donation amount is required"],
