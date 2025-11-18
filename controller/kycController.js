@@ -7,7 +7,7 @@ const { sendEmail } = require("../utils/brevo");
 
 exports.addKyc = async (req, res) => {
   try {
-    const userId = req.user._id;
+    const userId = req.user._id || req.user.id;
 
     if (userId === undefined) {
       return res.status(401).json({
