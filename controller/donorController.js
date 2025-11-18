@@ -89,7 +89,7 @@ exports.registerUser = async (req, res) => {
     res.status(201).json({
       statusCode: true,
       statusText: "Created",
-      message: "User Registration successful and check ",
+      message: "Check your email for the OTP to verify your account",
       data: { user: response },
     });
   } catch (error) {
@@ -158,7 +158,7 @@ exports.verifyUser = async (req, res) => {
     };
 
     const jwtSecret = process.env.JWT_SECRET;
-    const token = jwt.sign(jwtPayload, jwtSecret, { expiresIn: "5m" });
+    const token = jwt.sign(jwtPayload, jwtSecret, { expiresIn: "1d" });
 
     return res.status(200).json({
       statusCode: true,
@@ -294,7 +294,7 @@ exports.loginUser = async (req, res) => {
     }
 
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
-      expiresIn: "5m",
+      expiresIn: "1d",
     });
 
     const response = {

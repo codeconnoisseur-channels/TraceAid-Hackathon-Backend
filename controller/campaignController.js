@@ -65,9 +65,9 @@ exports.createACampaign = async (req, res) => {
     if (titleExists) {
       if (file && file.path && fs.existsSync(file.path)) fs.unlinkSync(file.path);
       return res.status(400).json({
-      statusCode: false,
-      statusText: "Bad Request",
-      message: "You already have a campaign with this title. Kindly choose a different title.",
+        statusCode: false,
+        statusText: "Bad Request",
+        message: "You already have a campaign with this title. Kindly choose a different title.",
       });
     }
 
@@ -298,16 +298,13 @@ exports.getAllActiveCampaigns = async (req, res) => {
     // Status tracking updated to include 'ended'
     const activeCampaigns = allCampaigns.filter((c) => c.status === "active");
 
-    res.status(200).json({
+    //shuffle the active campaigns based on how many times the api is called
+    const shuffledCampaigns = activeCampaigns.sort(() => Math.random() - 0.5);
+    return res.status(200).json({
       statusCode: true,
       statusText: "OK",
       message: "Campaigns retrieved successfully",
-      data: {
-        active: activeCampaigns,
-        counts: {
-          active: activeCampaigns.length,
-        },
-      },
+      data: shuffledCampaigns,
     });
   } catch (error) {
     console.error("Error retrieving campaigns:", error);
