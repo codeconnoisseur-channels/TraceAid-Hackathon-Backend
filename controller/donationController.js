@@ -76,7 +76,7 @@ exports.makeDonation = async function (req, res) {
       return res.status(403).json({
         statusCode: false,
         statusText: "Forbidden",
-        message: "Donations are not accepted. Campaign status is not active.",
+        message: "Donations are not accepted. Campaign status is closed",
       });
     }
 
