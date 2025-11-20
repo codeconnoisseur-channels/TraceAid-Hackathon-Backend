@@ -98,7 +98,7 @@ exports.registerOrganization = async (req, res) => {
     res.status(201).json({
       statusCode: true,
       statusText: "Created",
-      message: "User Registration successful",
+      message: "Check your email for the OTP to verify your account",
       data: response,
     });
   } catch (error) {
